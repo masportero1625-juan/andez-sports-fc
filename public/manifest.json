@@ -1,16 +1,18 @@
 {
   "short_name": "Andez FC",
-  "name": "Andez Sports FC - Pizarra Táctica",
+  "name": "Andez Sports FC",
+  "description": "Pizarra Táctica y Metodología Andez Sports FC",
   "icons": [
     {
       "src": "/logo-andez.png",
       "type": "image/png",
-      "sizes": "192x192 512x512"
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
   "background_color": "#020617",
-  "theme_color": "#dc2626",
+  "theme_color": "#020617",
   "display": "standalone",
-  "orientation": "any"
+  "orientation": "landscape"
 }
