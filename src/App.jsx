@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   Folder, Play, RotateCcw, Shirt, Share2, Save,
-  Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser, Check
+  Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser
 } from 'lucide-react';
 
 const TACTICAL_SYSTEMS = {
@@ -46,7 +46,6 @@ const TACTICAL_SYSTEMS = {
   ]
 };
 
-// Balón oficial realista
 function SoccerBall({ x, y, onPointerDown }) {
   return (
     <g
@@ -71,7 +70,6 @@ function SoccerBall({ x, y, onPointerDown }) {
   );
 }
 
-// Renderizado realista de accesorios de entrenamiento
 function TrainingMaterial({ obj, onPointerDown }) {
   if (obj.type === 'mini_goal') {
     return (
@@ -158,13 +156,12 @@ function TrainingMaterial({ obj, onPointerDown }) {
 }
 
 export default function App() {
-  const [pitchMode, setPitchMode] = useState('full'); // 'full' o 'half'
+  const [pitchMode, setPitchMode] = useState('full');
   const [showTrainingMenu, setShowTrainingMenu] = useState(false);
   const [showLineMenu, setShowLineMenu] = useState(false);
   const [showSystemsMenu, setShowSystemsMenu] = useState(false);
 
-  // Modos de herramienta: 'move', 'draw', 'eraser'
-  const [tool, setTool] = useState('move');
+  const [tool, setTool] = useState('move'); // 'move', 'draw', 'eraser'
   const [lineType, setLineType] = useState('arrow'); // 'straight', 'arrow', 'dashed-arrow', 'wavy-arrow', 'stop'
   const [lineColor, setLineColor] = useState('#ffffff');
   const [lineWidth, setLineWidth] = useState(1.4);
@@ -201,7 +198,6 @@ export default function App() {
 
   const handlePointerDown = (e, obj) => {
     e.stopPropagation();
-    // SI ESTÁ ACTIVO EL BORRADOR: elimina el elemento de inmediato
     if (tool === 'eraser') {
       const filtered = objects.filter((o) => o.id !== obj.id);
       setObjects(filtered);
@@ -213,6 +209,13 @@ export default function App() {
     isDraggingRef.current = true;
   };
 
+  const handleLinePointerDown = (e, lineId) => {
+    if (tool === 'eraser') {
+      e.stopPropagation();
+      setDrawings((prev) => prev.filter((l) => l.id !== lineId));
+    }
+  };
+
   const handlePitchPointerDown = (e) => {
     if (tool === 'move' || tool === 'eraser') {
       setSelectedObj(null);
@@ -220,6 +223,7 @@ export default function App() {
     }
     const coords = getCoordinates(e);
     setCurrentLine({
+      id: Date.now(),
       start: coords,
       end: coords,
       type: lineType,
@@ -255,7 +259,7 @@ export default function App() {
       recordHistory(objects);
     }
     if (currentLine) {
-      setDrawings((prev) => [...prev, { ...currentLine, id: Date.now() }]);
+      setDrawings((prev) => [...prev, currentLine]);
       setCurrentLine(null);
     }
   };
@@ -289,12 +293,17 @@ export default function App() {
     recordHistory(nextObjs);
   };
 
+  const removeLastLineOrAll = () => {
+    if (drawings.length === 0) return;
+    setDrawings((prev) => prev.slice(0, -1));
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
           title: 'Andez Sports FC - Ejercicio Táctico',
-          text: 'Pizarra táctica profesional de Andez Sports FC PRO',
+          text: 'Pizarra táctica profesional creada en Andez Sports FC PRO',
           url: window.location.href,
         });
       } catch (err) {
@@ -321,69 +330,97 @@ export default function App() {
     setShowSystemsMenu(false);
   };
 
-  // Generador de caminos SVG para trazos avanzados
-  const renderLinePath = (line) => {
-    const { start, end, type, color, width } = line;
+  // Trazo de flechas tácticas con geometría ultra nítida y cabeza sobredimensionada
+  const renderLinePath = (line, isPreview = false) => {
+    const { id, start, end, type, color, width } = line;
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const angle = Math.atan2(dy, dx);
     const length = Math.hypot(dx, dy);
 
-    // Línea ondulada (zigzag/conducción)
+    // Dimensiones prominentes de la flecha:
+    // Nunca se achica con el grosor de la línea
+    const arrowLength = Math.max(3.8, width * 2.6);
+    const arrowWing = Math.max(2.6, width * 1.9);
+
+    // Punto donde termina la línea antes de la cabeza para evitar que el grosor la tape
+    const lineEndX = length > arrowLength ? end.x - (arrowLength * 0.75) * Math.cos(angle) : end.x;
+    const lineEndY = length > arrowLength ? end.y - (arrowLength * 0.75) * Math.sin(angle) : end.y;
+
+    const arrowP1x = end.x - arrowLength * Math.cos(angle) + arrowWing * Math.sin(angle);
+    const arrowP1y = end.y - arrowLength * Math.sin(angle) - arrowWing * Math.cos(angle);
+    const arrowP2x = end.x - arrowLength * Math.cos(angle) - arrowWing * Math.sin(angle);
+    const arrowP2y = end.y - arrowLength * Math.sin(angle) + arrowWing * Math.cos(angle);
+
     if (type === 'wavy-arrow') {
       const waves = 4;
       let pathD = `M ${start.x} ${start.y}`;
       for (let i = 1; i <= waves; i++) {
         const segX = start.x + (dx * i) / waves;
         const segY = start.y + (dy * i) / waves;
-        const perpX = -Math.sin(angle) * (i % 2 === 0 ? -1.8 : 1.8);
-        const perpY = Math.cos(angle) * (i % 2 === 0 ? -1.8 : 1.8);
+        const perpX = -Math.sin(angle) * (i % 2 === 0 ? -2.2 : 2.2);
+        const perpY = Math.cos(angle) * (i % 2 === 0 ? -2.2 : 2.2);
         pathD += ` Q ${segX + perpX} ${segY + perpY} ${segX} ${segY}`;
       }
       return (
-        <g key={line.id || 'curr'}>
+        <g
+          key={id || 'curr'}
+          onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
+          className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
+        >
+          <path d={pathD} fill="none" stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
           <path d={pathD} fill="none" stroke={color} strokeWidth={width} />
-          {/* Flecha final */}
-          <polygon
-            points={`${end.x},${end.y} ${end.x - 2 * Math.cos(angle - 0.5)},${end.y - 2 * Math.sin(angle - 0.5)} ${end.x - 2 * Math.cos(angle + 0.5)},${end.y - 2 * Math.sin(angle + 0.5)}`}
-            fill={color}
-          />
+          <polygon points={`${end.x},${end.y} ${arrowP1x},${arrowP1y} ${arrowP2x},${arrowP2y}`} fill={color} />
         </g>
       );
     }
 
-    // Línea con tope transversal (cobertura/bloqueo)
     if (type === 'stop') {
-      const stopLen = 2.4;
+      const stopLen = Math.max(3.2, width * 2.2);
       const p1x = end.x - Math.sin(angle) * stopLen;
       const p1y = end.y + Math.cos(angle) * stopLen;
       const p2x = end.x + Math.sin(angle) * stopLen;
       const p2y = end.y - Math.cos(angle) * stopLen;
       return (
-        <g key={line.id || 'curr'}>
-          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={color} strokeWidth={width} />
-          <line x1={p1x} y1={p1y} x2={p2x} y2={p2y} stroke={color} strokeWidth={width * 1.3} strokeLinecap="round" />
+        <g
+          key={id || 'curr'}
+          onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
+          className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
+        >
+          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
+          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={color} strokeWidth={width} strokeLinecap="round" />
+          <line x1={p1x} y1={p1y} x2={p2x} y2={p2y} stroke={color} strokeWidth={width * 1.5} strokeLinecap="round" />
         </g>
       );
     }
 
-    // Línea recta o entrecortada con o sin flecha
-    const isDashed = type === 'dashed-arrow' || type === 'dashed';
+    const isDashed = type === 'dashed-arrow';
+    const hasArrow = type === 'arrow' || type === 'dashed-arrow';
+
     return (
-      <g key={line.id || 'curr'}>
+      <g
+        key={id || 'curr'}
+        onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
+        className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
+      >
+        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
         <line
           x1={start.x}
           y1={start.y}
-          x2={end.x}
-          y2={end.y}
+          x2={hasArrow && length > arrowLength ? lineEndX : end.x}
+          y2={hasArrow && length > arrowLength ? lineEndY : end.y}
           stroke={color}
           strokeWidth={width}
-          strokeDasharray={isDashed ? '2.5,2.0' : 'none'}
+          strokeLinecap="round"
+          strokeDasharray={isDashed ? `${width * 2.5},${width * 1.8}` : 'none'}
         />
-        {(type === 'arrow' || type === 'dashed-arrow') && length > 2 && (
+        {hasArrow && length > 2.5 && (
           <polygon
-            points={`${end.x},${end.y} ${end.x - 2 * Math.cos(angle - 0.5)},${end.y - 2 * Math.sin(angle - 0.5)} ${end.x - 2 * Math.cos(angle + 0.5)},${end.y - 2 * Math.sin(angle + 0.5)}`}
+            points={`${end.x},${end.y} ${arrowP1x},${arrowP1y} ${arrowP2x},${arrowP2y}`}
             fill={color}
+            stroke={color}
+            strokeWidth="0.5"
+            strokeLinejoin="round"
           />
         )}
       </g>
@@ -392,7 +429,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#000000] overflow-hidden select-none font-sans">
-      {/* 1. BARRA SUPERIOR MINIMALISTA */}
+      {/* 1. BARRA SUPERIOR */}
       <header className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 shadow-md">
         <div className="flex items-center gap-4">
           <button
@@ -411,16 +448,14 @@ export default function App() {
             <Play className="w-5 h-5" />
           </button>
 
-          {/* Alternar Media Cancha Horizontal / Cancha Completa Vertical */}
           <button
             onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')}
             className={`p-1 rounded active:scale-95 transition ${pitchMode === 'half' ? 'bg-red-600 text-white' : 'text-zinc-300 hover:text-white'}`}
-            title="Media Cancha (Izquierda a Derecha)"
+            title="Alternar Cancha Entera / Media Cancha"
           >
             <RotateCcw className="w-5 h-5" />
           </button>
 
-          {/* Menú de Materiales de Entrenamiento */}
           <button
             onClick={() => setShowTrainingMenu(!showTrainingMenu)}
             className={`p-1 rounded active:scale-95 transition ${showTrainingMenu ? 'bg-amber-500 text-black font-black' : 'text-amber-400'}`}
@@ -429,7 +464,6 @@ export default function App() {
             <span className="text-base font-bold">▲</span>
           </button>
 
-          {/* Alternar color de equipo base */}
           <button
             onClick={() => addElement('player', { team: 'blue' })}
             className="text-blue-400 hover:text-blue-300 active:scale-95 transition"
@@ -439,7 +473,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Acciones Derecha */}
         <div className="flex items-center gap-3">
           <button
             onClick={handleShare}
@@ -466,7 +499,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. LIENZO DE CANCHA ADAPTABLE */}
+      {/* 2. LIENZO DE CANCHA */}
       <main
         className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]"
         onPointerMove={handlePointerMove}
@@ -483,7 +516,6 @@ export default function App() {
 
           {/* DIBUJO CANCHA */}
           {pitchMode === 'half' ? (
-            /* Media Cancha: De Izquierda a Derecha (Como la app de referencia) */
             <g>
               <rect x="2" y="3" width="64" height="79" fill="none" stroke="white" strokeWidth="0.8" />
               <rect x="2" y="19" width="22" height="47" fill="none" stroke="white" strokeWidth="0.8" />
@@ -496,7 +528,6 @@ export default function App() {
               <circle cx="66" cy="42.5" r="0.6" fill="white" />
             </g>
           ) : (
-            /* Cancha Completa Vertical */
             <g>
               <rect x="2" y="2" width="64" height="101" fill="none" stroke="white" strokeWidth="0.8" />
               <line x1="2" y1="52.5" x2="66" y2="52.5" stroke="white" strokeWidth="0.8" />
@@ -517,13 +548,11 @@ export default function App() {
             </g>
           )}
 
-          {/* Trazos tácticos guardados */}
-          {drawings.map((line) => renderLinePath(line))}
+          {/* Trazos tácticos */}
+          {drawings.map((line) => renderLinePath(line, false))}
+          {currentLine && renderLinePath(currentLine, true)}
 
-          {/* Trazo táctico en tiempo real */}
-          {currentLine && renderLinePath(currentLine)}
-
-          {/* Renderizado de todos los elementos: fichas, balón y materiales */}
+          {/* Renderizado de elementos */}
           {objects.map((obj) => {
             if (obj.type === 'player') {
               return (
@@ -578,7 +607,7 @@ export default function App() {
           })}
         </svg>
 
-        {/* 3. MENÚ FLOTANTE DE MATERIALES REALISTAS */}
+        {/* 3. MENÚ DE MATERIALES */}
         {showTrainingMenu && (
           <aside className="absolute right-2 top-2 bg-black/90 backdrop-blur-md border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 max-h-[82vh] overflow-y-auto w-44">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5 mb-1">
@@ -644,7 +673,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. MODAL DE TRAZOS AVANZADOS (PALETA PROFESIONAL) */}
+        {/* 5. MODAL DE TRAZOS */}
         {showLineMenu && (
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
@@ -655,44 +684,41 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Botón rápido modo dibujo */}
               <button
                 onClick={() => { setTool('draw'); setShowLineMenu(false); }}
-                className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl text-white mb-3"
+                className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl text-white mb-3 shadow"
               >
                 Activar Trazo Seleccionado
               </button>
 
-              {/* Tipos de línea idénticos a la app de referencia */}
               <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Estilo de Línea</label>
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <button
                   onClick={() => setLineType('arrow')}
                   className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
                 >
-                  <span>→</span> Pase Directo
+                  <span className="font-black text-sm">→</span> Pase Directo
                 </button>
                 <button
                   onClick={() => setLineType('dashed-arrow')}
                   className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'dashed-arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
                 >
-                  <span>⇢</span> Carrera / Desmarque
+                  <span className="font-black text-sm">⇢</span> Desmarque
                 </button>
                 <button
                   onClick={() => setLineType('wavy-arrow')}
                   className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'wavy-arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
                 >
-                  <span>∿></span> Conducción
+                  <span className="font-black text-sm">∿></span> Conducción
                 </button>
                 <button
                   onClick={() => setLineType('stop')}
                   className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'stop' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
                 >
-                  <span>—|</span> Cobertura / Bloqueo
+                  <span className="font-black text-sm">—|</span> Bloqueo
                 </button>
               </div>
 
-              {/* Paleta de colores */}
               <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Color</label>
               <div className="flex items-center justify-between mb-3 bg-zinc-900 p-2 rounded-xl">
                 {['#ffffff', '#ef4444', '#3b82f6', '#facc15'].map((color) => (
@@ -705,7 +731,6 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Grosor */}
               <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Grosor</label>
               <div className="flex items-center justify-between bg-zinc-900 p-2 rounded-xl">
                 {[0.8, 1.4, 2.0, 2.8].map((w) => (
@@ -714,7 +739,7 @@ export default function App() {
                     onClick={() => setLineWidth(w)}
                     className={`px-3 py-1 text-xs font-bold rounded-lg ${lineWidth === w ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'}`}
                   >
-                    {w === 0.8 ? 'Fino' : w === 1.4 ? 'Normal' : w === 2.0 ? 'Grueso' : 'Extra'}
+                    {w === 0.8 ? 'Fino' : w === 1.4 ? 'Medio' : w === 2.0 ? 'Grueso' : 'Extra'}
                   </button>
                 ))}
               </div>
@@ -723,9 +748,8 @@ export default function App() {
         )}
       </main>
 
-      {/* 6. PIE INFERIOR FLOTANTE CON BORRADOR Y GESTIÓN DE ELEMENTOS */}
+      {/* 6. PIE INFERIOR */}
       <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 shadow-xl">
-        {/* Deshacer y Rehacer */}
         <div className="flex items-center gap-2">
           <button
             onClick={undo}
@@ -745,7 +769,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Fichas Maestras: Azul, Roja y Balón */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => addElement('player', { team: 'blue' })}
@@ -772,27 +795,24 @@ export default function App() {
           </button>
         </div>
 
-        {/* Borrador individual, limpiar líneas y selector de trazo */}
         <div className="flex items-center gap-2">
-          {/* Borrador interactivo: toca cualquier cosa para borrarla */}
           <button
             onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')}
             className={`p-1.5 rounded active:scale-95 transition ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400 hover:text-red-400'}`}
-            title="Borrador de Elementos (Toca cualquier cono, arco o ficha para eliminarla)"
+            title="Goma de Borrar: Toca cualquier línea o material para eliminarlo"
           >
             <Eraser className="w-5 h-5" />
           </button>
 
-          {/* Limpiar solo los trazos dibujados */}
           <button
-            onClick={() => setDrawings([])}
+            onClick={removeLastLineOrAll}
+            onDoubleClick={() => setDrawings([])}
             className="p-1.5 text-zinc-400 hover:text-amber-400 active:scale-95 transition"
-            title="Limpiar Líneas de la Cancha"
+            title="Borrar última línea (Doble clic borra todas)"
           >
             <Trash2 className="w-5 h-5" />
           </button>
 
-          {/* Menú de líneas y pluma */}
           <button
             onClick={() => setShowLineMenu(true)}
             className={`p-1.5 rounded active:scale-95 transition ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300 hover:text-white'}`}
