@@ -1,12 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  RotateCcw, Trash2, Save, Undo2, Redo2,
-  CircleDot, SplitSquareVertical
+  RotateCcw, Trash2, Save, CircleDot
 } from 'lucide-react';
 
-// Cancha vertical estándar FIFA: 68 metros ancho x 105 metros largo
-// Media cancha: 68 metros ancho x 52.5 metros largo
-const FULL_PLAYERS = [
+// Cancha Entera Vertical (Arco Norte arriba, Arco Sur abajo): 68 ancho x 105 alto
+const FULL_PITCH_PLAYERS = [
   { id: 'p1', type: 'player', team: 'blue', number: '1', role: 'GK', x: 34, y: 96 },
   { id: 'p2', type: 'player', team: 'blue', number: '4', role: 'CB', x: 23, y: 82 },
   { id: 'p3', type: 'player', team: 'blue', number: '3', role: 'CB', x: 45, y: 82 },
@@ -21,43 +19,79 @@ const FULL_PLAYERS = [
   { id: 'ball', type: 'ball', x: 34, y: 52.5 },
 ];
 
-const HALF_PLAYERS = [
-  { id: 'p1', type: 'player', team: 'blue', number: '1', role: 'GK', x: 34, y: 8 },
-  { id: 'p2', type: 'player', team: 'blue', number: '4', role: 'CB', x: 24, y: 20 },
-  { id: 'p3', type: 'player', team: 'blue', number: '3', role: 'CB', x: 44, y: 20 },
-  { id: 'p4', type: 'player', team: 'blue', number: '2', role: 'RB', x: 12, y: 28 },
-  { id: 'p5', type: 'player', team: 'blue', number: '5', role: 'LB', x: 56, y: 28 },
-  { id: 'p6', type: 'player', team: 'red', number: '9', role: 'ST', x: 34, y: 32 },
-  { id: 'p7', type: 'red', number: '10', role: 'CAM', x: 24, y: 40 },
-  { id: 'p8', type: 'red', number: '7', role: 'RW', x: 48, y: 38 },
-  { id: 'ball', type: 'ball', x: 34, y: 28 },
+// Media Cancha de Izquierda a Derecha (Arco a la izquierda, mitad a la derecha): 68 ancho x 85 alto
+const HALF_PITCH_PLAYERS = [
+  { id: 'p1', type: 'player', team: 'blue', number: '1', role: 'GK', x: 6, y: 42.5 },
+  { id: 'p2', type: 'player', team: 'blue', number: '4', role: 'CB', x: 22, y: 28 },
+  { id: 'p3', type: 'player', team: 'blue', number: '3', role: 'CB', x: 22, y: 57 },
+  { id: 'p4', type: 'player', team: 'blue', number: '2', role: 'RB', x: 30, y: 15 },
+  { id: 'p5', type: 'player', team: 'blue', number: '5', role: 'LB', x: 30, y: 70 },
+  { id: 'p6', type: 'player', team: 'red', number: '9', role: 'ST', x: 36, y: 42.5 },
+  { id: 'p7', type: 'player', team: 'red', number: '10', role: 'CAM', x: 48, y: 32 },
+  { id: 'p8', type: 'player', team: 'red', number: '7', role: 'RW', x: 48, y: 55 },
+  { id: 'ball', type: 'ball', x: 36, y: 42.5 },
 ];
+
+// Balón clásico de fútbol con pentágonos y costuras detalladas
+function SoccerBall({ x, y, onPointerDown }) {
+  return (
+    <g
+      transform={`translate(${x}, ${y})`}
+      onPointerDown={onPointerDown}
+      className="cursor-grab active:cursor-grabbing touch-none select-none"
+    >
+      <circle r="2.8" fill="rgba(0,0,0,0.3)" transform="translate(0.3, 0.3)" />
+      <circle r="2.6" fill="#ffffff" stroke="#111827" strokeWidth="0.4" />
+      {/* Pentágono Central Negro */}
+      <polygon points="0,-0.9 0.85,-0.28 0.53,0.73 -0.53,0.73 -0.85,-0.28" fill="#111827" />
+      {/* Gajos exteriores */}
+      <polygon points="0,-1.7 0.6,-2.3 -0.6,-2.3" fill="#111827" />
+      <polygon points="1.7,-0.6 2.4,-0.8 2.1,-0.1" fill="#111827" />
+      <polygon points="1.2,1.6 1.8,1.9 1.5,2.4" fill="#111827" />
+      <polygon points="-1.2,1.6 -1.5,2.4 -1.8,1.9" fill="#111827" />
+      <polygon points="-1.7,-0.6 -2.1,-0.1 -2.4,-0.8" fill="#111827" />
+      {/* Costuras */}
+      <line x1="0" y1="-0.9" x2="0" y2="-1.7" stroke="#111827" strokeWidth="0.25" />
+      <line x1="0.85" y1="-0.28" x2="1.7" y2="-0.6" stroke="#111827" strokeWidth="0.25" />
+      <line x1="0.53" y1="0.73" x2="1.2" y2="1.6" stroke="#111827" strokeWidth="0.25" />
+      <line x1="-0.53" y1="0.73" x2="-1.2" y2="1.6" stroke="#111827" strokeWidth="0.25" />
+      <line x1="-0.85" y1="-0.28" x2="-1.7" y2="-0.6" stroke="#111827" strokeWidth="0.25" />
+    </g>
+  );
+}
 
 export default function App() {
   const [isHalfPitch, setIsHalfPitch] = useState(false);
   const [tool, setTool] = useState('move'); // 'move', 'pass', 'run'
-  const [objects, setObjects] = useState(FULL_PLAYERS);
+  const [objects, setObjects] = useState(FULL_PITCH_PLAYERS);
   const [selectedObj, setSelectedObj] = useState(null);
   const [drawings, setDrawings] = useState([]);
   const [currentLine, setCurrentLine] = useState(null);
 
-  const [history, setHistory] = useState([FULL_PLAYERS]);
+  const [history, setHistory] = useState([FULL_PITCH_PLAYERS]);
   const [historyStep, setHistoryStep] = useState(0);
 
   const svgRef = useRef(null);
   const isDraggingRef = useRef(false);
 
-  // Al cambiar entre cancha entera y media cancha
+  // Bloqueo de orientación forzada por Screen Orientation API si el navegador lo permite
+  useEffect(() => {
+    if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+      window.screen.orientation.lock('portrait').catch(() => {});
+    }
+  }, []);
+
   const togglePitchMode = () => {
     const nextMode = !isHalfPitch;
     setIsHalfPitch(nextMode);
-    setObjects(nextMode ? HALF_PLAYERS : FULL_PLAYERS);
+    setObjects(nextMode ? HALF_PITCH_PLAYERS : FULL_PITCH_PLAYERS);
     setDrawings([]);
+    setHistory([nextMode ? HALF_PITCH_PLAYERS : FULL_PITCH_PLAYERS]);
+    setHistoryStep(0);
   };
 
-  // Coordenadas precisas dentro del SVG
   const getCoordinates = (e) => {
-    if (!svgRef.current) return { x: 34, y: 52 };
+    if (!svgRef.current) return { x: 34, y: 50 };
     const pt = svgRef.current.createSVGPoint();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -65,7 +99,7 @@ export default function App() {
     pt.y = clientY;
     const cursorPt = pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
     const maxX = 68;
-    const maxY = isHalfPitch ? 55 : 105;
+    const maxY = isHalfPitch ? 85 : 105;
     return {
       x: Math.max(2, Math.min(maxX - 2, cursorPt.x)),
       y: Math.max(2, Math.min(maxY - 2, cursorPt.y))
@@ -127,7 +161,7 @@ export default function App() {
   const addElement = (type, team = 'blue') => {
     const id = 'item-' + Date.now();
     let newItem;
-    const spawnY = isHalfPitch ? 30 : 52.5;
+    const spawnY = isHalfPitch ? 42.5 : 52.5;
     if (type === 'player') {
       const count = objects.filter(o => o.type === 'player' && o.team === team).length + 1;
       newItem = { id, type: 'player', team, number: String(count), x: 34, y: spawnY };
@@ -146,7 +180,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1e7e1b] overflow-hidden select-none font-sans">
       {/* Barra Superior */}
-      <header className="bg-black/95 border-b border-slate-800 px-3 py-1.5 flex items-center justify-between shrink-0 z-30 shadow-md">
+      <header className="bg-black/95 border-b border-zinc-800 px-3 py-1.5 flex items-center justify-between shrink-0 z-30 shadow-md">
         <div className="flex items-center gap-2">
           <img
             src="/logo-andez.png"
@@ -160,9 +194,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* Acciones Rápidas */}
+        {/* Acciones de Pizarra */}
         <div className="flex items-center gap-2">
-          {/* Alternador Cancha Entera / Media Cancha */}
           <button
             onClick={togglePitchMode}
             className={`px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1 border transition ${
@@ -185,7 +218,7 @@ export default function App() {
           <button
             onClick={() => setDrawings([])}
             className="p-1.5 bg-zinc-800 border border-zinc-700 rounded text-amber-400"
-            title="Borrar Líneas"
+            title="Borrar Trazos"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -208,47 +241,51 @@ export default function App() {
       >
         <svg
           ref={svgRef}
-          viewBox={isHalfPitch ? "0 0 68 55" : "0 0 68 105"}
+          viewBox={isHalfPitch ? "0 0 68 85" : "0 0 68 105"}
           preserveAspectRatio="xMidYMid meet"
-          className="w-full h-full touch-none select-none drop-shadow-xl"
+          className="w-full h-full touch-none select-none drop-shadow-2xl"
           onPointerDown={handlePitchPointerDown}
         >
           {/* Fondo Césped Verde */}
           <rect width="200" height="200" x="-50" y="-50" fill="#228b22" />
 
-          {/* Franjas Césped Realista */}
-          {[0, 10.5, 21, 31.5, 42, 52.5, 63, 73.5, 84, 94.5].map((y, idx) => (
-            idx % 2 === 0 ? <rect key={y} x="0" y={y} width="68" height="10.5" fill="#1e7e1b" /> : null
-          ))}
-
-          {/* DIBUJO CANCHA */}
+          {/* DIBUJO CANCHA SEGÚN MODO */}
           {isHalfPitch ? (
-            /* --- MODO MEDIA CANCHA PROFESIONAL --- */
+            /* --- MEDIA CANCHA EXACTA A LA APP DE REFERENCIA (De Izquierda a Derecha) --- */
             <g>
-              {/* Líneas Perimetrales de media cancha */}
-              <rect x="2" y="2" width="64" height="50.5" fill="none" stroke="white" strokeWidth="0.8" />
-              
-              {/* Línea de mitad de cancha abajo */}
-              <line x1="2" y1="52.5" x2="66" y2="52.5" stroke="white" strokeWidth="0.8" />
-              
-              {/* Círculo Central hacia arriba */}
-              <path d="M 24.85 52.5 A 9.15 9.15 0 0 0 43.15 52.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <circle cx="34" cy="52.5" r="0.6" fill="white" />
+              {/* Franjas Césped */}
+              {[0, 17, 34, 51, 68].map((x, idx) => (
+                idx % 2 === 0 ? <rect key={x} x={x} y="3" width="17" height="79" fill="#1e7e1b" /> : null
+              ))}
 
-              {/* Área Penal Grande (Norte) */}
-              <rect x="13.84" y="2" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.8" />
-              {/* Área Chica */}
-              <rect x="24.84" y="2" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.8" />
-              {/* Punto Penal Norte */}
-              <circle cx="34" cy="13" r="0.6" fill="white" />
+              {/* Perímetro Media Cancha */}
+              <rect x="2" y="3" width="64" height="79" fill="none" stroke="white" strokeWidth="0.8" />
+
+              {/* Área Penal Grande (Izquierda) */}
+              <rect x="2" y="19" width="22" height="47" fill="none" stroke="white" strokeWidth="0.8" />
+              {/* Área Chica (Izquierda) */}
+              <rect x="2" y="30.5" width="7" height="24" fill="none" stroke="white" strokeWidth="0.8" />
+              {/* Punto Penal */}
+              <circle cx="15" cy="42.5" r="0.6" fill="white" />
               {/* Media Luna del Área Grande */}
-              <path d="M 27.5 18.5 A 9.15 9.15 0 0 0 40.5 18.5" fill="none" stroke="white" strokeWidth="0.8" />
-              {/* Arco */}
-              <rect x="30.34" y="0.2" width="7.32" height="1.8" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
+              <path d="M 24 33.5 A 10 10 0 0 1 24 51.5" fill="none" stroke="white" strokeWidth="0.8" />
+              {/* Arco Izquierdo */}
+              <rect x="0.2" y="37.5" width="1.8" height="10" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
+
+              {/* Línea de Mitad de Cancha (Derecha) */}
+              <line x1="66" y1="3" x2="66" y2="82" stroke="white" strokeWidth="0.8" />
+              {/* Círculo Central hacia adentro */}
+              <path d="M 66 30.5 A 12 12 0 0 0 66 54.5" fill="none" stroke="white" strokeWidth="0.8" />
+              <circle cx="66" cy="42.5" r="0.6" fill="white" />
             </g>
           ) : (
-            /* --- MODO CANCHA ENTERA --- */
+            /* --- CANCHA ENTERA VERTICAL FIFA REGLAMENTARIA --- */
             <g>
+              {/* Franjas Césped */}
+              {[0, 10.5, 21, 31.5, 42, 52.5, 63, 73.5, 84, 94.5].map((y, idx) => (
+                idx % 2 === 0 ? <rect key={y} x="2" y={y} width="64" height="10.5" fill="#1e7e1b" /> : null
+              ))}
+
               {/* Líneas Perimetrales */}
               <rect x="2" y="2" width="64" height="101" fill="none" stroke="white" strokeWidth="0.8" />
               {/* Línea Central */}
@@ -281,7 +318,7 @@ export default function App() {
               x2={d.end.x}
               y2={d.end.y}
               stroke={d.type === 'pass' ? '#facc15' : '#38bdf8'}
-              strokeWidth="1.2"
+              strokeWidth="1.3"
               strokeDasharray={d.type === 'run' ? '2.5,2.5' : 'none'}
             />
           ))}
@@ -290,15 +327,14 @@ export default function App() {
             <line
               x1={currentLine.start.x}
               y1={currentLine.start.y}
-              x2={currentLine.end.x}
-              y2={currentLine.end.y}
+              x2={currentLine.end.y}
               stroke={currentLine.type === 'pass' ? '#facc15' : '#38bdf8'}
-              strokeWidth="1.2"
+              strokeWidth="1.3"
               strokeDasharray={currentLine.type === 'run' ? '2.5,2.5' : 'none'}
             />
           )}
 
-          {/* Fichas y Balón Circulares */}
+          {/* Fichas, Conos y Balón */}
           {objects.map((obj) => {
             if (obj.type === 'player') {
               return (
@@ -308,16 +344,17 @@ export default function App() {
                   onPointerDown={(e) => handlePointerDown(e, obj)}
                   className="cursor-grab active:cursor-grabbing touch-none select-none"
                 >
+                  <circle r="3.2" fill="rgba(0,0,0,0.25)" transform="translate(0.3, 0.3)" />
                   <circle
-                    r="2.8"
+                    r="3.0"
                     fill={obj.role === 'GK' ? '#f59e0b' : obj.team === 'blue' ? '#2563eb' : '#dc2626'}
                     stroke="#ffffff"
                     strokeWidth="0.6"
                   />
                   <text
                     textAnchor="middle"
-                    dy="0.95"
-                    fontSize="2.3"
+                    dy="1.0"
+                    fontSize="2.5"
                     fontWeight="bold"
                     fill="#ffffff"
                     pointerEvents="none"
@@ -330,20 +367,12 @@ export default function App() {
 
             if (obj.type === 'ball') {
               return (
-                <g
+                <SoccerBall
                   key={obj.id}
-                  transform={`translate(${obj.x}, ${obj.y})`}
+                  x={obj.x}
+                  y={obj.y}
                   onPointerDown={(e) => handlePointerDown(e, obj)}
-                  className="cursor-grab active:cursor-grabbing touch-none select-none"
-                >
-                  <circle r="1.8" fill="#ffffff" stroke="#111827" strokeWidth="0.35" />
-                  <polygon points="0,-0.6 0.57,-0.19 0.35,0.49 -0.35,0.49 -0.57,-0.19" fill="#111827" />
-                  <line x1="0" y1="-0.6" x2="0" y2="-1.6" stroke="#111827" strokeWidth="0.25" />
-                  <line x1="0.57" y1="-0.19" x2="1.5" y2="-0.5" stroke="#111827" strokeWidth="0.25" />
-                  <line x1="0.35" y1="0.49" x2="1.0" y2="1.3" stroke="#111827" strokeWidth="0.25" />
-                  <line x1="-0.35" y1="0.49" x2="-1.0" y2="1.3" stroke="#111827" strokeWidth="0.25" />
-                  <line x1="-0.57" y1="-0.19" x2="-1.5" y2="-0.5" stroke="#111827" strokeWidth="0.25" />
-                </g>
+                />
               );
             }
 
@@ -355,7 +384,7 @@ export default function App() {
                   onPointerDown={(e) => handlePointerDown(e, obj)}
                   className="cursor-grab touch-none"
                 >
-                  <polygon points="-1.8,1.8 1.8,1.8 0,-2.0" fill="#f97316" stroke="#fff" strokeWidth="0.4" />
+                  <polygon points="-2.0,2.0 2.0,2.0 0,-2.2" fill="#f97316" stroke="#fff" strokeWidth="0.4" />
                 </g>
               );
             }
@@ -365,7 +394,7 @@ export default function App() {
       </main>
 
       {/* Banco Inferior Rápido */}
-      <footer className="bg-black/95 border-t border-slate-800 px-3 py-1.5 flex items-center justify-between shrink-0 z-30 shadow-lg">
+      <footer className="bg-black/95 border-t border-zinc-800 px-3 py-1.5 flex items-center justify-between shrink-0 z-30 shadow-lg">
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => addElement('player', 'blue')}
