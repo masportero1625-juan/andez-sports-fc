@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Play, Pause, Plus, Trash2, Save, RotateCcw,
-  Smartphone, Monitor, ShieldCheck, ShieldAlert, Users,
-  FolderOpen, Layers, Maximize2, Minimize2, ChevronDown, ChevronUp
+  Layers, FolderOpen, ShieldCheck, ShieldAlert,
+  ChevronDown, ChevronUp, RotateCcw
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -16,17 +15,17 @@ const INITIAL_PLAYERS = [
   { id: 'p1', type: 'player', team: 'home', number: '1', role: 'GK', x: 8, y: 50 },
   { id: 'p2', type: 'player', team: 'home', number: '4', role: 'CB', x: 22, y: 35 },
   { id: 'p3', type: 'player', team: 'home', number: '3', role: 'CB', x: 22, y: 65 },
-  { id: 'p4', type: 'player', team: 'home', number: '2', role: 'RB', x: 28, y: 15 },
-  { id: 'p5', type: 'player', team: 'home', number: '5', role: 'LB', x: 28, y: 85 },
+  { id: 'p4', type: 'player', team: 'home', number: '2', role: 'RB', x: 28, y: 16 },
+  { id: 'p5', type: 'player', team: 'home', number: '5', role: 'LB', x: 28, y: 84 },
   { id: 'p6', type: 'player', team: 'home', number: '6', role: 'CDM', x: 40, y: 50 },
   { id: 'p7', type: 'player', team: 'home', number: '8', role: 'CM', x: 55, y: 30 },
   { id: 'p8', type: 'player', team: 'home', number: '10', role: 'CAM', x: 55, y: 70 },
-  { id: 'p9', type: 'player', team: 'home', number: '7', role: 'RW', x: 75, y: 20 },
-  { id: 'p10', type: 'player', team: 'home', number: '11', role: 'LW', x: 75, y: 80 },
+  { id: 'p9', type: 'player', team: 'home', number: '7', role: 'RW', x: 74, y: 20 },
+  { id: 'p10', type: 'player', team: 'home', number: '11', role: 'LW', x: 74, y: 80 },
   { id: 'p11', type: 'player', team: 'home', number: '9', role: 'ST', x: 80, y: 50 },
   { id: 'ball1', type: 'ball', x: 48, y: 50 },
-  { id: 'c1', type: 'cone', x: 45, y: 40 },
-  { id: 'c2', type: 'cone', x: 45, y: 60 }
+  { id: 'c1', type: 'cone', x: 45, y: 38 },
+  { id: 'c2', type: 'cone', x: 45, y: 62 }
 ];
 
 export default function App() {
@@ -71,7 +70,6 @@ export default function App() {
   const [adminLicenses, setAdminLicenses] = useState([
     { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-PRO-01', seats: 2, used: 2, status: 'active', plan: 'Club Dúo (\$25.000)' },
     { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-PRO-02', seats: 2, used: 1, status: 'active', plan: 'Coach Single (\$15.000)' },
-    { id: 'lic-3', coach: 'Prof. Esteban Tapia', club: 'Deportivo Central', code: 'AND-PRO-03', seats: 2, used: 0, status: 'suspended', plan: 'Coach Single (\$15.000)' },
   ]);
 
   const svgRef = useRef(null);
@@ -82,9 +80,9 @@ export default function App() {
     const rect = svgRef.current.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = ((clientX - rect.left) / rect.width) * 100;
-    const y = ((clientY - rect.top) / rect.height) * 100;
-    return { x: Math.max(3, Math.min(97, x)), y: Math.max(3, Math.min(97, y)) };
+    const x = ((clientX - rect.left) / rect.width) * 105;
+    const y = ((clientY - rect.top) / rect.height) * 68;
+    return { x: Math.max(2, Math.min(103, x)), y: Math.max(2, Math.min(66, y)) };
   };
 
   const handlePointerDown = (e, obj) => {
@@ -161,43 +159,29 @@ export default function App() {
     const id = 'item-' + Date.now();
     let newItem;
     if (type === 'player') {
-      newItem = { id, type: 'player', team, number: String(objects.filter(o => o.type==='player').length + 1), role: 'JUG', x: 50, y: 50 };
+      newItem = { id, type: 'player', team, number: String(objects.filter(o => o.type==='player').length + 1), role: 'JUG', x: 52.5, y: 34 };
     } else if (type === 'ball') {
-      newItem = { id, type: 'ball', x: 50, y: 50 };
+      newItem = { id, type: 'ball', x: 52.5, y: 34 };
     } else {
-      newItem = { id, type: 'cone', x: 50, y: 50 };
+      newItem = { id, type: 'cone', x: 52.5, y: 34 };
     }
     setObjects([...objects, newItem]);
   };
 
-  const attemptAddDevice = () => {
-    if (connectedDevices.length >= 2) {
-      setDeviceAlert(true);
-    } else {
-      setConnectedDevices([
-        ...connectedDevices,
-        { id: 'dev-' + Date.now(), name: 'Tablet 10" (Vestuario)', type: 'mobile', active: true, lastSeen: 'Ahora' }
-      ]);
-    }
-  };
-
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
-      {/* Cabecera con Logo */}
-      <header className="bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center justify-between shrink-0 z-20">
-        <div className="flex items-center gap-2.5">
+      {/* Cabecera */}
+      <header className="bg-slate-900 border-b border-slate-800 px-3 py-1.5 flex items-center justify-between shrink-0 z-20">
+        <div className="flex items-center gap-2">
           <img
             src="/logo-andez.png"
-            alt="Logo Andez"
-            className="w-8 h-8 rounded-full object-cover border border-red-500 shadow"
+            alt="Logo"
+            className="w-7 h-7 rounded-full object-cover border border-red-500 shadow"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-black tracking-wider text-sm sm:text-base text-white">ANDEZ SPORTS</span>
-              <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">FC</span>
-            </div>
-            <p className="text-[9px] text-slate-400 hidden sm:block">Pizarra Táctica & Metodología</p>
+          <div className="flex items-center gap-1.5">
+            <span className="font-black tracking-wider text-xs sm:text-base text-white">ANDEZ SPORTS</span>
+            <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">FC</span>
           </div>
         </div>
 
@@ -241,18 +225,18 @@ export default function App() {
       {/* Pizarra Táctica */}
       {activeTab === 'board' && (
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-          {/* Panel de herramientas desplegable en móvil y fijo en PC */}
+          {/* Panel Lateral */}
           <aside
             className={`${
               showToolsMobile ? 'flex' : 'hidden'
-            } md:flex w-full md:w-72 bg-slate-900/95 backdrop-blur-md border-r border-slate-800 p-3 flex-col gap-3 overflow-y-auto shrink-0 z-30 absolute md:relative inset-x-0 top-0 max-h-[80vh] md:max-h-full shadow-2xl md:shadow-none`}
+            } md:flex w-full md:w-72 bg-slate-900/95 backdrop-blur-md border-r border-slate-800 p-3 flex-col gap-2.5 overflow-y-auto shrink-0 z-30 absolute md:relative inset-x-0 top-0 max-h-[85vh] md:max-h-full shadow-2xl md:shadow-none`}
           >
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Categoría</label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -266,12 +250,12 @@ export default function App() {
                 type="text"
                 value={drillTitle}
                 onChange={(e) => setDrillTitle(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Trazos y Acción</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Acciones</label>
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   onClick={() => { setTool('select'); setShowToolsMobile(false); }}
@@ -301,11 +285,11 @@ export default function App() {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Agregar Elementos</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Agregar</label>
               <div className="grid grid-cols-2 gap-1.5">
                 <button onClick={() => addItem('player', 'home')} className="py-1 bg-red-600/30 text-red-300 border border-red-600 text-xs font-bold rounded-lg">+ Rojo</button>
                 <button onClick={() => addItem('player', 'away')} className="py-1 bg-blue-600/30 text-blue-300 border border-blue-600 text-xs font-bold rounded-lg">+ Azul</button>
-                <button onClick={() => addItem('ball')} className="py-1 bg-amber-600/30 text-amber-300 border border-amber-600 text-xs font-bold rounded-lg">+ Pelota</button>
+                <button onClick={() => addItem('ball')} className="py-1 bg-amber-600/30 text-amber-300 border border-amber-600 text-xs font-bold rounded-lg">+ Balón</button>
                 <button onClick={() => addItem('cone')} className="py-1 bg-orange-600/30 text-orange-300 border border-orange-600 text-xs font-bold rounded-lg">+ Cono</button>
               </div>
             </div>
@@ -320,7 +304,7 @@ export default function App() {
                   onClick={() => setIsPlaying(!isPlaying)}
                   className={`flex-1 py-1 rounded-lg text-xs font-bold ${isPlaying ? 'bg-amber-600' : 'bg-emerald-600'}`}
                 >
-                  {isPlaying ? 'Pausar' : 'Reproducir'}
+                  {isPlaying ? 'Pausa' : 'Play'}
                 </button>
                 <button onClick={captureFrame} className="py-1 px-2.5 bg-slate-800 text-xs font-bold rounded-lg">+ Paso</button>
               </div>
@@ -328,35 +312,56 @@ export default function App() {
 
             <button
               onClick={handleSaveDrill}
-              className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl shadow mt-1"
+              className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl shadow mt-0.5"
             >
               Guardar Ejercicio
             </button>
           </aside>
 
-          {/* Cancha adaptable 100% */}
+          {/* Contenedor Cancha Proporción Real FIFA 105x68 */}
           <main
-            className="flex-1 bg-slate-950 flex items-center justify-center p-1 sm:p-3 overflow-hidden touch-none"
+            className="flex-1 bg-slate-950 flex items-center justify-center p-2 sm:p-4 overflow-hidden touch-none"
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
           >
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full max-h-full max-w-full flex items-center justify-center">
               <svg
                 ref={svgRef}
-                className="w-full h-full max-h-[96vh] max-w-[100vw] aspect-[16/10] bg-emerald-800 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-slate-700 shadow-2xl relative z-10 cursor-crosshair touch-none"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
+                viewBox="0 0 105 68"
+                className="w-full h-full max-h-full max-w-full rounded-xl border-2 sm:border-4 border-slate-700 shadow-2xl relative z-10 cursor-crosshair touch-none select-none"
+                style={{ aspectRatio: '105 / 68', objectFit: 'contain' }}
                 onPointerDown={handlePitchPointerDown}
               >
-                {/* Líneas de Cancha */}
-                <rect x="4" y="4" width="92" height="92" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
-                <line x1="50" y1="4" x2="50" y2="96" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
-                <circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
-                <circle cx="50" cy="50" r="0.8" fill="white" />
-                <rect x="4" y="24" width="16" height="52" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
-                <rect x="80" y="24" width="16" height="52" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
+                {/* Césped con franjas realistas */}
+                <defs>
+                  <pattern id="grassStripes" width="10.5" height="68" patternUnits="userSpaceOnUse">
+                    <rect width="5.25" height="68" fill="#1b4d3e" />
+                    <rect x="5.25" width="5.25" height="68" fill="#1e5645" />
+                  </pattern>
+                </defs>
+                <rect width="105" height="68" fill="url(#grassStripes)" />
 
-                {/* Trazos */}
+                {/* Límites de la Cancha */}
+                <rect x="4" y="4" width="97" height="60" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="0.7" />
+                <line x1="52.5" y1="4" x2="52.5" y2="64" stroke="rgba(255,255,255,0.85)" strokeWidth="0.7" />
+                
+                {/* Círculo y punto central */}
+                <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="0.7" />
+                <circle cx="52.5" cy="34" r="0.6" fill="white" />
+
+                {/* Área Grande Izquierda y Derecha */}
+                <rect x="4" y="13.84" width="16.5" height="40.32" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="0.7" />
+                <rect x="84.5" y="13.84" width="16.5" height="40.32" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="0.7" />
+
+                {/* Área Chica Izquierda y Derecha */}
+                <rect x="4" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="0.7" />
+                <rect x="95.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="0.7" />
+
+                {/* Arcos */}
+                <rect x="1.8" y="30.34" width="2.2" height="7.32" fill="rgba(255,255,255,0.3)" stroke="white" strokeWidth="0.6" />
+                <rect x="101" y="30.34" width="2.2" height="7.32" fill="rgba(255,255,255,0.3)" stroke="white" strokeWidth="0.6" />
+
+                {/* Trazos tácticos */}
                 {drawings.map((d) => (
                   <line
                     key={d.id}
@@ -365,8 +370,8 @@ export default function App() {
                     x2={d.end.x}
                     y2={d.end.y}
                     stroke={d.type === 'pass' ? '#facc15' : '#38bdf8'}
-                    strokeWidth="1.2"
-                    strokeDasharray={d.type === 'run' ? '2,2' : 'none'}
+                    strokeWidth="0.9"
+                    strokeDasharray={d.type === 'run' ? '1.5,1.5' : 'none'}
                   />
                 ))}
 
@@ -377,12 +382,12 @@ export default function App() {
                     x2={currentLine.end.x}
                     y2={currentLine.end.y}
                     stroke={currentLine.type === 'pass' ? '#facc15' : '#38bdf8'}
-                    strokeWidth="1.2"
-                    strokeDasharray={currentLine.type === 'run' ? '2,2' : 'none'}
+                    strokeWidth="0.9"
+                    strokeDasharray={currentLine.type === 'run' ? '1.5,1.5' : 'none'}
                   />
                 )}
 
-                {/* Fichas y elementos */}
+                {/* Fichas Interactivas */}
                 {objects.map((obj) => {
                   if (obj.type === 'player') {
                     return (
@@ -390,15 +395,22 @@ export default function App() {
                         key={obj.id}
                         transform={`translate(${obj.x}, ${obj.y})`}
                         onPointerDown={(e) => handlePointerDown(e, obj)}
-                        className="cursor-grab active:cursor-grabbing touch-none"
+                        className="cursor-grab active:cursor-grabbing touch-none select-none"
                       >
                         <circle
-                          r="3"
+                          r="2.2"
                           fill={obj.role === 'GK' ? '#eab308' : obj.team === 'home' ? '#dc2626' : '#2563eb'}
                           stroke="#ffffff"
-                          strokeWidth="0.6"
+                          strokeWidth="0.45"
                         />
-                        <text textAnchor="middle" dy="1" fontSize="2.2" fontWeight="bold" fill="#ffffff" pointerEvents="none">
+                        <text
+                          textAnchor="middle"
+                          dy="0.75"
+                          fontSize="1.6"
+                          fontWeight="bold"
+                          fill="#ffffff"
+                          pointerEvents="none"
+                        >
                           {obj.number}
                         </text>
                       </g>
@@ -406,15 +418,35 @@ export default function App() {
                   }
                   if (obj.type === 'ball') {
                     return (
-                      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => handlePointerDown(e, obj)} className="cursor-grab touch-none">
-                        <circle r="1.8" fill="#ffffff" stroke="#000000" strokeWidth="0.5" />
+                      <g
+                        key={obj.id}
+                        transform={`translate(${obj.x}, ${obj.y})`}
+                        onPointerDown={(e) => handlePointerDown(e, obj)}
+                        className="cursor-grab active:cursor-grabbing touch-none select-none"
+                      >
+                        {/* Balón de fútbol detallado con gajos */}
+                        <circle r="1.4" fill="#ffffff" stroke="#111827" strokeWidth="0.25" />
+                        {/* Pentágono central negro */}
+                        <polygon points="0,-0.45 0.42,-0.14 0.26,0.36 -0.26,0.36 -0.42,-0.14" fill="#111827" />
+                        {/* Líneas de costura hacia el exterior */}
+                        <line x1="0" y1="-0.45" x2="0" y2="-1.3" stroke="#111827" strokeWidth="0.2" />
+                        <line x1="0.42" y1="-0.14" x2="1.2" y2="-0.4" stroke="#111827" strokeWidth="0.2" />
+                        <line x1="0.26" y1="0.36" x2="0.8" y2="1.1" stroke="#111827" strokeWidth="0.2" />
+                        <line x1="-0.26" y1="0.36" x2="-0.8" y2="1.1" stroke="#111827" strokeWidth="0.2" />
+                        <line x1="-0.42" y1="-0.14" x2="-1.2" y2="-0.4" stroke="#111827" strokeWidth="0.2" />
                       </g>
                     );
                   }
                   if (obj.type === 'cone') {
                     return (
-                      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => handlePointerDown(e, obj)} className="cursor-grab touch-none">
-                        <polygon points="-1.8,1.8 1.8,1.8 0,-2" fill="#f97316" stroke="#fff" strokeWidth="0.4" />
+                      <g
+                        key={obj.id}
+                        transform={`translate(${obj.x}, ${obj.y})`}
+                        onPointerDown={(e) => handlePointerDown(e, obj)}
+                        className="cursor-grab touch-none"
+                      >
+                        <polygon points="-1.4,1.4 1.4,1.4 0,-1.5" fill="#f97316" stroke="#fff" strokeWidth="0.3" />
+                        <line x1="-0.8" y1="0.3" x2="0.8" y2="0.3" stroke="#ffffff" strokeWidth="0.25" />
                       </g>
                     );
                   }
@@ -426,16 +458,16 @@ export default function App() {
         </div>
       )}
 
-      {/* Biblioteca de Sesiones */}
+      {/* Biblioteca */}
       {activeTab === 'library' && (
-        <div className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full overflow-y-auto">
-          <h2 className="text-xl sm:text-2xl font-black mb-4">Biblioteca de Sesiones</h2>
+        <div className="flex-1 p-4 max-w-5xl mx-auto w-full overflow-y-auto">
+          <h2 className="text-xl font-black mb-4">Biblioteca de Sesiones</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {savedDrills.map((d) => (
               <div key={d.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
                 <div>
                   <span className="text-xs text-red-400 font-bold">{d.category.toUpperCase()}</span>
-                  <h3 className="font-bold text-white text-sm sm:text-base">{d.title}</h3>
+                  <h3 className="font-bold text-white text-sm">{d.title}</h3>
                   <p className="text-xs text-slate-500">{d.date}</p>
                 </div>
                 <button
@@ -450,27 +482,22 @@ export default function App() {
         </div>
       )}
 
-      {/* Panel Administrador */}
+      {/* Dueño */}
       {activeTab === 'admin' && (
-        <div className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full overflow-y-auto space-y-4">
+        <div className="flex-1 p-4 max-w-5xl mx-auto w-full overflow-y-auto space-y-4">
           <div className="flex justify-between items-center border-b border-slate-800 pb-3">
             <div>
               <span className="bg-red-600 text-[10px] font-black px-2 py-0.5 rounded">SUPERADMIN</span>
-              <h2 className="text-xl sm:text-2xl font-black mt-1">Control de Licencias</h2>
+              <h2 className="text-xl font-black mt-1">Control de Licencias</h2>
             </div>
             <div className="text-right">
               <span className="text-[10px] text-slate-400">Ingresos Mensuales</span>
-              <div className="text-xl sm:text-2xl font-black text-emerald-400">\$55.000 CLP</div>
+              <div className="text-xl font-black text-emerald-400">\$40.000 CLP</div>
             </div>
           </div>
 
-          <div className="bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-800">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-xs sm:text-sm">Dispositivos en Tiempo Real (Máx. 2)</h3>
-              <button onClick={attemptAddDevice} className="bg-slate-800 px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-400">
-                + Probar 3er Equipo
-              </button>
-            </div>
+          <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
+            <h3 className="font-bold text-xs mb-3">Dispositivos en Tiempo Real (Máx. 2)</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {connectedDevices.map((dev) => (
                 <div key={dev.id} className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center">
@@ -478,48 +505,12 @@ export default function App() {
                     <div className="text-xs font-bold">{dev.name}</div>
                     <span className="text-[10px] text-emerald-400">En línea</span>
                   </div>
-                  <button onClick={() => setConnectedDevices(connectedDevices.filter(d => d.id !== dev.id))} className="text-xs text-red-400">
-                    Desconectar
-                  </button>
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-800">
-            <h3 className="font-bold text-xs sm:text-sm mb-3">Clubes y Escuelas Activas</h3>
-            <div className="space-y-2">
-              {adminLicenses.map((lic) => (
-                <div key={lic.id} className="bg-slate-950 p-2.5 rounded-lg flex justify-between items-center border border-slate-800">
-                  <div>
-                    <div className="text-xs font-bold text-white">{lic.coach} <span className="text-slate-400">({lic.club})</span></div>
-                    <span className="text-[10px] text-slate-500">{lic.code} • {lic.plan}</span>
-                  </div>
-                  <button
-                    onClick={() => setAdminLicenses(adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l))}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}
-                  >
-                    {lic.status === 'active' ? 'Suspender' : 'Reactivar'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {deviceAlert && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border-2 border-red-600 rounded-2xl max-w-sm w-full p-5 text-center">
-            <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-3" />
-            <h3 className="font-black text-white text-lg mb-2">Límite de 2 Equipos Alcanzado</h3>
-            <p className="text-xs text-slate-300 mb-4">Esta cuenta ya tiene 2 pantallas abiertas. Para un 3er profe, el club debe contratar un asiento adicional.</p>
-            <button onClick={() => setDeviceAlert(false)} className="w-full py-2 bg-red-600 text-white font-bold text-xs rounded-xl">
-              Entendido
-            </button>
           </div>
         </div>
       )}
     </div>
   );
-}      
+}
