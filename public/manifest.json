@@ -1,0 +1,16 @@
+{
+  "short_name": "Andez FC",
+  "name": "Andez Sports FC - Pizarra Táctica",
+  "icons": [
+    {
+      "src": "/logo-andez.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#020617",
+  "theme_color": "#dc2626",
+  "display": "standalone",
+  "orientation": "any"
+}
