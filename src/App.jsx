@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Play, Pause, Plus, Trash2, Save, RotateCcw,
   Smartphone, Monitor, ShieldCheck, ShieldAlert, Users,
-  FolderOpen, Layers, Maximize2, Minimize2, UserPlus, ChevronRight
+  FolderOpen, Layers, Maximize2, Minimize2, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -33,6 +33,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('board');
   const [selectedCategory, setSelectedCategory] = useState('sub14');
   const [tool, setTool] = useState('select');
+  const [showToolsMobile, setShowToolsMobile] = useState(false);
   
   const [objects, setObjects] = useState(INITIAL_PLAYERS);
   const [selectedObj, setSelectedObj] = useState(null);
@@ -74,7 +75,7 @@ export default function App() {
   ]);
 
   const svgRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
 
   const getSVGCoordinates = (e) => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -83,14 +84,14 @@ export default function App() {
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const x = ((clientX - rect.left) / rect.width) * 100;
     const y = ((clientY - rect.top) / rect.height) * 100;
-    return { x: Math.max(2, Math.min(98, x)), y: Math.max(2, Math.min(98, y)) };
+    return { x: Math.max(3, Math.min(97, x)), y: Math.max(3, Math.min(97, y)) };
   };
 
   const handlePointerDown = (e, obj) => {
     e.stopPropagation();
     if (tool !== 'select') return;
     setSelectedObj(obj);
-    setIsDragging(true);
+    isDraggingRef.current = true;
   };
 
   const handlePitchPointerDown = (e) => {
@@ -103,19 +104,21 @@ export default function App() {
   };
 
   const handlePointerMove = (e) => {
-    if (isDragging && selectedObj) {
+    if (isDraggingRef.current && selectedObj) {
+      if (e.cancelable) e.preventDefault();
       const coords = getSVGCoordinates(e);
       setObjects((prev) =>
         prev.map((o) => (o.id === selectedObj.id ? { ...o, x: coords.x, y: coords.y } : o))
       );
     } else if (currentLine) {
+      if (e.cancelable) e.preventDefault();
       const coords = getSVGCoordinates(e);
       setCurrentLine((prev) => ({ ...prev, end: coords }));
     }
   };
 
   const handlePointerUp = () => {
-    setIsDragging(false);
+    isDraggingRef.current = false;
     if (currentLine) {
       setDrawings((prev) => [...prev, { ...currentLine, id: Date.now() }]);
       setCurrentLine(null);
@@ -151,7 +154,7 @@ export default function App() {
       objects: JSON.parse(JSON.stringify(objects))
     };
     setSavedDrills([newDrill, ...savedDrills]);
-    alert('¡Sesión guardada en la categoría!');
+    alert('¡Sesión guardada exitosamente!');
   };
 
   const addItem = (type, team = 'home') => {
@@ -179,64 +182,77 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-950 text-slate-100 overflow-hidden font-sans">
-      <header className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between z-20">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-red-600 flex items-center justify-center font-black text-xs border border-white">
-            FC
-          </div>
+    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
+      {/* Cabecera con Logo */}
+      <header className="bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center justify-between shrink-0 z-20">
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/logo-andez.png"
+            alt="Logo Andez"
+            className="w-8 h-8 rounded-full object-cover border border-red-500 shadow"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-black tracking-wider text-base text-white">ANDEZ SPORTS</span>
-              <span className="bg-red-600 text-[10px] font-black px-1.5 py-0.5 rounded text-white">FC</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-black tracking-wider text-sm sm:text-base text-white">ANDEZ SPORTS</span>
+              <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">FC</span>
             </div>
-            <p className="text-[10px] text-slate-400">Pizarra Táctica & Metodología</p>
+            <p className="text-[9px] text-slate-400 hidden sm:block">Pizarra Táctica & Metodología</p>
           </div>
         </div>
 
         <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => setActiveTab('board')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
               activeTab === 'board' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" /> Pizarra
+            <Layers className="w-3 h-3" /> Pizarra
           </button>
           <button
             onClick={() => setActiveTab('library')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
               activeTab === 'library' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <FolderOpen className="w-3.5 h-3.5" /> Sesiones
+            <FolderOpen className="w-3 h-3" /> Sesiones
           </button>
           <button
             onClick={() => setActiveTab('admin')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
               activeTab === 'admin' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5" /> Panel Dueño
+            <ShieldCheck className="w-3 h-3" /> Dueño
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:inline text-xs text-emerald-400 bg-emerald-950/70 border border-emerald-800 px-2.5 py-1 rounded-full">
-            ● Licencia Activa (2/2)
-          </span>
-        </div>
+        {activeTab === 'board' && (
+          <button
+            onClick={() => setShowToolsMobile(!showToolsMobile)}
+            className="md:hidden flex items-center gap-1 bg-slate-800 border border-slate-700 px-2 py-1 rounded-lg text-xs font-bold text-slate-200"
+          >
+            Herramientas {showToolsMobile ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+        )}
       </header>
 
+      {/* Pizarra Táctica */}
       {activeTab === 'board' && (
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-          <aside className="w-full md:w-80 bg-slate-900 border-r border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto z-10">
+          {/* Panel de herramientas desplegable en móvil y fijo en PC */}
+          <aside
+            className={`${
+              showToolsMobile ? 'flex' : 'hidden'
+            } md:flex w-full md:w-72 bg-slate-900/95 backdrop-blur-md border-r border-slate-800 p-3 flex-col gap-3 overflow-y-auto shrink-0 z-30 absolute md:relative inset-x-0 top-0 max-h-[80vh] md:max-h-full shadow-2xl md:shadow-none`}
+          >
             <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Categoría Formativa</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Categoría</label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -245,39 +261,39 @@ export default function App() {
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Nombre del Ejercicio</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Ejercicio</label>
               <input
                 type="text"
                 value={drillTitle}
                 onChange={(e) => setDrillTitle(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Herramientas</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Trazos y Acción</label>
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
-                  onClick={() => setTool('select')}
-                  className={`p-2 rounded-lg text-xs font-semibold border ${tool === 'select' ? 'bg-red-600 text-white' : 'bg-slate-950 text-slate-300'}`}
+                  onClick={() => { setTool('select'); setShowToolsMobile(false); }}
+                  className={`p-1.5 rounded-lg text-xs font-semibold border ${tool === 'select' ? 'bg-red-600 text-white' : 'bg-slate-950 text-slate-300'}`}
                 >
                   Mover Fichas
                 </button>
                 <button
-                  onClick={() => setTool('pass')}
-                  className={`p-2 rounded-lg text-xs font-semibold border ${tool === 'pass' ? 'bg-red-600 text-white' : 'bg-slate-950 text-slate-300'}`}
+                  onClick={() => { setTool('pass'); setShowToolsMobile(false); }}
+                  className={`p-1.5 rounded-lg text-xs font-semibold border ${tool === 'pass' ? 'bg-red-600 text-white' : 'bg-slate-950 text-slate-300'}`}
                 >
                   Pase (Línea)
                 </button>
                 <button
-                  onClick={() => setTool('run')}
-                  className={`p-2 rounded-lg text-xs font-semibold border ${tool === 'run' ? 'bg-red-600 text-white' : 'bg-slate-950 text-slate-300'}`}
+                  onClick={() => { setTool('run'); setShowToolsMobile(false); }}
+                  className={`p-1.5 rounded-lg text-xs font-semibold border ${tool === 'run' ? 'bg-red-600 text-white' : 'bg-slate-950 text-slate-300'}`}
                 >
                   Desmarque (- -)
                 </button>
                 <button
                   onClick={() => setDrawings([])}
-                  className="p-2 rounded-lg text-xs font-semibold bg-slate-950 border border-slate-800 text-red-400"
+                  className="p-1.5 rounded-lg text-xs font-semibold bg-slate-950 border border-slate-800 text-red-400"
                 >
                   Limpiar Trazos
                 </button>
@@ -285,52 +301,54 @@ export default function App() {
             </div>
 
             <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Agregar a Cancha</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => addItem('player', 'home')} className="py-1.5 bg-red-600/30 text-red-300 border border-red-600 text-xs font-bold rounded-lg">+ Jugador Rojo</button>
-                <button onClick={() => addItem('player', 'away')} className="py-1.5 bg-blue-600/30 text-blue-300 border border-blue-600 text-xs font-bold rounded-lg">+ Jugador Azul</button>
-                <button onClick={() => addItem('ball')} className="py-1.5 bg-amber-600/30 text-amber-300 border border-amber-600 text-xs font-bold rounded-lg">+ Balón</button>
-                <button onClick={() => addItem('cone')} className="py-1.5 bg-orange-600/30 text-orange-300 border border-orange-600 text-xs font-bold rounded-lg">+ Cono</button>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Agregar Elementos</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button onClick={() => addItem('player', 'home')} className="py-1 bg-red-600/30 text-red-300 border border-red-600 text-xs font-bold rounded-lg">+ Rojo</button>
+                <button onClick={() => addItem('player', 'away')} className="py-1 bg-blue-600/30 text-blue-300 border border-blue-600 text-xs font-bold rounded-lg">+ Azul</button>
+                <button onClick={() => addItem('ball')} className="py-1 bg-amber-600/30 text-amber-300 border border-amber-600 text-xs font-bold rounded-lg">+ Pelota</button>
+                <button onClick={() => addItem('cone')} className="py-1 bg-orange-600/30 text-orange-300 border border-orange-600 text-xs font-bold rounded-lg">+ Cono</button>
               </div>
             </div>
 
-            <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl">
-              <div className="flex items-center justify-between mb-2">
+            <div className="bg-slate-950 border border-slate-800 p-2 rounded-xl">
+              <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-bold">Animación</span>
-                <span className="text-[10px] text-slate-400">Paso {activeFrameIndex + 1} de {frames.length}</span>
+                <span className="text-[10px] text-slate-400">{activeFrameIndex + 1}/{frames.length}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold ${isPlaying ? 'bg-amber-600' : 'bg-emerald-600'}`}
+                  className={`flex-1 py-1 rounded-lg text-xs font-bold ${isPlaying ? 'bg-amber-600' : 'bg-emerald-600'}`}
                 >
                   {isPlaying ? 'Pausar' : 'Reproducir'}
                 </button>
-                <button onClick={captureFrame} className="py-1.5 px-3 bg-slate-800 text-xs font-bold rounded-lg">+ Paso</button>
+                <button onClick={captureFrame} className="py-1 px-2.5 bg-slate-800 text-xs font-bold rounded-lg">+ Paso</button>
               </div>
             </div>
 
             <button
               onClick={handleSaveDrill}
-              className="mt-auto w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg"
+              className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl shadow mt-1"
             >
               Guardar Ejercicio
             </button>
           </aside>
 
+          {/* Cancha adaptable 100% */}
           <main
-            className="flex-1 bg-slate-950 flex items-center justify-center p-3 select-none"
+            className="flex-1 bg-slate-950 flex items-center justify-center p-1 sm:p-3 overflow-hidden touch-none"
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
           >
-            <div className="w-full h-full max-w-5xl max-h-[820px] aspect-[16/10] bg-emerald-800 rounded-2xl border-4 border-slate-700 shadow-2xl relative overflow-hidden flex items-center justify-center">
+            <div className="w-full h-full flex items-center justify-center">
               <svg
                 ref={svgRef}
-                className="w-full h-full relative z-10 cursor-crosshair"
+                className="w-full h-full max-h-[96vh] max-w-[100vw] aspect-[16/10] bg-emerald-800 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-slate-700 shadow-2xl relative z-10 cursor-crosshair touch-none"
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
                 onPointerDown={handlePitchPointerDown}
               >
+                {/* Líneas de Cancha */}
                 <rect x="4" y="4" width="92" height="92" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
                 <line x1="50" y1="4" x2="50" y2="96" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
                 <circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
@@ -338,6 +356,7 @@ export default function App() {
                 <rect x="4" y="24" width="16" height="52" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
                 <rect x="80" y="24" width="16" height="52" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.8" />
 
+                {/* Trazos */}
                 {drawings.map((d) => (
                   <line
                     key={d.id}
@@ -346,7 +365,7 @@ export default function App() {
                     x2={d.end.x}
                     y2={d.end.y}
                     stroke={d.type === 'pass' ? '#facc15' : '#38bdf8'}
-                    strokeWidth="0.9"
+                    strokeWidth="1.2"
                     strokeDasharray={d.type === 'run' ? '2,2' : 'none'}
                   />
                 ))}
@@ -358,11 +377,12 @@ export default function App() {
                     x2={currentLine.end.x}
                     y2={currentLine.end.y}
                     stroke={currentLine.type === 'pass' ? '#facc15' : '#38bdf8'}
-                    strokeWidth="0.9"
+                    strokeWidth="1.2"
                     strokeDasharray={currentLine.type === 'run' ? '2,2' : 'none'}
                   />
                 )}
 
+                {/* Fichas y elementos */}
                 {objects.map((obj) => {
                   if (obj.type === 'player') {
                     return (
@@ -370,15 +390,15 @@ export default function App() {
                         key={obj.id}
                         transform={`translate(${obj.x}, ${obj.y})`}
                         onPointerDown={(e) => handlePointerDown(e, obj)}
-                        className="cursor-grab active:cursor-grabbing"
+                        className="cursor-grab active:cursor-grabbing touch-none"
                       >
                         <circle
-                          r="2.6"
+                          r="3"
                           fill={obj.role === 'GK' ? '#eab308' : obj.team === 'home' ? '#dc2626' : '#2563eb'}
                           stroke="#ffffff"
-                          strokeWidth="0.5"
+                          strokeWidth="0.6"
                         />
-                        <text textAnchor="middle" dy="0.9" fontSize="2" fontWeight="bold" fill="#ffffff" pointerEvents="none">
+                        <text textAnchor="middle" dy="1" fontSize="2.2" fontWeight="bold" fill="#ffffff" pointerEvents="none">
                           {obj.number}
                         </text>
                       </g>
@@ -386,15 +406,15 @@ export default function App() {
                   }
                   if (obj.type === 'ball') {
                     return (
-                      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => handlePointerDown(e, obj)} className="cursor-grab">
-                        <circle r="1.6" fill="#ffffff" stroke="#000000" strokeWidth="0.4" />
+                      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => handlePointerDown(e, obj)} className="cursor-grab touch-none">
+                        <circle r="1.8" fill="#ffffff" stroke="#000000" strokeWidth="0.5" />
                       </g>
                     );
                   }
                   if (obj.type === 'cone') {
                     return (
-                      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => handlePointerDown(e, obj)} className="cursor-grab">
-                        <polygon points="-1.5,1.5 1.5,1.5 0,-1.8" fill="#f97316" stroke="#fff" strokeWidth="0.3" />
+                      <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => handlePointerDown(e, obj)} className="cursor-grab touch-none">
+                        <polygon points="-1.8,1.8 1.8,1.8 0,-2" fill="#f97316" stroke="#fff" strokeWidth="0.4" />
                       </g>
                     );
                   }
@@ -406,15 +426,16 @@ export default function App() {
         </div>
       )}
 
+      {/* Biblioteca de Sesiones */}
       {activeTab === 'library' && (
-        <div className="flex-1 p-6 max-w-5xl mx-auto w-full overflow-y-auto">
-          <h2 className="text-2xl font-black mb-4">Biblioteca de Sesiones</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full overflow-y-auto">
+          <h2 className="text-xl sm:text-2xl font-black mb-4">Biblioteca de Sesiones</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {savedDrills.map((d) => (
               <div key={d.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
                 <div>
                   <span className="text-xs text-red-400 font-bold">{d.category.toUpperCase()}</span>
-                  <h3 className="font-bold text-white text-base">{d.title}</h3>
+                  <h3 className="font-bold text-white text-sm sm:text-base">{d.title}</h3>
                   <p className="text-xs text-slate-500">{d.date}</p>
                 </div>
                 <button
@@ -429,29 +450,30 @@ export default function App() {
         </div>
       )}
 
+      {/* Panel Administrador */}
       {activeTab === 'admin' && (
-        <div className="flex-1 p-6 max-w-5xl mx-auto w-full overflow-y-auto space-y-6">
-          <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+        <div className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full overflow-y-auto space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-800 pb-3">
             <div>
-              <span className="bg-red-600 text-xs font-black px-2 py-0.5 rounded">SUPERADMIN</span>
-              <h2 className="text-2xl font-black mt-1">Control de Licencias y Conexiones</h2>
+              <span className="bg-red-600 text-[10px] font-black px-2 py-0.5 rounded">SUPERADMIN</span>
+              <h2 className="text-xl sm:text-2xl font-black mt-1">Control de Licencias</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs text-slate-400">Ingresos Mensuales</span>
-              <div className="text-2xl font-black text-emerald-400">\$55.000 CLP</div>
+              <span className="text-[10px] text-slate-400">Ingresos Mensuales</span>
+              <div className="text-xl sm:text-2xl font-black text-emerald-400">\$55.000 CLP</div>
             </div>
           </div>
 
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+          <div className="bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-800">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-sm">Dispositivos Conectados en Tiempo Real (Máx. 2)</h3>
-              <button onClick={attemptAddDevice} className="bg-slate-800 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400">
-                + Probar 3er Dispositivo
+              <h3 className="font-bold text-xs sm:text-sm">Dispositivos en Tiempo Real (Máx. 2)</h3>
+              <button onClick={attemptAddDevice} className="bg-slate-800 px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-400">
+                + Probar 3er Equipo
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {connectedDevices.map((dev) => (
-                <div key={dev.id} className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center">
+                <div key={dev.id} className="bg-slate-950 p-2.5 rounded-lg border border-slate-800 flex justify-between items-center">
                   <div>
                     <div className="text-xs font-bold">{dev.name}</div>
                     <span className="text-[10px] text-emerald-400">En línea</span>
@@ -464,20 +486,20 @@ export default function App() {
             </div>
           </div>
 
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-            <h3 className="font-bold text-sm mb-3">Clientes y Escuelas Activas</h3>
-            <div className="space-y-3">
+          <div className="bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-800">
+            <h3 className="font-bold text-xs sm:text-sm mb-3">Clubes y Escuelas Activas</h3>
+            <div className="space-y-2">
               {adminLicenses.map((lic) => (
-                <div key={lic.id} className="bg-slate-950 p-3 rounded-lg flex justify-between items-center border border-slate-800">
+                <div key={lic.id} className="bg-slate-950 p-2.5 rounded-lg flex justify-between items-center border border-slate-800">
                   <div>
                     <div className="text-xs font-bold text-white">{lic.coach} <span className="text-slate-400">({lic.club})</span></div>
-                    <span className="text-[10px] text-slate-500">Clave: {lic.code} • Plan: {lic.plan}</span>
+                    <span className="text-[10px] text-slate-500">{lic.code} • {lic.plan}</span>
                   </div>
                   <button
                     onClick={() => setAdminLicenses(adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l))}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}
                   >
-                    {lic.status === 'active' ? 'Suspender Servicio' : 'Reactivar'}
+                    {lic.status === 'active' ? 'Suspender' : 'Reactivar'}
                   </button>
                 </div>
               ))}
@@ -500,4 +522,4 @@ export default function App() {
       )}
     </div>
   );
-}
+}      
