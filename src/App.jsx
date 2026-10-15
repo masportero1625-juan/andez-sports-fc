@@ -1,15 +1,54 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Folder, Play, RotateCcw, Shirt, Share2, Save, Undo2, Redo2, Trash2, PenTool, X, ChevronRight,
-  Eraser, Lock, ShieldCheck, Plus, Calendar, AlertTriangle, RotateCw, LogOut, MessageCircle,
-  Upload, Printer, Edit2, Video, Square, Download, Sparkles, Gift
+  Folder, Play, RotateCcw, Save, Undo2, Redo2, Trash2, PenTool, X,
+  Eraser, Lock, Plus, AlertTriangle, RotateCw, LogOut, MessageCircle,
+  Upload, Printer, Edit2, Video, Square, Download, Sparkles, Gift,
+  CheckCircle2, Clock, Users, DollarSign, Type, Shield
 } from 'lucide-react';
+
+// CREDENCIALES SUPABASE
+const SB_URL = 'https://btpzlnatmnmtmzdygcge.supabase.co';
+const SB_KEY = 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
+
+async function sbGet(key) {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/app_data?key=eq.${encodeURIComponent(key)}&select=value`, {
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+    });
+    const d = await res.json();
+    return d && d.length > 0 ? d[0].value : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function sbSet(key, value) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/app_data`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+    });
+  } catch (e) {}
+}
 
 const DEFAULT_CATEGORIES = [
   { id: 'sub10', name: 'Sub-8 a Sub-10 (Iniciación)' },
   { id: 'sub14', name: 'Sub-12 a Sub-14 (Formación)' },
   { id: 'sub18', name: 'Sub-16 a Juvenil (Especialización)' },
   { id: 'senior', name: 'Adulto / Senior (Rendimiento)' },
+];
+
+const DEFAULT_PLANS = [
+  { id: 'p-trial', name: 'Prueba Gratuita (7 Días)', seats: 2, price: 0 },
+  { id: 'p-ind', name: 'Plan Individual (2 Dispositivos)', seats: 2, price: 15000 },
+  { id: 'p-silver', name: 'Plan Plata (4 Dispositivos)', seats: 4, price: 25000 },
+  { id: 'p-gold', name: 'Plan Oro (6 Dispositivos)', seats: 6, price: 35000 }
 ];
 
 const GET_TACTICAL_SYSTEMS = (isLand) => {
@@ -99,11 +138,12 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   );
 }
 
-function WhatsAppButton({ phone, label = '', name = '' }) {
+function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   if (!phone) return <span className="text-[10px] text-zinc-600 italic">Sin WhatsApp</span>;
   const num = phone.replace(/[^0-9]/g, '');
   const finalNum = num.startsWith('56') ? num : `56${num}`;
-  const msg = encodeURIComponent(`Hola ${name || ''}, te contacto desde Andez Sports FC.`);
+  const defMsg = `Hola ${name || ''}, te contacto desde Andez Sports FC.`;
+  const msg = encodeURIComponent(customMessage || defMsg);
   return (
     <a href={`https://wa.me/${finalNum}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow transition active:scale-95">
       <MessageCircle className="w-3.5 h-3.5" />
@@ -120,25 +160,176 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const [deviceId] = useState(() => {
+    let id = localStorage.getItem('andez_device_id');
+    if (!id) {
+      id = 'dev-' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+      localStorage.setItem('andez_device_id', id);
+    }
+    return id;
+  });
+
+  const [customPlans, setCustomPlans] = useState(() => {
+    const p = localStorage.getItem('andez_custom_plans');
+    return p ? JSON.parse(p) : DEFAULT_PLANS;
+  });
+  useEffect(() => {
+    localStorage.setItem('andez_custom_plans', JSON.stringify(customPlans));
+    sbSet('andez_custom_plans', customPlans);
+  }, [customPlans]);
+
   const [adminLicenses, setAdminLicenses] = useState(() => {
     const l = localStorage.getItem('andez_licenses');
     return l ? JSON.parse(l) : [
-      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 5, status: 'active', plan: 'Escuela / Club (5 Equipos)', price: 35000, expiry: '2026-11-15' },
-      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, status: 'active', plan: 'DT Personal (2 Equipos)', price: 15000, expiry: '2026-11-10' }
+      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 4, devices: [], status: 'active', plan: 'Plan Plata (4 Dispositivos)', price: 25000, expiry: '2026-11-15' },
+      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, devices: [], status: 'active', plan: 'Plan Individual (2 Dispositivos)', price: 15000, expiry: '2026-11-10' }
     ];
   });
-  useEffect(() => localStorage.setItem('andez_licenses', JSON.stringify(adminLicenses)), [adminLicenses]);
+
+  useEffect(() => {
+    sbGet('andez_licenses').then(data => {
+      if (data && Array.isArray(data)) setAdminLicenses(data);
+    });
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('andez_licenses', JSON.stringify(adminLicenses));
+    sbSet('andez_licenses', adminLicenses);
+  }, [adminLicenses]);
 
   const [authenticatedUser, setAuthenticatedUser] = useState(() => {
     const s = localStorage.getItem('andez_auth_session');
     return s ? JSON.parse(s) : null;
   });
 
+  const [categories, setCategories] = useState(() => {
+    const c = localStorage.getItem('andez_dynamic_categories');
+    return c ? JSON.parse(c) : DEFAULT_CATEGORIES;
+  });
+  useEffect(() => {
+    localStorage.setItem('andez_dynamic_categories', JSON.stringify(categories));
+    sbSet('andez_dynamic_categories', categories);
+  }, [categories]);
+
+  const [coachesList, setCoachesList] = useState(() => {
+    const c = localStorage.getItem('andez_coaches_staff');
+    return c ? JSON.parse(c) : [
+      { id: 'c1', name: 'Prof. Carlos Morales', role: 'DT Principal', categoryId: 'sub10', phone: '+56932100183', code: 'DT-101' }
+    ];
+  });
+  useEffect(() => {
+    localStorage.setItem('andez_coaches_staff', JSON.stringify(coachesList));
+    sbSet('andez_coaches_staff', coachesList);
+  }, [coachesList]);
+
+  const [rosters, setRosters] = useState(() => {
+    const r = localStorage.getItem('andez_category_rosters');
+    return r ? JSON.parse(r) : {
+      sub10: [{ id: 'p1', name: 'Lucas Valenzuela', rut: '24.123.456-7', birth: '2016-04-12', role: 'Delantero', phone: '+56932100183', paid: true }],
+      sub14: [{ id: 'p3', name: 'Martín Sepúlveda', rut: '22.345.678-9', birth: '2012-02-14', role: 'Portero', phone: '+56932100183', paid: false }],
+      sub18: [], senior: []
+    };
+  });
+  useEffect(() => {
+    localStorage.setItem('andez_category_rosters', JSON.stringify(rosters));
+    sbSet('andez_category_rosters', rosters);
+  }, [rosters]);
+
+  const [attendanceRecords, setAttendanceRecords] = useState(() => {
+    const a = localStorage.getItem('andez_attendance_records');
+    return a ? JSON.parse(a) : {};
+  });
+  useEffect(() => {
+    localStorage.setItem('andez_attendance_records', JSON.stringify(attendanceRecords));
+    sbSet('andez_attendance_records', attendanceRecords);
+  }, [attendanceRecords]);
+
+  const [billingDay, setBillingDay] = useState(() => localStorage.getItem('andez_billing_day') || '5');
+  const [billingMessageTemplate, setBillingMessageTemplate] = useState(() => localStorage.getItem('andez_billing_template') || 'Estimado(a) apoderado(a) de {ALUMNO}, le recordamos desde Andez Sports FC que la mensualidad correspondiente al mes en curso se encuentra pendiente. Agradecemos regularizar el pago.');
+
+  const [inputLicenseCode, setInputLicenseCode] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  const handleClientLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    const code = inputLicenseCode.trim().toUpperCase();
+
+    if (code === 'ANDEZ2026') {
+      const u = { role: 'owner', name: 'Administrador Maestro', club: 'Andez Sports FC Principal' };
+      setAuthenticatedUser(u);
+      localStorage.setItem('andez_auth_session', JSON.stringify(u));
+      return;
+    }
+
+    const coachUser = coachesList.find(c => c.code && c.code.toUpperCase() === code);
+    if (coachUser) {
+      const u = { role: 'coach', name: coachUser.name, categoryId: coachUser.categoryId, club: 'Escuela de Fútbol' };
+      setAuthenticatedUser(u);
+      localStorage.setItem('andez_auth_session', JSON.stringify(u));
+      return;
+    }
+
+    const cloudLic = await sbGet('andez_licenses');
+    const currentLics = cloudLic && Array.isArray(cloudLic) ? cloudLic : adminLicenses;
+    const found = currentLics.find(l => l.code.toUpperCase() === code);
+
+    if (!found) {
+      setLoginError('Código de activación no válido.');
+      return;
+    }
+    if (found.status === 'suspended') {
+      setLoginError('Suscripción suspendida. Contacta a soporte.');
+      return;
+    }
+
+    const activeDevices = found.devices || [];
+    if (!activeDevices.includes(deviceId)) {
+      if (activeDevices.length >= (found.seats || 2)) {
+        setLoginError(`Límite de dispositivos alcanzado (${found.seats} máx). Cierra sesión en otro equipo.`);
+        return;
+      }
+      found.devices = [...activeDevices, deviceId];
+      const updated = currentLics.map(l => l.id === found.id ? found : l);
+      setAdminLicenses(updated);
+      sbSet('andez_licenses', updated);
+    }
+
+    const dirUser = { role: 'director', ...found };
+    setAuthenticatedUser(dirUser);
+    localStorage.setItem('andez_auth_session', JSON.stringify(dirUser));
+  };
+
+  const handleLogout = () => {
+    if (confirm('¿Cerrar sesión en este equipo?')) {
+      if (authenticatedUser && authenticatedUser.role === 'director' && authenticatedUser.id) {
+        const updated = adminLicenses.map(l => {
+          if (l.id === authenticatedUser.id) {
+            return { ...l, devices: (l.devices || []).filter(d => d !== deviceId) };
+          }
+          return l;
+        });
+        setAdminLicenses(updated);
+        sbSet('andez_licenses', updated);
+      }
+      setAuthenticatedUser(null);
+      localStorage.removeItem('andez_auth_session');
+    }
+  };
+
+  // ESTADOS DE LA PIZARRA
+  const [pitchMode, setPitchMode] = useState('full');
+  const [showTrainingMenu, setShowTrainingMenu] = useState(false);
+  const [showSystemsMenu, setShowSystemsMenu] = useState(false);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [activeTabLibrary, setActiveTabLibrary] = useState('sessions');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [newCoachName, setNewCoachName] = useState('');
   const [newCoachClub, setNewCoachClub] = useState('');
-  const [newCoachPlan, setNewCoachPlan] = useState('DT Personal (2 Equipos: Móvil + PC) - $15.000');
+  const [newCoachPlan, setNewCoachPlan] = useState('p-silver');
   const [newCoachExpiry, setNewCoachExpiry] = useState(() => {
     const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0];
   });
@@ -156,38 +347,16 @@ export default function App() {
     }
   };
 
-  const [categories, setCategories] = useState(() => {
-    const c = localStorage.getItem('andez_dynamic_categories');
-    return c ? JSON.parse(c) : DEFAULT_CATEGORIES;
-  });
-  useEffect(() => localStorage.setItem('andez_dynamic_categories', JSON.stringify(categories)), [categories]);
-
+  // NÓMINAS Y GESTIÓN
   const [newCatName, setNewCatName] = useState('');
   const [editingCatId, setEditingCatId] = useState(null);
   const [editingCatName, setEditingCatName] = useState('');
-
-  const [coachesList, setCoachesList] = useState(() => {
-    const c = localStorage.getItem('andez_coaches_staff');
-    return c ? JSON.parse(c) : [
-      { id: 'c1', name: 'Prof. Carlos Morales', role: 'DT Principal', categoryId: 'sub10', phone: '+56932100183' }
-    ];
-  });
-  useEffect(() => localStorage.setItem('andez_coaches_staff', JSON.stringify(coachesList)), [coachesList]);
 
   const [newCoachStaffName, setNewCoachStaffName] = useState('');
   const [newCoachStaffRole, setNewCoachStaffRole] = useState('Director Técnico');
   const [newCoachStaffCategory, setNewCoachStaffCategory] = useState(categories[0]?.id || 'sub10');
   const [newCoachStaffPhone, setNewCoachStaffPhone] = useState('+569');
-
-  const [rosters, setRosters] = useState(() => {
-    const r = localStorage.getItem('andez_category_rosters');
-    return r ? JSON.parse(r) : {
-      sub10: [{ id: 'p1', name: 'Lucas Valenzuela', rut: '24.123.456-7', birth: '2016-04-12', role: 'Delantero', phone: '+56932100183' }],
-      sub14: [{ id: 'p3', name: 'Martín Sepúlveda', rut: '22.345.678-9', birth: '2012-02-14', role: 'Portero', phone: '+56932100183' }],
-      sub18: [], senior: []
-    };
-  });
-  useEffect(() => localStorage.setItem('andez_category_rosters', JSON.stringify(rosters)), [rosters]);
+  const [newCoachStaffCode, setNewCoachStaffCode] = useState('');
 
   const [newRosterName, setNewRosterName] = useState('');
   const [newRosterRut, setNewRosterRut] = useState('');
@@ -195,60 +364,38 @@ export default function App() {
   const [newRosterRole, setNewRosterRole] = useState('Delantero');
   const [newRosterPhone, setNewRosterPhone] = useState('+569');
 
-  const [inputLicenseCode, setInputLicenseCode] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  const handleClientLogin = (e) => {
-    e.preventDefault();
-    setLoginError('');
-    const code = inputLicenseCode.trim().toUpperCase();
-    if (code === 'ANDEZ2026') {
-      const u = { role: 'owner', name: 'Administrador Maestro', club: 'Andez Sports FC Principal' };
-      setAuthenticatedUser(u);
-      localStorage.setItem('andez_auth_session', JSON.stringify(u));
-      return;
-    }
-    const found = adminLicenses.find(l => l.code.toUpperCase() === code);
-    if (!found) { setLoginError('Código de activación no válido.'); return; }
-    if (found.status === 'suspended') { setLoginError('Suscripción suspendida.'); return; }
-    const cl = { role: 'client', ...found };
-    setAuthenticatedUser(cl);
-    localStorage.setItem('andez_auth_session', JSON.stringify(cl));
-  };
-
-  const handleLogout = () => {
-    if (confirm('¿Cerrar sesión en este equipo?')) {
-      setAuthenticatedUser(null);
-      localStorage.removeItem('andez_auth_session');
-    }
-  };
-
-  const [pitchMode, setPitchMode] = useState('full');
-  const [showTrainingMenu, setShowTrainingMenu] = useState(false);
-  const [showSystemsMenu, setShowSystemsMenu] = useState(false);
-  const [showLibraryModal, setShowLibraryModal] = useState(false);
-  const [activeTabLibrary, setActiveTabLibrary] = useState('sessions');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
-
-  const [drillTitle, setDrillTitle] = useState('Salida de Balón y Transición');
+  // SESIONES
+  const [drillTitle, setDrillTitle] = useState('Salida y Progresión');
   const [drillCategory, setDrillCategory] = useState(categories[0]?.id || 'sub14');
-  const [drillNotes, setDrillNotes] = useState('Bloques de 6 minutos. Énfasis en el tercer hombre.');
+  const [drillNotes, setDrillNotes] = useState('Transición rápida a 2 toques.');
   const [showSaveModal, setShowSaveModal] = useState(false);
-
   const [savedDrills, setSavedDrills] = useState(() => {
     const d = localStorage.getItem('andez_saved_drills');
     return d ? JSON.parse(d) : [];
   });
-  useEffect(() => localStorage.setItem('andez_saved_drills', JSON.stringify(savedDrills)), [savedDrills]);
+  useEffect(() => {
+    localStorage.setItem('andez_saved_drills', JSON.stringify(savedDrills));
+    sbSet('andez_saved_drills', savedDrills);
+  }, [savedDrills]);
 
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerCustomName, setPlayerCustomName] = useState('');
   const [playerCustomNumber, setPlayerCustomNumber] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState(null);
 
+  // HERRAMIENTAS DE DIBUJO Y TEXTO
   const [tool, setTool] = useState('move');
   const [lineType, setLineType] = useState('arrow');
   const [lineColor, setLineColor] = useState('#ffffff');
+  const [lineWidth, setLineWidth] = useState(1.4);
+  const [showLinePalette, setShowLinePalette] = useState(false);
+
+  const [textBlocks, setTextBlocks] = useState([]);
+  const [textModalOpen, setTextModalOpen] = useState(false);
+  const [pendingTextPos, setPendingTextPos] = useState({ x: 50, y: 50 });
+  const [inputTextVal, setInputTextVal] = useState('');
 
   const [objects, setObjects] = useState(() => {
     const sys = GET_TACTICAL_SYSTEMS(window.innerWidth > 768)['4-3-3'];
@@ -265,7 +412,7 @@ export default function App() {
   const isDraggingRef = useRef(false);
   const [selectedObj, setSelectedObj] = useState(null);
 
-  // GRABACIÓN DE VIDEO NATIVO
+  // VIDEO & IA PROMPT
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -297,7 +444,6 @@ export default function App() {
     if (mediaRecorderRef.current && isRecording) mediaRecorderRef.current.stop();
   };
 
-  // GENERADOR TÁCTICO POR PROMPT
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [promptText, setPromptText] = useState('');
 
@@ -347,7 +493,7 @@ export default function App() {
     pt.x = e.touches ? e.touches[0].clientX : e.clientX;
     pt.y = e.touches ? e.touches[0].clientY : e.clientY;
     const c = pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
-    return { x: Math.max(2, Math.min(maxX - 2, c.x)), y: Math.max(2, Math.min(maxY - 2, c.y)) };
+    return { x: Math.max(1, Math.min(maxX - 1, c.x)), y: Math.max(1, Math.min(maxY - 1, c.y)) };
   };
 
   const recordHistory = (objs) => {
@@ -370,11 +516,17 @@ export default function App() {
   };
 
   const handlePitchPointerDown = (e) => {
+    const c = getCoordinates(e);
+    if (tool === 'text') {
+      setPendingTextPos(c);
+      setInputTextVal('');
+      setTextModalOpen(true);
+      return;
+    }
     if (tool === 'move' || tool === 'eraser') {
       setSelectedObj(null); setSelectedMaterial(null); return;
     }
-    const c = getCoordinates(e);
-    setCurrentLine({ id: Date.now(), start: c, end: c, type: lineType, color: lineColor, width: 1.4 });
+    setCurrentLine({ id: Date.now(), start: c, end: c, type: lineType, color: lineColor, width: lineWidth });
   };
 
   const handlePointerMove = (e) => {
@@ -422,31 +574,37 @@ export default function App() {
   const currentDisplayLogo = customLogo || '/logo-andez.png';
   const totalRevenue = adminLicenses.filter(l => l.status === 'active').reduce((sum, l) => sum + (l.price || 0), 0);
 
+  // PANTALLA DE INGRESO
   if (!authenticatedUser) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-[#070b12] text-white p-4 font-sans select-none relative">
         <div className="w-full max-w-md bg-zinc-950/90 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center">
           <img src={currentDisplayLogo} alt="Logo" className="w-16 h-16 rounded-2xl mb-4 border border-amber-400 object-cover" />
           <h1 className="text-2xl font-black text-white mb-1">ANDEZ SPORTS FC <span className="text-amber-400">PRO</span></h1>
-          <form onSubmit={handleClientLogin} className="w-full space-y-3 my-4">
-            <input type="text" value={inputLicenseCode} onChange={e => setInputLicenseCode(e.target.value)} placeholder="Clave (ej. ANDEZ2026)" className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-sm text-center font-mono font-bold text-white uppercase focus:border-red-500 outline-none" required />
-            {loginError && <p className="text-xs text-red-400">{loginError}</p>}
-            <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase rounded-2xl shadow">Ingresar</button>
+          <p className="text-xs text-zinc-400 mb-4">Ingreso de Director Técnico, Profesor o Administrador</p>
+          <form onSubmit={handleClientLogin} className="w-full space-y-3 my-2">
+            <input type="text" value={inputLicenseCode} onChange={e => setInputLicenseCode(e.target.value)} placeholder="Código (ej. ANDEZ2026 / AND-7821)" className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-sm text-center font-mono font-bold text-white uppercase focus:border-red-500 outline-none" required />
+            {loginError && <p className="text-xs text-red-400 font-bold bg-red-950/50 p-2 rounded-xl border border-red-800">{loginError}</p>}
+            <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase rounded-2xl shadow">Ingresar al Sistema</button>
           </form>
-          <a href="https://wa.me/56932100183?text=Hola%20Andez%20Sports%20FC,%20solicito%20acceso" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-emerald-700/40 border border-emerald-500 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-2">
-            <MessageCircle className="w-4 h-4" /> Solicitar Acceso por WhatsApp (+56932100183)
+          <a href="https://wa.me/56932100183?text=Hola%20Andez%20Sports%20FC,%20solicito%20acceso" target="_blank" rel="noopener noreferrer" className="w-full mt-3 py-3 bg-zinc-900 border border-zinc-800 hover:border-emerald-500 rounded-2xl text-xs font-bold text-zinc-300 flex items-center justify-center gap-2">
+            <MessageCircle className="w-4 h-4 text-emerald-400" /> Soporte Oficial (+56932100183)
           </a>
         </div>
       </div>
     );
   }
 
+  const isTeacherRestricted = authenticatedUser.role === 'coach';
+  const currentCategoryContext = isTeacherRestricted ? authenticatedUser.categoryId : (selectedCategoryFilter === 'all' ? (categories[0]?.id || 'sub10') : selectedCategoryFilter);
+
   return (
     <div className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black">
+      {/* HEADER */}
       <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 no-print">
         <div className="flex items-center gap-2 sm:gap-3">
           {isPC ? (
-            <label htmlFor="logo-up" className="cursor-pointer" title="Cambiar Logo Club (PC)">
+            <label htmlFor="logo-up" className="cursor-pointer" title="Cambiar Logo Club">
               <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
               <input id="logo-up" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
             </label>
@@ -454,11 +612,11 @@ export default function App() {
             <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
           )}
 
-          <button onClick={() => setShowLibraryModal(true)} className="text-zinc-300 hover:text-amber-400" title="Biblioteca y Nóminas"><Folder className="w-5 h-5" /></button>
+          <button onClick={() => setShowLibraryModal(true)} className="text-zinc-300 hover:text-amber-400" title="Biblioteca y Gestión"><Folder className="w-5 h-5" /></button>
           <button onClick={() => setShowSystemsMenu(true)} className="text-zinc-300 hover:text-amber-400" title="Sistemas Tácticos"><Play className="w-5 h-5" /></button>
           <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} className={`p-1 rounded ${pitchMode === 'half' ? 'bg-red-600 text-white' : 'text-zinc-300'}`}><RotateCcw className="w-5 h-5" /></button>
           <button onClick={() => setShowTrainingMenu(!showTrainingMenu)} className={`p-1 rounded ${showTrainingMenu ? 'bg-amber-500 text-black' : 'text-amber-400'}`}><span className="font-bold">▲</span></button>
-          
+
           <button onClick={() => setShowPromptModal(true)} className="flex items-center gap-1 bg-amber-500/20 border border-amber-400 text-amber-300 px-2 py-1 rounded-full text-[11px] font-bold shadow active:scale-95">
             <Sparkles className="w-3.5 h-3.5" /> Prompt IA
           </button>
@@ -482,14 +640,13 @@ export default function App() {
           <button onClick={() => window.print()} className="text-zinc-300 hover:text-amber-400"><Printer className="w-5 h-5" /></button>
           <button onClick={() => setShowSaveModal(true)} className="text-zinc-300 hover:text-red-400"><Save className="w-5 h-5" /></button>
 
-          {/* BOTÓN PANEL DE DUEÑO */}
           {authenticatedUser.role === 'owner' ? (
             <button onClick={() => setShowAdminDashboard(true)} className="flex items-center gap-1 bg-zinc-900 border border-zinc-700 px-2.5 py-1 rounded-full text-[10px] font-black text-amber-400 uppercase tracking-wider">
-              <span>Dueño</span> <Lock className="w-3 h-3 text-zinc-400" />
+              <span>Super Admin</span> <Lock className="w-3 h-3 text-zinc-400" />
             </button>
           ) : (
-            <div className="bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-[10px] font-bold text-zinc-300 max-w-[100px] truncate">
-              {authenticatedUser.club || authenticatedUser.coach || 'DT Pro'}
+            <div className="bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-[10px] font-bold text-zinc-300 max-w-[120px] truncate">
+              {authenticatedUser.role === 'director' ? `Director: ${authenticatedUser.club}` : `Prof: ${authenticatedUser.name}`}
             </div>
           )}
 
@@ -497,35 +654,88 @@ export default function App() {
         </div>
       </header>
 
-      {/* LIENZO DE CANCHA */}
+      {/* CANCHA CON ARCOS Y ÁREAS COMPLETAS */}
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
         <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl" onPointerDown={handlePitchPointerDown}>
+          <defs>
+            <marker id="arrow-white" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ffffff" /></marker>
+            <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" /></marker>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" /></marker>
+            <marker id="arrow-yellow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#facc15" /></marker>
+            <marker id="arrow-black" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#000000" /></marker>
+            <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
+          </defs>
+
           <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
+
+          {/* DIBUJO PROFESIONAL DE CANCHA, ARCOS Y ÁREAS */}
           {isPC ? (
             <g stroke="white" strokeWidth="0.8" fill="none">
               <rect x="2" y="2" width={pitchMode === 'half' ? 51 : 101} height="64" />
               <line x1={pitchMode === 'half' ? 53 : 52.5} y1="2" x2={pitchMode === 'half' ? 53 : 52.5} y2="66" />
               <circle cx={pitchMode === 'half' ? 53 : 52.5} cy="34" r="9.15" />
+              <circle cx={pitchMode === 'half' ? 53 : 52.5} cy="34" r="0.8" fill="white" />
+              {/* Lado izquierdo */}
               <rect x="2" y="13.8" width="16.5" height="40.4" />
-              {!pitchMode.includes('half') && <rect x="86.5" y="13.8" width="16.5" height="40.4" />}
+              <rect x="2" y="24.8" width="5.5" height="18.4" />
+              <rect x="-0.8" y="30.3" width="2.8" height="7.32" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
+              <path d="M 18.5 28 A 9.15 9.15 0 0 1 18.5 40" />
+              {/* Lado derecho */}
+              {!pitchMode.includes('half') && (
+                <>
+                  <rect x="86.5" y="13.8" width="16.5" height="40.4" />
+                  <rect x="97.5" y="24.8" width="5.5" height="18.4" />
+                  <rect x="103" y="30.3" width="2.8" height="7.32" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
+                  <path d="M 86.5 28 A 9.15 9.15 0 0 0 86.5 40" />
+                </>
+              )}
             </g>
           ) : (
             <g stroke="white" strokeWidth="0.8" fill="none">
               <rect x="2" y="2" width="64" height={pitchMode === 'half' ? 79 : 101} />
               <line x1="2" y1={pitchMode === 'half' ? 81 : 52.5} x2="66" y2={pitchMode === 'half' ? 81 : 52.5} />
               <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="9.15" />
-              <rect x="13.8" y="2" width="40.4" height="16.5" />
-              {!pitchMode.includes('half') && <rect x="13.8" y="86.5" width="40.4" height="16.5" />}
+              <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="0.8" fill="white" />
+              {/* Portería norte */}
+              {!pitchMode.includes('half') && (
+                <>
+                  <rect x="13.8" y="2" width="40.4" height="16.5" />
+                  <rect x="24.8" y="2" width="18.4" height="5.5" />
+                  <rect x="30.3" y="-0.8" width="7.32" height="2.8" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
+                  <path d="M 28 18.5 A 9.15 9.15 0 0 0 40 18.5" />
+                </>
+              )}
+              {/* Portería sur */}
+              <rect x="13.8" y={pitchMode === 'half' ? 64.5 : 86.5} width="40.4" height="16.5" />
+              <rect x="24.8" y={pitchMode === 'half' ? 75.5 : 97.5} width="18.4" height="5.5" />
+              <rect x="30.3" y={pitchMode === 'half' ? 81 : 103} width="7.32" height="2.8" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
+              <path d={`M 28 ${pitchMode === 'half' ? 64.5 : 86.5} A 9.15 9.15 0 0 1 40 ${pitchMode === 'half' ? 64.5 : 86.5}`} />
             </g>
           )}
 
-          {drawings.map(l => (
-            <g key={l.id} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setDrawings(prev => prev.filter(d => d.id !== l.id)); } }}>
-              <line x1={l.start.x} y1={l.start.y} x2={l.end.x} y2={l.end.y} stroke={l.color} strokeWidth="1.4" strokeDasharray={l.type === 'dashed-arrow' ? '3,2' : 'none'} />
+          {/* DIBUJOS Y TRAZOS */}
+          {drawings.map(l => {
+            const markerId = l.type === 'straight' ? '' : (l.type === 'block' ? 'url(#block-mark)' : (l.color === '#ef4444' ? 'url(#arrow-red)' : l.color === '#3b82f6' ? 'url(#arrow-blue)' : l.color === '#facc15' ? 'url(#arrow-yellow)' : l.color === '#000000' ? 'url(#arrow-black)' : 'url(#arrow-white)'));
+            return (
+              <g key={l.id} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setDrawings(prev => prev.filter(d => d.id !== l.id)); } }}>
+                <line x1={l.start.x} y1={l.start.y} x2={l.end.x} y2={l.end.y} stroke={l.color} strokeWidth={l.width || 1.4} strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'} markerEnd={markerId} />
+              </g>
+            );
+          })}
+
+          {currentLine && (
+            <line x1={currentLine.start.x} y1={currentLine.start.y} x2={currentLine.end.x} y2={currentLine.end.y} stroke={currentLine.color} strokeWidth={currentLine.width || 1.4} strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'} />
+          )}
+
+          {/* TEXTOS LIBRES */}
+          {textBlocks.map(tb => (
+            <g key={tb.id} transform={`translate(${tb.x}, ${tb.y})`} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setTextBlocks(textBlocks.filter(t => t.id !== tb.id)); } }} className="cursor-pointer select-none">
+              <rect x="-2" y="-3.5" width={tb.text.length * 2.2 + 5} height="6.5" rx="1.5" fill="rgba(0,0,0,0.85)" stroke="#eab308" strokeWidth="0.3" />
+              <text x="1" y="0.8" fill="#ffffff" fontSize="2.8" fontWeight="bold">{tb.text}</text>
             </g>
           ))}
-          {currentLine && <line x1={currentLine.start.x} y1={currentLine.start.y} x2={currentLine.end.x} y2={currentLine.end.y} stroke={currentLine.color} strokeWidth="1.4" />}
 
+          {/* OBJETOS Y JUGADORES */}
           {objects.map(obj => {
             if (obj.type === 'player') {
               const hasName = obj.name && obj.name.trim().length > 0;
@@ -548,6 +758,77 @@ export default function App() {
           })}
         </svg>
 
+        {/* MODAL AGREGAR TEXTO LIBRE */}
+        {textModalOpen && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
+            <div className="bg-[#121214] border border-zinc-800 rounded-3xl w-full max-w-xs p-5 shadow-2xl">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Type className="w-4 h-4 text-amber-400" /> Insertar Nota Táctica</h3>
+                <button onClick={() => setTextModalOpen(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+              </div>
+              <input type="text" value={inputTextVal} onChange={e => setInputTextVal(e.target.value)} placeholder="Ej: Máximo 2 toques / Salida rápida" className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-2 text-xs text-white outline-none focus:border-amber-400 mb-3" autoFocus />
+              <button onClick={() => {
+                if (inputTextVal.trim()) {
+                  setTextBlocks([...textBlocks, { id: 'txt-' + Date.now(), x: pendingTextPos.x, y: pendingTextPos.y, text: inputTextVal.trim() }]);
+                }
+                setTextModalOpen(false);
+                setTool('move');
+              }} className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase rounded-2xl shadow">Agregar a la Pizarra</button>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL PALETA DE TRAZOS Y LÍNEAS AVANZADA */}
+        {showLinePalette && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-sm text-white">Selector de Trazos y Líneas</h3>
+                <button onClick={() => setShowLinePalette(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+              </div>
+
+              <span className="text-[10px] font-bold text-zinc-400 block mb-2">TIPO DE LÍNEA</span>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <button onClick={() => setLineType('arrow')} className={`p-2.5 rounded-xl border text-xs font-bold text-white flex items-center justify-center gap-2 ${lineType === 'arrow' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 border-zinc-800'}`}>
+                  <span>➜</span> Flecha Normal
+                </button>
+                <button onClick={() => setLineType('straight')} className={`p-2.5 rounded-xl border text-xs font-bold text-white flex items-center justify-center gap-2 ${lineType === 'straight' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 border-zinc-800'}`}>
+                  <span>━</span> Línea Recta
+                </button>
+                <button onClick={() => setLineType('dashed')} className={`p-2.5 rounded-xl border text-xs font-bold text-white flex items-center justify-center gap-2 ${lineType === 'dashed' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 border-zinc-800'}`}>
+                  <span>⤏</span> Flecha Discontinua
+                </button>
+                <button onClick={() => setLineType('block')} className={`p-2.5 rounded-xl border text-xs font-bold text-white flex items-center justify-center gap-2 ${lineType === 'block' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 border-zinc-800'}`}>
+                  <span>⊣</span> Bloqueo en T
+                </button>
+              </div>
+
+              <span className="text-[10px] font-bold text-zinc-400 block mb-2">COLOR DEL TRAZO</span>
+              <div className="flex gap-3 mb-4">
+                {['#ffffff', '#ef4444', '#3b82f6', '#facc15', '#000000'].map(c => (
+                  <button key={c} onClick={() => setLineColor(c)} style={{ backgroundColor: c }} className={`w-8 h-8 rounded-full border-2 ${lineColor === c ? 'border-amber-400 scale-110 shadow-lg' : 'border-zinc-700'}`} />
+                ))}
+              </div>
+
+              <span className="text-[10px] font-bold text-zinc-400 block mb-2">GROSOR</span>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {[
+                  { label: 'Fino', val: 0.8 },
+                  { label: 'Medio', val: 1.4 },
+                  { label: 'Grueso', val: 2.2 },
+                  { label: 'Extra', val: 3.2 }
+                ].map(g => (
+                  <button key={g.val} onClick={() => setLineWidth(g.val)} className={`py-1.5 rounded-lg text-xs font-bold border ${lineWidth === g.val ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-800'}`}>
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+
+              <button onClick={() => { setTool('draw'); setShowLinePalette(false); }} className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase text-white rounded-xl shadow">Aplicar a la Pizarra</button>
+            </div>
+          </div>
+        )}
+
         {/* MODAL FICHA JUGADOR */}
         {editingPlayer && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
@@ -562,18 +843,18 @@ export default function App() {
                 setObjects(u); recordHistory(u); setEditingPlayer(null);
               }} className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">NOMBRE O APODO</label>
-                  <input type="text" value={playerCustomName} onChange={e => setPlayerCustomName(e.target.value)} placeholder="Ej. Delantero" className="w-full bg-[#1c1c1f] border border-zinc-800 rounded-2xl px-4 py-2 text-xs text-white outline-none focus:border-red-500" autoFocus />
+                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">NOMBRE O ROL</label>
+                  <input type="text" value={playerCustomName} onChange={e => setPlayerCustomName(e.target.value)} placeholder="Ej. Central" className="w-full bg-[#1c1c1f] border border-zinc-800 rounded-2xl px-4 py-2 text-xs text-white outline-none focus:border-red-500" autoFocus />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">DORSAL / NÚMERO</label>
-                  <input type="text" value={playerCustomNumber} onChange={e => setPlayerCustomNumber(e.target.value)} placeholder="9" className="w-full bg-[#1c1c1f] border border-zinc-800 rounded-2xl px-4 py-2 text-xs text-white outline-none focus:border-red-500" required />
+                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">DORSAL</label>
+                  <input type="text" value={playerCustomNumber} onChange={e => setPlayerCustomNumber(e.target.value)} placeholder="4" className="w-full bg-[#1c1c1f] border border-zinc-800 rounded-2xl px-4 py-2 text-xs text-white outline-none focus:border-red-500" required />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => {
                     const u = objects.map(o => o.id === editingPlayer.id ? { ...o, name: '' } : o);
                     setObjects(u); recordHistory(u); setEditingPlayer(null);
-                  }} className="flex-1 py-3 bg-[#242428] text-red-400 font-bold text-xs rounded-2xl">Eliminar</button>
+                  }} className="flex-1 py-3 bg-[#242428] text-red-400 font-bold text-xs rounded-2xl">Borrar Nombre</button>
                   <button type="submit" className="flex-1 py-3 bg-red-600 text-white font-bold text-xs rounded-2xl shadow">Guardar</button>
                 </div>
               </form>
@@ -590,19 +871,19 @@ export default function App() {
                 <button onClick={() => setShowPromptModal(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
               <form onSubmit={handleGenerateTacticalPrompt} className="space-y-3">
-                <textarea rows={3} value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Escribe el ejercicio (Ej: 'Rondo 4v2 con 4 conos y balón')..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400 resize-none" autoFocus />
+                <textarea rows={3} value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Ej: Rondo 4v2 con conos y balón..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400 resize-none" autoFocus />
                 <button type="submit" className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase rounded-xl shadow">Crear en la Pizarra</button>
               </form>
             </div>
           </div>
         )}
 
-        {/* MODAL REPRODUCTOR / DESCARGA DE VIDEO */}
+        {/* MODAL VIDEO */}
         {recordedVideoUrl && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md p-5 shadow-2xl flex flex-col items-center">
               <div className="w-full flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Video className="w-4 h-4 text-red-500" /> Video del Ejercicio</h3>
+                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Video className="w-4 h-4 text-red-500" /> Video Grabado</h3>
                 <button onClick={() => setRecordedVideoUrl(null)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
               <video src={recordedVideoUrl} controls autoPlay className="w-full rounded-2xl mb-4 border border-zinc-800 max-h-60" />
@@ -610,24 +891,12 @@ export default function App() {
                 <a href={recordedVideoUrl} download={`ejercicio-${drillTitle.replace(/\s+/g, '_')}.webm`} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 shadow">
                   <Download className="w-4 h-4" /> Descargar
                 </a>
-                <button onClick={() => {
-                  if (navigator.share) {
-                    fetch(recordedVideoUrl).then(r => r.blob()).then(blob => {
-                      const file = new File([blob], 'ejercicio.webm', { type: 'video/webm' });
-                      navigator.share({ title: drillTitle, files: [file] });
-                    });
-                  } else {
-                    alert('Descarga el video para enviarlo directamente a tu WhatsApp.');
-                  }
-                }} className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 shadow">
-                  <MessageCircle className="w-4 h-4" /> Enviar WhatsApp
-                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* MENÚ DE MATERIALES COMPLETO */}
+        {/* MENÚ DE MATERIALES */}
         {showTrainingMenu && (
           <aside className="absolute right-2 top-2 bg-black/90 border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 w-44 no-print">
             <div className="flex justify-between items-center border-b border-zinc-800 pb-1 mb-1">
@@ -641,7 +910,7 @@ export default function App() {
             <button onClick={() => addElement('cone', { color: '#ea580c' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-orange-500">▲</span> Cono Naranja</button>
             <button onClick={() => addElement('cone', { color: '#2563eb' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-blue-500">▲</span> Cono Azul</button>
             <button onClick={() => addElement('cone', { color: '#eab308' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-yellow-400">▲</span> Cono Amarillo</button>
-            <button onClick={() => addElement('saucer', { color: '#facc15' })} className="p-1.5 text-left hover:bg-zinc-800 rounded-xs text-xs text-white">🟡 Plato Chino</button>
+            <button onClick={() => addElement('saucer', { color: '#facc15' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🟡 Plato Chino</button>
             <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">⭕ Aro de Salto</button>
           </aside>
         )}
@@ -663,22 +932,27 @@ export default function App() {
           </div>
         )}
 
-        {/* MODAL BIBLIOTECA, ALUMNOS, PROFESORES Y CATEGORÍAS */}
+        {/* MODAL GESTIÓN: SESIONES, ALUMNOS, ASISTENCIA, PAGOS Y PROFESORES */}
         {showLibraryModal && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-3xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
                 <div className="flex gap-1.5 flex-wrap">
-                  <button onClick={() => setActiveTabLibrary('sessions')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'sessions' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📁 Sesiones</button>
-                  <button onClick={() => setActiveTabLibrary('roster')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'roster' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📋 Alumnos</button>
-                  <button onClick={() => setActiveTabLibrary('coaches')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'coaches' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>🧑‍🏫 Profesores</button>
-                  <button onClick={() => setActiveTabLibrary('categories')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'categories' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`}>⚙️ Categorías</button>
-                  {isPC && <button onClick={() => setActiveTabLibrary('club_settings')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'club_settings' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}>🛡️ Logo Club</button>}
+                  <button onClick={() => setActiveTabLibrary('sessions')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'sessions' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📁 Sesiones</button>
+                  <button onClick={() => setActiveTabLibrary('roster')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'roster' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📋 Alumnos</button>
+                  <button onClick={() => setActiveTabLibrary('attendance')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'attendance' ? 'bg-emerald-600 text-white' : 'text-zinc-400'}`}>✅ Asistencia</button>
+                  {!isTeacherRestricted && (
+                    <>
+                      <button onClick={() => setActiveTabLibrary('billing')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'billing' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`}>💰 Mensualidades</button>
+                      <button onClick={() => setActiveTabLibrary('coaches')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'coaches' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}>🧑‍🏫 Profesores</button>
+                      <button onClick={() => setActiveTabLibrary('categories')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'categories' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}>⚙️ Categorías</button>
+                    </>
+                  )}
                 </div>
                 <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
 
-              {/* PESTAÑA: SESIONES */}
+              {/* SESIONES */}
               {activeTabLibrary === 'sessions' && (
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {savedDrills.length === 0 ? <p className="text-xs text-zinc-500 text-center py-8">No hay sesiones guardadas aún.</p> : savedDrills.map(d => (
@@ -696,15 +970,14 @@ export default function App() {
                 </div>
               )}
 
-              {/* PESTAÑA: ALUMNOS (FORMULARIO Y LISTA) */}
+              {/* ALUMNOS */}
               {activeTabLibrary === 'roster' && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <form onSubmit={(e) => {
                     e.preventDefault();
                     if (!newRosterName.trim()) return;
-                    const target = selectedCategoryFilter === 'all' ? (categories[0]?.id || 'sub10') : selectedCategoryFilter;
-                    const newP = { id: 'ros-' + Date.now(), name: newRosterName.trim(), rut: newRosterRut || 'Sin RUT', birth: newRosterBirth || '2012-01-01', role: newRosterRole, phone: newRosterPhone.trim() || '+56932100183' };
-                    setRosters({ ...rosters, [target]: [...(rosters[target] || []), newP] });
+                    const newP = { id: 'ros-' + Date.now(), name: newRosterName.trim(), rut: newRosterRut || 'Sin RUT', birth: newRosterBirth || '2012-01-01', role: newRosterRole, phone: newRosterPhone.trim() || '+56932100183', paid: false };
+                    setRosters({ ...rosters, [currentCategoryContext]: [...(rosters[currentCategoryContext] || []), newP] });
                     setNewRosterName(''); setNewRosterRut(''); setNewRosterPhone('+569');
                   }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-5 gap-2">
                     <input type="text" placeholder="Nombre Alumno" value={newRosterName} onChange={e => setNewRosterName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" required />
@@ -714,15 +987,15 @@ export default function App() {
                     <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg py-1 shadow flex items-center justify-center gap-1"><Plus className="w-3.5 h-3.5" /> Agregar</button>
                   </form>
                   <div className="flex-1 overflow-y-auto space-y-2">
-                    {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => (
+                    {(rosters[currentCategoryContext] || []).map(p => (
                       <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
                         <div>
-                          <div className="font-bold text-xs text-white">{p.name} <span className="text-[10px] text-zinc-400 font-normal">({categories.find(c => c.id === p.catKey)?.name || p.catKey})</span></div>
+                          <div className="font-bold text-xs text-white">{p.name} <span className="text-[10px] text-zinc-400 font-normal">({p.role})</span></div>
                           <div className="text-[10px] text-zinc-400">RUT: {p.rut} • Nac: {p.birth}</div>
                         </div>
                         <div className="flex items-center gap-2">
                           <WhatsAppButton phone={p.phone} name={p.name} label="WhatsApp" />
-                          <button onClick={() => setRosters({ ...rosters, [p.catKey]: rosters[p.catKey].filter(x => x.id !== p.id) })} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => setRosters({ ...rosters, [currentCategoryContext]: rosters[currentCategoryContext].filter(x => x.id !== p.id) })} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       </div>
                     ))}
@@ -730,31 +1003,102 @@ export default function App() {
                 </div>
               )}
 
-              {/* PESTAÑA: PROFESORES (FORMULARIO Y LISTA) */}
-              {activeTabLibrary === 'coaches' && (
+              {/* ASISTENCIA */}
+              {activeTabLibrary === 'attendance' && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between mb-3 bg-zinc-900 p-2.5 rounded-xl border border-zinc-800">
+                    <span className="text-xs font-bold text-white">Fecha de Entrenamiento:</span>
+                    <input type="date" value={attendanceDate} onChange={e => setAttendanceDate(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" />
+                  </div>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {(rosters[currentCategoryContext] || []).map(p => {
+                      const attKey = `${currentCategoryContext}_${attendanceDate}`;
+                      const currentStatus = attendanceRecords[attKey]?.[p.id] || 'pending';
+                      return (
+                        <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                          <span className="font-bold text-xs text-white">{p.name}</span>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => {
+                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'present' } };
+                              setAttendanceRecords(updated);
+                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'present' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}>Presente</button>
+                            <button onClick={() => {
+                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'absent' } };
+                              setAttendanceRecords(updated);
+                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'absent' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}>Ausente</button>
+                            <button onClick={() => {
+                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'excused' } };
+                              setAttendanceRecords(updated);
+                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'excused' ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-400'}`}>Justificado</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* COBRANZA Y MENSUALIDADES (DIRECTOR) */}
+              {activeTabLibrary === 'billing' && !isTeacherRestricted && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-white block">Día de Cobro Mensual:</span>
+                      <span className="text-[10px] text-zinc-400">Los alumnos no pagados a este día aparecerán en rojo.</span>
+                    </div>
+                    <input type="number" min="1" max="31" value={billingDay} onChange={e => { setBillingDay(e.target.value); localStorage.setItem('巧ndez_billing_day', e.target.value); }} className="w-16 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white" />
+                  </div>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => {
+                      const msg = billingMessageTemplate.replace('{ALUMNO}', p.name);
+                      return (
+                        <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                          <div>
+                            <div className="font-bold text-xs text-white">{p.name} <span className="text-[10px] text-zinc-400">({categories.find(c => c.id === p.catKey)?.name || p.catKey})</span></div>
+                            <div className="text-[10px] flex items-center gap-1.5 mt-0.5">
+                              {p.paid ? <span className="text-emerald-400 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Al Día</span> : <span className="text-red-400 font-bold flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Pendiente de Pago</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => {
+                              const updatedList = rosters[p.catKey].map(x => x.id === p.id ? { ...x, paid: !x.paid } : x);
+                              setRosters({ ...rosters, [p.catKey]: updatedList });
+                            }} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${p.paid ? 'bg-zinc-800 text-zinc-400' : 'bg-emerald-600 text-white'}`}>
+                              {p.paid ? 'Marcar Pendiente' : 'Recibir Pago'}
+                            </button>
+                            {!p.paid && <WhatsAppButton phone={p.phone} name={p.name} label="Avisar Cobro" customMessage={msg} />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* PROFESORES */}
+              {activeTabLibrary === 'coaches' && !isTeacherRestricted && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <form onSubmit={(e) => {
                     e.preventDefault();
                     if (!newCoachStaffName.trim()) return;
-                    setCoachesList([...coachesList, { id: 'c-' + Date.now(), name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim() }]);
-                    setNewCoachStaffName(''); setNewCoachStaffPhone('+569');
-                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-4 gap-2">
-                    <input type="text" placeholder="Nombre Profesor" value={newCoachStaffName} onChange={e => setNewCoachStaffName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" required />
-                    <input type="text" placeholder="Cargo (DT, PF)" value={newCoachStaffRole} onChange={e => setNewCoachStaffRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" />
+                    const code = newCoachStaffCode.trim() || 'DT-' + Math.floor(100 + Math.random() * 900);
+                    setCoachesList([...coachesList, { id: 'c-' + Date.now(), name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim(), code }]);
+                    setNewCoachStaffName(''); setNewCoachStaffCode('');
+                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-5 gap-2">
+                    <input type="text" placeholder="Nombre Profesor" value={newCoachStaffName} onChange={e => setNewCoachStaffName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" required />
+                    <input type="text" placeholder="Cargo (DT, PF)" value={newCoachStaffRole} onChange={e => setNewCoachStaffRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" />
                     <select value={newCoachStaffCategory} onChange={e => setNewCoachStaffCategory(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none">
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
-                    <div className="flex gap-1">
-                      <input type="tel" placeholder="WhatsApp" value={newCoachStaffPhone} onChange={e => setNewCoachStaffPhone(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" required />
-                      <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg px-3 shadow"><Plus className="w-3.5 h-3.5" /></button>
-                    </div>
+                    <input type="text" placeholder="Clave Acceso DT" value={newCoachStaffCode} onChange={e => setNewCoachStaffCode(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none uppercase font-mono" />
+                    <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg py-1 shadow flex items-center justify-center gap-1"><Plus className="w-3.5 h-3.5" /> Agregar</button>
                   </form>
                   <div className="flex-1 overflow-y-auto space-y-2">
                     {coachesList.map(c => (
                       <div key={c.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
                         <div>
                           <div className="font-bold text-xs text-white">{c.name} <span className="text-amber-400 font-semibold text-[10px]">({c.role})</span></div>
-                          <div className="text-[10px] text-zinc-400">Categoría: {categories.find(x => x.id === c.categoryId)?.name || 'Sin asignar'}</div>
+                          <div className="text-[10px] text-zinc-400">Categoría: {categories.find(x => x.id === c.categoryId)?.name || 'Sin asignar'} • Clave: <span className="font-mono text-white font-bold">{c.code}</span></div>
                         </div>
                         <div className="flex items-center gap-2">
                           <WhatsAppButton phone={c.phone} name={c.name} label="WhatsApp DT" />
@@ -766,8 +1110,8 @@ export default function App() {
                 </div>
               )}
 
-              {/* PESTAÑA: CATEGORÍAS (CREAR, EDITAR, ELIMINAR) */}
-              {activeTabLibrary === 'categories' && (
+              {/* CATEGORÍAS */}
+              {activeTabLibrary === 'categories' && !isTeacherRestricted && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <form onSubmit={(e) => {
                     e.preventDefault();
@@ -799,36 +1143,49 @@ export default function App() {
                   </div>
                 </div>
               )}
-
-              {/* PESTAÑA: LOGO */}
-              {activeTabLibrary === 'club_settings' && isPC && (
-                <div className="flex-1 flex flex-col items-center justify-center p-4 bg-zinc-900 rounded-xl border border-zinc-800 text-center">
-                  <img src={currentDisplayLogo} alt="Logo" className="w-20 h-20 rounded-2xl mb-3 border-2 border-amber-400 object-cover" />
-                  <label htmlFor="logo-up-modal" className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl cursor-pointer shadow">
-                    Subir Escudo del Club
-                    <input id="logo-up-modal" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                  </label>
-                </div>
-              )}
             </div>
           </div>
         )}
 
-        {/* MODAL PANEL DE DUEÑO Y LICENCIAS */}
+        {/* MODAL PANEL DE DUEÑO: PLANES DINÁMICOS Y LICENCIAS */}
         {showAdminDashboard && (
           <div className="absolute inset-0 bg-black/90 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
                 <div>
-                  <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">DUEÑO</span>
-                  <h3 className="font-black text-base text-white mt-1">Control de Licencias SaaS</h3>
+                  <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">SUPERADMINISTRADOR</span>
+                  <h3 className="font-black text-base text-white mt-1">Gestión de Planes y Licencias</h3>
                 </div>
                 <button onClick={() => setShowAdminDashboard(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
 
+              {/* EDITOR DE PRECIOS Y CUPOS */}
+              <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl mb-3">
+                <span className="text-[11px] font-black text-amber-400 uppercase block mb-2">Configurar Planes Comerciales</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {customPlans.map(pl => (
+                    <div key={pl.id} className="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-white truncate">{pl.name}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-zinc-400">\$</span>
+                        <input type="number" value={pl.price} onChange={e => {
+                          const val = Number(e.target.value);
+                          setCustomPlans(customPlans.map(p => p.id === pl.id ? { ...p, price: val } : p));
+                        }} className="w-20 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-0.5 text-[11px] font-bold text-emerald-400" />
+                        <span className="text-[10px] text-zinc-400">Cupos:</span>
+                        <input type="number" value={pl.seats} onChange={e => {
+                          const val = Number(e.target.value);
+                          setCustomPlans(customPlans.map(p => p.id === pl.id ? { ...p, seats: val } : p));
+                        }} className="w-12 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-0.5 text-[11px] font-bold text-white" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800">
-                  <span className="text-[10px] text-zinc-400 block font-bold">Ingresos Recurrentes</span>
+                  <span className="text-[10px] text-zinc-400 block font-bold">Ingresos Totales</span>
                   <span className="text-lg font-black text-emerald-400">\${totalRevenue.toLocaleString('es-CL')} CLP</span>
                 </div>
                 <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex items-center justify-between">
@@ -837,7 +1194,7 @@ export default function App() {
                     <span className="text-lg font-black text-white">{adminLicenses.filter(l => l.status === 'active').length}</span>
                   </div>
                   <button onClick={() => setShowNewUserModal(true)} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow">
-                    <Plus className="w-4 h-4" /> Nuevo
+                    <Plus className="w-4 h-4" /> Nuevo Club
                   </button>
                 </div>
               </div>
@@ -851,10 +1208,13 @@ export default function App() {
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-amber-400 font-mono font-bold border border-zinc-700">{lic.code}</span>
                       </div>
                       <div className="text-[10px] text-zinc-400">{lic.club} • {lic.plan}</div>
-                      <div className="text-[9px] text-zinc-500">Vence: {lic.expiry} ({lic.seats} Equipos)</div>
+                      <div className="text-[9px] text-zinc-500">Equipos conectados: {(lic.devices || []).length} / {lic.seats} máx</div>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <button onClick={() => setAdminLicenses(adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l))} className={`px-2 py-1 rounded text-xs font-bold ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}>
+                      <button onClick={() => {
+                        const updated = adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l);
+                        setAdminLicenses(updated);
+                      }} className={`px-2 py-1 rounded text-xs font-bold ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}>
                         {lic.status === 'active' ? 'Suspender' : 'Reactivar'}
                       </button>
                       <button onClick={() => { if (confirm('¿Eliminar licencia?')) setAdminLicenses(adminLicenses.filter(l => l.id !== lic.id)); }} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -866,42 +1226,32 @@ export default function App() {
           </div>
         )}
 
-        {/* MODAL CREAR NUEVO ACCESO / LICENCIA */}
+        {/* MODAL CREAR NUEVA LICENCIA */}
         {showNewUserModal && (
           <div className="absolute inset-0 bg-black/95 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1"><Plus className="w-4 h-4 text-red-500" /> Crear Acceso DT</h3>
+                <h3 className="font-bold text-sm text-white flex items-center gap-1"><Plus className="w-4 h-4 text-red-500" /> Crear Licencia de Club</h3>
                 <button onClick={() => setShowNewUserModal(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
-              <button type="button" onClick={() => {
-                const d = new Date(); d.setDate(d.getDate() + 7);
-                setNewCoachExpiry(d.toISOString().split('T')[0]);
-                setNewCoachPlan('Prueba Gratuita (7 Días - 2 Equipos)');
-              }} className="w-full mb-3 py-1.5 px-3 bg-amber-500/10 border border-amber-500/40 rounded-xl text-amber-400 font-bold text-xs flex items-center justify-center gap-1.5">
-                <Gift className="w-4 h-4" /> Asignar 7 Días Gratis
-              </button>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 if (!newCoachName.trim()) return;
                 const code = 'AND-' + Math.floor(1000 + Math.random() * 9000);
-                const isSchool = newCoachPlan.includes('Escuela');
-                const isTrial = newCoachPlan.includes('Prueba');
-                const seats = isSchool ? 5 : 2;
-                const price = isTrial ? 0 : (isSchool ? 35000 : 15000);
-                setAdminLicenses([{ id: 'lic-' + Date.now(), coach: newCoachName.trim(), club: newCoachClub.trim() || 'Club Particular', code, seats, status: 'active', plan: newCoachPlan, price, expiry: newCoachExpiry }, ...adminLicenses]);
+                const chosenPlan = customPlans.find(p => p.id === newCoachPlan) || customPlans[0];
+                setAdminLicenses([{ id: 'lic-' + Date.now(), coach: newCoachName.trim(), club: newCoachClub.trim() || 'Club Deportivo', code, seats: chosenPlan.seats, devices: [], status: 'active', plan: chosenPlan.name, price: chosenPlan.price, expiry: newCoachExpiry }, ...adminLicenses]);
                 setShowNewUserModal(false); setNewCoachName(''); setNewCoachClub('');
-                alert(`¡Usuario creado!\nClave: ${code}`);
+                alert(`¡Club Creado!\nClave: ${code}\nDispositivos: ${chosenPlan.seats}`);
               }} className="space-y-3">
-                <input type="text" placeholder="Nombre Profesor / DT" value={newCoachName} onChange={e => setNewCoachName(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
-                <input type="text" placeholder="Club o Escuela" value={newCoachClub} onChange={e => setNewCoachClub(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+                <input type="text" placeholder="Director del Club" value={newCoachName} onChange={e => setNewCoachName(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
+                <input type="text" placeholder="Nombre de la Escuela / Club" value={newCoachClub} onChange={e => setNewCoachClub(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
                 <select value={newCoachPlan} onChange={e => setNewCoachPlan(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
-                  <option value="DT Personal (2 Equipos: Móvil + PC) - \$15.000">DT Personal (2 Equipos) - \$15.000</option>
-                  <option value="Escuela / Club (5 Equipos: 4 Móviles + 1 PC) - \$35.000">Escuela / Club (5 Equipos) - \$35.000</option>
-                  <option value="Prueba Gratuita (7 Días - 2 Equipos)">Prueba Gratuita (7 Días) - \$0</option>
+                  {customPlans.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} - \${p.price.toLocaleString('es-CL')}</option>
+                  ))}
                 </select>
                 <input type="date" value={newCoachExpiry} onChange={e => setNewCoachExpiry(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
-                <button type="submit" className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase rounded-xl text-white shadow">Generar Clave</button>
+                <button type="submit" className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase rounded-xl text-white shadow">Generar Acceso</button>
               </form>
             </div>
           </div>
@@ -911,16 +1261,16 @@ export default function App() {
         {showSaveModal && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-3">
-              <h3 className="font-bold text-sm text-white">Guardar Sesión</h3>
+              <h3 className="font-bold text-sm text-white">Guardar Ejercicio</h3>
               <input type="text" value={drillTitle} onChange={e => setDrillTitle(e.target.value)} placeholder="Título" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
               <select value={drillCategory} onChange={e => setDrillCategory(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <textarea value={drillNotes} onChange={e => setDrillNotes(e.target.value)} rows={3} placeholder="Consignas..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none resize-none" />
+              <textarea value={drillNotes} onChange={e => setDrillNotes(e.target.value)} rows={3} placeholder="Consignas y variantes..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none resize-none" />
               <button onClick={() => {
                 const n = { id: 'd-' + Date.now(), title: drillTitle, notes: drillNotes, category: drillCategory, date: new Date().toISOString().split('T')[0], objects, drawings };
                 setSavedDrills([n, ...savedDrills]); setShowSaveModal(false); alert('¡Sesión guardada!');
-              }} className="w-full py-2 bg-red-600 font-bold text-xs rounded-xl text-white shadow">Confirmar</button>
+              }} className="w-full py-2 bg-red-600 font-bold text-xs rounded-xl text-white shadow">Confirmar Guardado</button>
             </div>
           </div>
         )}
@@ -940,9 +1290,10 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400'}`} title="Borrador"><Eraser className="w-5 h-5" /></button>
-          <button onClick={() => setDrawings([])} className="p-1.5 text-zinc-400 hover:text-amber-400"><Trash2 className="w-5 h-5" /></button>
-          <button onClick={() => setTool(tool === 'draw' ? 'move' : 'draw')} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300'}`} title="Trazar Flecha"><PenTool className="w-5 h-5" /></button>
+          <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`} title="Texto Explicativo"><Type className="w-5 h-5" /></button>
+          <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400'}`} title="Goma de Borrar"><Eraser className="w-5 h-5" /></button>
+          <button onClick={() => { setDrawings([]); setTextBlocks([]); }} className="p-1.5 text-zinc-400 hover:text-amber-400" title="Limpiar Dibujos"><Trash2 className="w-5 h-5" /></button>
+          <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300'}`} title="Trazados y Flechas"><PenTool className="w-5 h-5" /></button>
         </div>
       </footer>
     </div>
