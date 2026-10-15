@@ -12,46 +12,95 @@ const CATEGORIES = [
   { id: 'senior', name: 'Adulto / Senior (Rendimiento)' },
 ];
 
-const TACTICAL_SYSTEMS = {
-  '4-3-3': [
-    { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
-    { number: '4', role: 'CB', x: 23, y: 82, team: 'blue' },
-    { number: '3', role: 'CB', x: 45, y: 82, team: 'blue' },
-    { number: '2', role: 'RB', x: 10, y: 74, team: 'blue' },
-    { number: '5', role: 'LB', x: 58, y: 74, team: 'blue' },
-    { number: '6', role: 'CDM', x: 34, y: 64, team: 'blue' },
-    { number: '8', role: 'CM', x: 22, y: 52, team: 'blue' },
-    { number: '10', role: 'CAM', x: 46, y: 52, team: 'blue' },
-    { number: '7', role: 'RW', x: 12, y: 32, team: 'blue' },
-    { number: '11', role: 'LW', x: 56, y: 32, team: 'blue' },
-    { number: '9', role: 'ST', x: 34, y: 24, team: 'blue' },
-  ],
-  '4-4-2': [
-    { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
-    { number: '4', role: 'CB', x: 23, y: 82, team: 'blue' },
-    { number: '3', role: 'CB', x: 45, y: 82, team: 'blue' },
-    { number: '2', role: 'RB', x: 10, y: 74, team: 'blue' },
-    { number: '5', role: 'LB', x: 58, y: 74, team: 'blue' },
-    { number: '6', role: 'CM', x: 24, y: 56, team: 'blue' },
-    { number: '8', role: 'CM', x: 44, y: 56, team: 'blue' },
-    { number: '7', role: 'RM', x: 10, y: 48, team: 'blue' },
-    { number: '11', role: 'LM', x: 58, y: 48, team: 'blue' },
-    { number: '9', role: 'ST', x: 26, y: 26, team: 'blue' },
-    { number: '10', role: 'ST', x: 42, y: 26, team: 'blue' },
-  ],
-  '3-5-2': [
-    { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
-    { number: '2', role: 'CB', x: 18, y: 82, team: 'blue' },
-    { number: '4', role: 'CB', x: 34, y: 83, team: 'blue' },
-    { number: '3', role: 'CB', x: 50, y: 82, team: 'blue' },
-    { number: '6', role: 'CDM', x: 34, y: 66, team: 'blue' },
-    { number: '8', role: 'CM', x: 23, y: 54, team: 'blue' },
-    { number: '10', role: 'CM', x: 45, y: 54, team: 'blue' },
-    { number: '7', role: 'RWB', x: 8, y: 48, team: 'blue' },
-    { number: '11', role: 'LWB', x: 60, y: 48, team: 'blue' },
-    { number: '9', role: 'ST', x: 26, y: 26, team: 'blue' },
-    { number: '19', role: 'ST', x: 42, y: 26, team: 'blue' },
-  ]
+// Formaciones tácticas adaptadas según orientación (horizontal en PC, vertical en móvil)
+const GET_TACTICAL_SYSTEMS = (isLandscape) => {
+  if (isLandscape) {
+    // Coordenadas horizontales para PC (105 de ancho x 68 de alto)
+    return {
+      '4-3-3': [
+        { number: '1', role: 'GK', x: 8, y: 34, team: 'blue' },
+        { number: '4', role: 'CB', x: 22, y: 24, team: 'blue' },
+        { number: '3', role: 'CB', x: 22, y: 44, team: 'blue' },
+        { number: '2', role: 'RB', x: 30, y: 10, team: 'blue' },
+        { number: '5', role: 'LB', x: 30, y: 58, team: 'blue' },
+        { number: '6', role: 'CDM', x: 40, y: 34, team: 'blue' },
+        { number: '8', role: 'CM', x: 52, y: 22, team: 'blue' },
+        { number: '10', role: 'CAM', x: 52, y: 46, team: 'blue' },
+        { number: '7', role: 'RW', x: 74, y: 12, team: 'blue' },
+        { number: '11', role: 'LW', x: 74, y: 56, team: 'blue' },
+        { number: '9', role: 'ST', x: 82, y: 34, team: 'blue' },
+      ],
+      '4-4-2': [
+        { number: '1', role: 'GK', x: 8, y: 34, team: 'blue' },
+        { number: '4', role: 'CB', x: 22, y: 24, team: 'blue' },
+        { number: '3', role: 'CB', x: 22, y: 44, team: 'blue' },
+        { number: '2', role: 'RB', x: 30, y: 10, team: 'blue' },
+        { number: '5', role: 'LB', x: 30, y: 58, team: 'blue' },
+        { number: '6', role: 'CM', x: 48, y: 24, team: 'blue' },
+        { number: '8', role: 'CM', x: 48, y: 44, team: 'blue' },
+        { number: '7', role: 'RM', x: 56, y: 10, team: 'blue' },
+        { number: '11', role: 'LM', x: 56, y: 58, team: 'blue' },
+        { number: '9', role: 'ST', x: 78, y: 26, team: 'blue' },
+        { number: '10', role: 'ST', x: 78, y: 42, team: 'blue' },
+      ],
+      '3-5-2': [
+        { number: '1', role: 'GK', x: 8, y: 34, team: 'blue' },
+        { number: '2', role: 'CB', x: 22, y: 18, team: 'blue' },
+        { number: '4', role: 'CB', x: 21, y: 34, team: 'blue' },
+        { number: '3', role: 'CB', x: 22, y: 50, team: 'blue' },
+        { number: '6', role: 'CDM', x: 38, y: 34, team: 'blue' },
+        { number: '8', role: 'CM', x: 50, y: 23, team: 'blue' },
+        { number: '10', role: 'CM', x: 50, y: 45, team: 'blue' },
+        { number: '7', role: 'RWB', x: 56, y: 8, team: 'blue' },
+        { number: '11', role: 'LWB', x: 56, y: 60, team: 'blue' },
+        { number: '9', role: 'ST', x: 78, y: 26, team: 'blue' },
+        { number: '19', role: 'ST', x: 78, y: 42, team: 'blue' },
+      ]
+    };
+  }
+
+  // Coordenadas verticales para Celular (68 de ancho x 105 de alto)
+  return {
+    '4-3-3': [
+      { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
+      { number: '4', role: 'CB', x: 23, y: 82, team: 'blue' },
+      { number: '3', role: 'CB', x: 45, y: 82, team: 'blue' },
+      { number: '2', role: 'RB', x: 10, y: 74, team: 'blue' },
+      { number: '5', role: 'LB', x: 58, y: 74, team: 'blue' },
+      { number: '6', role: 'CDM', x: 34, y: 64, team: 'blue' },
+      { number: '8', role: 'CM', x: 22, y: 52, team: 'blue' },
+      { number: '10', role: 'CAM', x: 46, y: 52, team: 'blue' },
+      { number: '7', role: 'RW', x: 12, y: 32, team: 'blue' },
+      { number: '11', role: 'LW', x: 56, y: 32, team: 'blue' },
+      { number: '9', role: 'ST', x: 34, y: 24, team: 'blue' },
+    ],
+    '4-4-2': [
+      { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
+      { number: '4', role: 'CB', x: 23, y: 82, team: 'blue' },
+      { number: '3', role: 'CB', x: 45, y: 82, team: 'blue' },
+      { number: '2', role: 'RB', x: 10, y: 74, team: 'blue' },
+      { number: '5', role: 'LB', x: 58, y: 74, team: 'blue' },
+      { number: '6', role: 'CM', x: 24, y: 56, team: 'blue' },
+      { number: '8', role: 'CM', x: 44, y: 56, team: 'blue' },
+      { number: '7', role: 'RM', x: 10, y: 48, team: 'blue' },
+      { number: '11', role: 'LM', x: 58, y: 48, team: 'blue' },
+      { number: '9', role: 'ST', x: 26, y: 26, team: 'blue' },
+      { number: '10', role: 'ST', x: 42, y: 26, team: 'blue' },
+    ],
+    '3-5-2': [
+      { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
+      { number: '2', role: 'CB', x: 18, y: 82, team: 'blue' },
+      { number: '4', role: 'CB', x: 34, y: 83, team: 'blue' },
+      { number: '3', role: 'CB', x: 50, y: 82, team: 'blue' },
+      { number: '6', role: 'CDM', x: 34, y: 66, team: 'blue' },
+      { number: '8', role: 'CM', x: 23, y: 54, team: 'blue' },
+      { number: '10', role: 'CM', x: 45, y: 54, team: 'blue' },
+      { number: '7', role: 'RWB', x: 8, y: 48, team: 'blue' },
+      { number: '11', role: 'LWB', x: 60, y: 48, team: 'blue' },
+      { number: '9', role: 'ST', x: 26, y: 26, team: 'blue' },
+      { number: '19', role: 'ST', x: 42, y: 26, team: 'blue' },
+    ]
+  };
 };
 
 function SoccerBall({ x, y, onPointerDown }) {
@@ -164,7 +213,16 @@ function TrainingMaterial({ obj, onPointerDown }) {
 }
 
 export default function App() {
-  const [pitchMode, setPitchMode] = useState('full');
+  // Detección automática de pantalla: ¿Está en PC/Monitor o en Celular?
+  const [isPC, setIsPC] = useState(window.innerWidth > 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsPC(window.innerWidth > 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const [pitchMode, setPitchMode] = useState('full'); // 'full' o 'half'
   const [showTrainingMenu, setShowTrainingMenu] = useState(false);
   const [showLineMenu, setShowLineMenu] = useState(false);
   const [showSystemsMenu, setShowSystemsMenu] = useState(false);
@@ -183,21 +241,7 @@ export default function App() {
     if (local) {
       try { return JSON.parse(local); } catch (e) {}
     }
-    return [
-      {
-        id: 'drill-1',
-        title: 'Rondo 4v2 con Tercer Hombre',
-        category: 'sub10',
-        notes: 'Iniciación en apoyos diagonales',
-        pitchMode: 'half',
-        date: '2026-10-12',
-        objects: [
-          ...TACTICAL_SYSTEMS['4-3-3'].slice(0, 6).map(p => ({ ...p, id: 'r-' + p.number, type: 'player' })),
-          { id: 'b-1', type: 'ball', x: 34, y: 42.5 }
-        ],
-        drawings: []
-      }
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -210,10 +254,10 @@ export default function App() {
   const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
 
-  // Formulario nuevo usuario con los planes reales
+  // Formulario nuevo usuario
   const [newCoachName, setNewCoachName] = useState('');
   const [newCoachClub, setNewCoachClub] = useState('');
-  const [newCoachPlan, setNewCoachPlan] = useState('DT Personal (2 Equipos: Móvil + PC - $15.000)');
+  const [newCoachPlan, setNewCoachPlan] = useState('DT Personal (2 Equipos: Móvil + PC) - $15.000');
   const [newCoachPrice, setNewCoachPrice] = useState(15000);
   const [newCoachSeats, setNewCoachSeats] = useState(2);
   const [newCoachExpiry, setNewCoachExpiry] = useState(() => {
@@ -243,10 +287,14 @@ export default function App() {
   const [lineColor, setLineColor] = useState('#ffffff');
   const [lineWidth, setLineWidth] = useState(1.4);
 
-  const [objects, setObjects] = useState([
-    ...TACTICAL_SYSTEMS['4-3-3'].map((p) => ({ ...p, id: 'init-' + p.number, type: 'player' })),
-    { id: 'ball-1', type: 'ball', x: 34, y: 52.5 }
-  ]);
+  // Inicialización de jugadores según dispositivo
+  const [objects, setObjects] = useState(() => {
+    const systems = GET_TACTICAL_SYSTEMS(window.innerWidth > 768);
+    const initialPlayers = systems['4-3-3'].map((p) => ({ ...p, id: 'init-' + p.number, type: 'player' }));
+    const ballPos = window.innerWidth > 768 ? { x: 52.5, y: 34 } : { x: 34, y: 52.5 };
+    return [...initialPlayers, { id: 'ball-1', type: 'ball', ...ballPos }];
+  });
+
   const [drawings, setDrawings] = useState([]);
   const [currentLine, setCurrentLine] = useState(null);
 
@@ -257,16 +305,20 @@ export default function App() {
   const isDraggingRef = useRef(false);
   const [selectedObj, setSelectedObj] = useState(null);
 
+  // Dimensiones según pantalla y modo:
+  // En PC horizontal: Cancha 105 x 68. Media Cancha 55 x 68.
+  // En Móvil vertical: Cancha 68 x 105. Media Cancha 68 x 85.
+  const maxX = isPC ? (pitchMode === 'half' ? 55 : 105) : 68;
+  const maxY = isPC ? 68 : (pitchMode === 'half' ? 85 : 105);
+
   const getCoordinates = (e) => {
-    if (!svgRef.current) return { x: 34, y: 50 };
+    if (!svgRef.current) return { x: maxX / 2, y: maxY / 2 };
     const pt = svgRef.current.createSVGPoint();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     pt.x = clientX;
     pt.y = clientY;
     const cursorPt = pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
-    const maxX = 68;
-    const maxY = pitchMode === 'half' ? 85 : 105;
     return {
       x: Math.max(2, Math.min(maxX - 2, cursorPt.x)),
       y: Math.max(2, Math.min(maxY - 2, cursorPt.y))
@@ -359,8 +411,9 @@ export default function App() {
 
   const addElement = (itemType, extra = {}) => {
     const id = 'item-' + Date.now();
-    const spawnY = pitchMode === 'half' ? 42.5 : 52.5;
-    let newItem = { id, type: itemType, x: 34, y: spawnY, ...extra };
+    const spawnX = isPC ? (pitchMode === 'half' ? 27.5 : 52.5) : 34;
+    const spawnY = isPC ? 34 : (pitchMode === 'half' ? 42.5 : 52.5);
+    let newItem = { id, type: itemType, x: spawnX, y: spawnY, ...extra };
     if (itemType === 'player') {
       const count = objects.filter((o) => o.type === 'player' && o.team === (extra.team || 'blue')).length + 1;
       newItem.number = String(extra.number || count);
@@ -406,7 +459,6 @@ export default function App() {
     }
   };
 
-  // Botón directo: 7 Días Gratis
   const applySevenDaysTrial = () => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
@@ -416,7 +468,6 @@ export default function App() {
     setNewCoachSeats(2);
   };
 
-  // Crear Usuario en Panel con los Planes Correctos
   const handleCreateNewUser = (e) => {
     e.preventDefault();
     if (!newCoachName.trim()) {
@@ -461,7 +512,7 @@ export default function App() {
       setShowAdminDashboard(true);
       setAdminPasswordInput('');
     } else {
-      alert('Contraseña incorrecta. (Clave por defecto: andez2026)');
+      alert('Contraseña incorrecta. (Clave: andez2026)');
     }
   };
 
@@ -483,7 +534,8 @@ export default function App() {
   };
 
   const applyTacticalSystem = (systemKey) => {
-    const sys = TACTICAL_SYSTEMS[systemKey];
+    const systems = GET_TACTICAL_SYSTEMS(isPC);
+    const sys = systems[systemKey];
     if (!sys) return;
     const newPlayers = sys.map((p, idx) => ({
       id: 'sys-p-' + idx,
@@ -679,7 +731,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. LIENZO DE CANCHA */}
+      {/* 2. LIENZO DE CANCHA ADAPTATIVO: HORIZONTAL EN PC Y VERTICAL EN MÓVIL */}
       <main
         className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]"
         onPointerMove={handlePointerMove}
@@ -687,49 +739,97 @@ export default function App() {
       >
         <svg
           ref={svgRef}
-          viewBox={pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105"}
+          viewBox={
+            isPC
+              ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68")
+              : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")
+          }
           preserveAspectRatio="xMidYMid meet"
           className="w-full h-full touch-none select-none drop-shadow-2xl"
           onPointerDown={handlePitchPointerDown}
         >
-          <rect width="200" height="200" x="-50" y="-50" fill="#228b22" />
+          <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
 
-          {pitchMode === 'half' ? (
-            <g>
-              <rect x="2" y="3" width="64" height="79" fill="none" stroke="white" strokeWidth="0.8" />
-              <rect x="2" y="19" width="22" height="47" fill="none" stroke="white" strokeWidth="0.8" />
-              <rect x="2" y="30.5" width="7" height="24" fill="none" stroke="white" strokeWidth="0.8" />
-              <circle cx="15" cy="42.5" r="0.6" fill="white" />
-              <path d="M 24 33.5 A 10 10 0 0 1 24 51.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <rect x="0.2" y="37.5" width="1.8" height="10" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
-              <line x1="66" y1="3" x2="66" y2="82" stroke="white" strokeWidth="0.8" />
-              <path d="M 66 30.5 A 12 12 0 0 0 66 54.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <circle cx="66" cy="42.5" r="0.6" fill="white" />
-            </g>
+          {/* DIBUJO CANCHA SEGÚN DISPOSITIVO */}
+          {isPC ? (
+            /* FORMATO PC (HORIZONTAL PANORÁMICO QUE OCUPA TODA LA PANTALLA) */
+            pitchMode === 'half' ? (
+              /* Media Cancha PC */
+              <g>
+                <rect x="2" y="2" width="51" height="64" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="2" y="13.84" width="16.5" height="40.32" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="2" y="24.84" width="5.5" height="18.32" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="11" cy="34" r="0.6" fill="white" />
+                <path d="M 18.5 27.5 A 9.15 9.15 0 0 1 18.5 40.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="0.2" y="30.34" width="1.8" height="7.32" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
+                <line x1="53" y1="2" x2="53" y2="66" stroke="white" strokeWidth="0.8" />
+                <path d="M 53 24.85 A 9.15 9.15 0 0 0 53 43.15" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="53" cy="34" r="0.6" fill="white" />
+              </g>
+            ) : (
+              /* Cancha Completa PC Horizontal */
+              <g>
+                <rect x="2" y="2" width="101" height="64" fill="none" stroke="white" strokeWidth="0.8" />
+                <line x1="52.5" y1="2" x2="52.5" y2="66" stroke="white" strokeWidth="0.8" />
+                <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="52.5" cy="34" r="0.6" fill="white" />
+
+                {/* Área Izquierda (Oeste) */}
+                <rect x="2" y="13.84" width="16.5" height="40.32" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="2" y="24.84" width="5.5" height="18.32" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="11" cy="34" r="0.6" fill="white" />
+                <path d="M 18.5 27.5 A 9.15 9.15 0 0 1 18.5 40.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="0.2" y="30.34" width="1.8" height="7.32" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
+
+                {/* Área Derecha (Este) */}
+                <rect x="86.5" y="13.84" width="16.5" height="40.32" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="97.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="94" cy="34" r="0.6" fill="white" />
+                <path d="M 86.5 27.5 A 9.15 9.15 0 0 0 86.5 40.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="103" y="30.34" width="1.8" height="7.32" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
+              </g>
+            )
           ) : (
-            <g>
-              <rect x="2" y="2" width="64" height="101" fill="none" stroke="white" strokeWidth="0.8" />
-              <line x1="2" y1="52.5" x2="66" y2="52.5" stroke="white" strokeWidth="0.8" />
-              <circle cx="34" cy="52.5" r="9.15" fill="none" stroke="white" strokeWidth="0.8" />
-              <circle cx="34" cy="52.5" r="0.6" fill="white" />
+            /* FORMATO MÓVIL (VERTICAL EXACTO COMO YA ESTÁ VALIDADO) */
+            pitchMode === 'half' ? (
+              <g>
+                <rect x="2" y="3" width="64" height="79" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="2" y="19" width="22" height="47" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="2" y="30.5" width="7" height="24" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="15" cy="42.5" r="0.6" fill="white" />
+                <path d="M 24 33.5 A 10 10 0 0 1 24 51.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="0.2" y="37.5" width="1.8" height="10" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
+                <line x1="66" y1="3" x2="66" y2="82" stroke="white" strokeWidth="0.8" />
+                <path d="M 66 30.5 A 12 12 0 0 0 66 54.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="66" cy="42.5" r="0.6" fill="white" />
+              </g>
+            ) : (
+              <g>
+                <rect x="2" y="2" width="64" height="101" fill="none" stroke="white" strokeWidth="0.8" />
+                <line x1="2" y1="52.5" x2="66" y2="52.5" stroke="white" strokeWidth="0.8" />
+                <circle cx="34" cy="52.5" r="9.15" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="34" cy="52.5" r="0.6" fill="white" />
 
-              <rect x="13.84" y="2" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <rect x="24.84" y="2" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <circle cx="34" cy="13" r="0.6" fill="white" />
-              <path d="M 27.5 18.5 A 9.15 9.15 0 0 0 40.5 18.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <rect x="30.34" y="0.2" width="7.32" height="1.8" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
+                <rect x="13.84" y="2" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="24.84" y="2" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="34" cy="13" r="0.6" fill="white" />
+                <path d="M 27.5 18.5 A 9.15 9.15 0 0 0 40.5 18.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="30.34" y="0.2" width="7.32" height="1.8" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
 
-              <rect x="13.84" y="86.5" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <rect x="24.84" y="97.5" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <circle cx="34" cy="92" r="0.6" fill="white" />
-              <path d="M 27.5 86.5 A 9.15 9.15 0 0 1 40.5 86.5" fill="none" stroke="white" strokeWidth="0.8" />
-              <rect x="30.34" y="103" width="7.32" height="1.8" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
-            </g>
+                <rect x="13.84" y="86.5" width="40.32" height="16.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="24.84" y="97.5" width="18.32" height="5.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <circle cx="34" cy="92" r="0.6" fill="white" />
+                <path d="M 27.5 86.5 A 9.15 9.15 0 0 1 40.5 86.5" fill="none" stroke="white" strokeWidth="0.8" />
+                <rect x="30.34" y="103" width="7.32" height="1.8" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
+              </g>
+            )
           )}
 
+          {/* Trazos tácticos */}
           {drawings.map((line) => renderLinePath(line, false))}
           {currentLine && renderLinePath(currentLine, true)}
 
+          {/* Elementos en cancha */}
           {objects.map((obj) => {
             if (obj.type === 'player') {
               return (
@@ -1038,7 +1138,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 7. MODAL CREAR NUEVO USUARIO CON PLANES Y PRUEBA GRATIS */}
+        {/* 7. MODAL CREAR NUEVO USUARIO */}
         {showNewUserModal && (
           <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
@@ -1051,7 +1151,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Botón Rápido: 7 Días de Prueba Gratis */}
               <button
                 type="button"
                 onClick={applySevenDaysTrial}
@@ -1103,10 +1202,10 @@ export default function App() {
                     }}
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                   >
-                    <option value="DT Personal (2 Equipos: Móvil + PC - \$15.000)">
+                    <option value="DT Personal (2 Equipos: Móvil + PC) - \$15.000">
                       DT Personal (2 Equipos: Móvil + PC) - \$15.000
                     </option>
-                    <option value="Escuela / Club (5 Equipos: 4 Móviles + 1 PC - \$35.000)">
+                    <option value="Escuela / Club (5 Equipos: 4 Móviles + 1 PC) - \$35.000">
                       Escuela / Club (5 Equipos: 4 Móviles + 1 PC) - \$35.000
                     </option>
                     <option value="Prueba Gratuita (7 Días - 2 Equipos)">
@@ -1188,7 +1287,7 @@ export default function App() {
                 </button>
               </div>
               <div className="flex flex-col gap-2">
-                {Object.keys(TACTICAL_SYSTEMS).map((sysKey) => (
+                {Object.keys(GET_TACTICAL_SYSTEMS(isPC)).map((sysKey) => (
                   <button
                     key={sysKey}
                     onClick={() => applyTacticalSystem(sysKey)}
