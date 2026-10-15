@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Folder, Play, RotateCcw, Shirt, Share2, Save,
   Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser,
-  Lock, KeyRound, ShieldCheck, Check, Search, Plus, Calendar, AlertTriangle, Users, Gift
+  Lock, KeyRound, ShieldCheck, Check, Search, Plus, Calendar, AlertTriangle, Users, Gift, RotateCw, Edit3
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -12,93 +12,90 @@ const CATEGORIES = [
   { id: 'senior', name: 'Adulto / Senior (Rendimiento)' },
 ];
 
-// Formaciones tácticas adaptadas según orientación (horizontal en PC, vertical en móvil)
 const GET_TACTICAL_SYSTEMS = (isLandscape) => {
   if (isLandscape) {
-    // Coordenadas horizontales para PC (105 de ancho x 68 de alto)
     return {
       '4-3-3': [
-        { number: '1', role: 'GK', x: 8, y: 34, team: 'blue' },
-        { number: '4', role: 'CB', x: 22, y: 24, team: 'blue' },
-        { number: '3', role: 'CB', x: 22, y: 44, team: 'blue' },
-        { number: '2', role: 'RB', x: 30, y: 10, team: 'blue' },
-        { number: '5', role: 'LB', x: 30, y: 58, team: 'blue' },
-        { number: '6', role: 'CDM', x: 40, y: 34, team: 'blue' },
-        { number: '8', role: 'CM', x: 52, y: 22, team: 'blue' },
-        { number: '10', role: 'CAM', x: 52, y: 46, team: 'blue' },
-        { number: '7', role: 'RW', x: 74, y: 12, team: 'blue' },
-        { number: '11', role: 'LW', x: 74, y: 56, team: 'blue' },
-        { number: '9', role: 'ST', x: 82, y: 34, team: 'blue' },
+        { number: '1', name: 'Arquero', role: 'GK', x: 8, y: 34, team: 'blue' },
+        { number: '4', name: 'Central Der.', role: 'CB', x: 22, y: 24, team: 'blue' },
+        { number: '3', name: 'Central Izq.', role: 'CB', x: 22, y: 44, team: 'blue' },
+        { number: '2', name: 'Lateral Der.', role: 'RB', x: 30, y: 10, team: 'blue' },
+        { number: '5', name: 'Lateral Izq.', role: 'LB', x: 30, y: 58, team: 'blue' },
+        { number: '6', name: 'Volante Def.', role: 'CDM', x: 40, y: 34, team: 'blue' },
+        { number: '8', name: 'Interior Der.', role: 'CM', x: 52, y: 22, team: 'blue' },
+        { number: '10', name: 'Creación', role: 'CAM', x: 52, y: 46, team: 'blue' },
+        { number: '7', name: 'Extremo Der.', role: 'RW', x: 74, y: 12, team: 'blue' },
+        { number: '11', name: 'Extremo Izq.', role: 'LW', x: 74, y: 56, team: 'blue' },
+        { number: '9', name: 'Delantero', role: 'ST', x: 82, y: 34, team: 'blue' },
       ],
       '4-4-2': [
-        { number: '1', role: 'GK', x: 8, y: 34, team: 'blue' },
-        { number: '4', role: 'CB', x: 22, y: 24, team: 'blue' },
-        { number: '3', role: 'CB', x: 22, y: 44, team: 'blue' },
-        { number: '2', role: 'RB', x: 30, y: 10, team: 'blue' },
-        { number: '5', role: 'LB', x: 30, y: 58, team: 'blue' },
-        { number: '6', role: 'CM', x: 48, y: 24, team: 'blue' },
-        { number: '8', role: 'CM', x: 48, y: 44, team: 'blue' },
-        { number: '7', role: 'RM', x: 56, y: 10, team: 'blue' },
-        { number: '11', role: 'LM', x: 56, y: 58, team: 'blue' },
-        { number: '9', role: 'ST', x: 78, y: 26, team: 'blue' },
-        { number: '10', role: 'ST', x: 78, y: 42, team: 'blue' },
+        { number: '1', name: 'Arquero', role: 'GK', x: 8, y: 34, team: 'blue' },
+        { number: '4', name: 'Central Der.', role: 'CB', x: 22, y: 24, team: 'blue' },
+        { number: '3', name: 'Central Izq.', role: 'CB', x: 22, y: 44, team: 'blue' },
+        { number: '2', name: 'Lateral Der.', role: 'RB', x: 30, y: 10, team: 'blue' },
+        { number: '5', name: 'Lateral Izq.', role: 'LB', x: 30, y: 58, team: 'blue' },
+        { number: '6', name: 'Volante Mixto', role: 'CM', x: 48, y: 24, team: 'blue' },
+        { number: '8', name: 'Volante Salida', role: 'CM', x: 48, y: 44, team: 'blue' },
+        { number: '7', name: 'Banda Der.', role: 'RM', x: 56, y: 10, team: 'blue' },
+        { number: '11', name: 'Banda Izq.', role: 'LM', x: 56, y: 58, team: 'blue' },
+        { number: '9', name: 'Punta Der.', role: 'ST', x: 78, y: 26, team: 'blue' },
+        { number: '10', name: 'Punta Izq.', role: 'ST', x: 78, y: 42, team: 'blue' },
       ],
       '3-5-2': [
-        { number: '1', role: 'GK', x: 8, y: 34, team: 'blue' },
-        { number: '2', role: 'CB', x: 22, y: 18, team: 'blue' },
-        { number: '4', role: 'CB', x: 21, y: 34, team: 'blue' },
-        { number: '3', role: 'CB', x: 22, y: 50, team: 'blue' },
-        { number: '6', role: 'CDM', x: 38, y: 34, team: 'blue' },
-        { number: '8', role: 'CM', x: 50, y: 23, team: 'blue' },
-        { number: '10', role: 'CM', x: 50, y: 45, team: 'blue' },
-        { number: '7', role: 'RWB', x: 56, y: 8, team: 'blue' },
-        { number: '11', role: 'LWB', x: 56, y: 60, team: 'blue' },
-        { number: '9', role: 'ST', x: 78, y: 26, team: 'blue' },
-        { number: '19', role: 'ST', x: 78, y: 42, team: 'blue' },
+        { number: '1', name: 'Arquero', role: 'GK', x: 8, y: 34, team: 'blue' },
+        { number: '2', name: 'Stopper Der.', role: 'CB', x: 22, y: 18, team: 'blue' },
+        { number: '4', name: 'Líbero', role: 'CB', x: 21, y: 34, team: 'blue' },
+        { number: '3', name: 'Stopper Izq.', role: 'CB', x: 22, y: 50, team: 'blue' },
+        { number: '6', name: 'Pivote', role: 'CDM', x: 38, y: 34, team: 'blue' },
+        { number: '8', name: 'Interior', role: 'CM', x: 50, y: 23, team: 'blue' },
+        { number: '10', name: 'Enganche', role: 'CM', x: 50, y: 45, team: 'blue' },
+        { number: '7', name: 'Carrilero Der.', role: 'RWB', x: 56, y: 8, team: 'blue' },
+        { number: '11', name: 'Carrilero Izq.', role: 'LWB', x: 56, y: 60, team: 'blue' },
+        { number: '9', name: 'Delantero', role: 'ST', x: 78, y: 26, team: 'blue' },
+        { number: '19', name: 'Segundo Punta', role: 'ST', x: 78, y: 42, team: 'blue' },
       ]
     };
   }
 
-  // Coordenadas verticales para Celular (68 de ancho x 105 de alto)
   return {
     '4-3-3': [
-      { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
-      { number: '4', role: 'CB', x: 23, y: 82, team: 'blue' },
-      { number: '3', role: 'CB', x: 45, y: 82, team: 'blue' },
-      { number: '2', role: 'RB', x: 10, y: 74, team: 'blue' },
-      { number: '5', role: 'LB', x: 58, y: 74, team: 'blue' },
-      { number: '6', role: 'CDM', x: 34, y: 64, team: 'blue' },
-      { number: '8', role: 'CM', x: 22, y: 52, team: 'blue' },
-      { number: '10', role: 'CAM', x: 46, y: 52, team: 'blue' },
-      { number: '7', role: 'RW', x: 12, y: 32, team: 'blue' },
-      { number: '11', role: 'LW', x: 56, y: 32, team: 'blue' },
-      { number: '9', role: 'ST', x: 34, y: 24, team: 'blue' },
+      { number: '1', name: 'Arquero', role: 'GK', x: 34, y: 96, team: 'blue' },
+      { number: '4', name: 'Central Der.', role: 'CB', x: 23, y: 82, team: 'blue' },
+      { number: '3', name: 'Central Izq.', role: 'CB', x: 45, y: 82, team: 'blue' },
+      { number: '2', name: 'Lateral Der.', role: 'RB', x: 10, y: 74, team: 'blue' },
+      { number: '5', name: 'Lateral Izq.', role: 'LB', x: 58, y: 74, team: 'blue' },
+      { number: '6', name: 'Volante Def.', role: 'CDM', x: 34, y: 64, team: 'blue' },
+      { number: '8', name: 'Interior Der.', role: 'CM', x: 22, y: 52, team: 'blue' },
+      { number: '10', name: 'Creación', role: 'CAM', x: 46, y: 52, team: 'blue' },
+      { number: '7', name: 'Extremo Der.', role: 'RW', x: 12, y: 32, team: 'blue' },
+      { number: '11', name: 'Extremo Izq.', role: 'LW', x: 56, y: 32, team: 'blue' },
+      { number: '9', name: 'Delantero', role: 'ST', x: 34, y: 24, team: 'blue' },
     ],
     '4-4-2': [
-      { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
-      { number: '4', role: 'CB', x: 23, y: 82, team: 'blue' },
-      { number: '3', role: 'CB', x: 45, y: 82, team: 'blue' },
-      { number: '2', role: 'RB', x: 10, y: 74, team: 'blue' },
-      { number: '5', role: 'LB', x: 58, y: 74, team: 'blue' },
-      { number: '6', role: 'CM', x: 24, y: 56, team: 'blue' },
-      { number: '8', role: 'CM', x: 44, y: 56, team: 'blue' },
-      { number: '7', role: 'RM', x: 10, y: 48, team: 'blue' },
-      { number: '11', role: 'LM', x: 58, y: 48, team: 'blue' },
-      { number: '9', role: 'ST', x: 26, y: 26, team: 'blue' },
-      { number: '10', role: 'ST', x: 42, y: 26, team: 'blue' },
+      { number: '1', name: 'Arquero', role: 'GK', x: 34, y: 96, team: 'blue' },
+      { number: '4', name: 'Central Der.', role: 'CB', x: 23, y: 82, team: 'blue' },
+      { number: '3', name: 'Central Izq.', role: 'CB', x: 45, y: 82, team: 'blue' },
+      { number: '2', name: 'Lateral Der.', role: 'RB', x: 10, y: 74, team: 'blue' },
+      { number: '5', name: 'Lateral Izq.', role: 'LB', x: 58, y: 74, team: 'blue' },
+      { number: '6', name: 'Volante Mixto', role: 'CM', x: 24, y: 56, team: 'blue' },
+      { number: '8', name: 'Volante Salida', role: 'CM', x: 44, y: 56, team: 'blue' },
+      { number: '7', name: 'Banda Der.', role: 'RM', x: 10, y: 48, team: 'blue' },
+      { number: '11', name: 'Banda Izq.', role: 'LM', x: 58, y: 48, team: 'blue' },
+      { number: '9', name: 'Punta Der.', role: 'ST', x: 26, y: 26, team: 'blue' },
+      { number: '10', name: 'Punta Izq.', role: 'ST', x: 42, y: 26, team: 'blue' },
     ],
     '3-5-2': [
-      { number: '1', role: 'GK', x: 34, y: 96, team: 'blue' },
-      { number: '2', role: 'CB', x: 18, y: 82, team: 'blue' },
-      { number: '4', role: 'CB', x: 34, y: 83, team: 'blue' },
-      { number: '3', role: 'CB', x: 50, y: 82, team: 'blue' },
-      { number: '6', role: 'CDM', x: 34, y: 66, team: 'blue' },
-      { number: '8', role: 'CM', x: 23, y: 54, team: 'blue' },
-      { number: '10', role: 'CM', x: 45, y: 54, team: 'blue' },
-      { number: '7', role: 'RWB', x: 8, y: 48, team: 'blue' },
-      { number: '11', role: 'LWB', x: 60, y: 48, team: 'blue' },
-      { number: '9', role: 'ST', x: 26, y: 26, team: 'blue' },
-      { number: '19', role: 'ST', x: 42, y: 26, team: 'blue' },
+      { number: '1', name: 'Arquero', role: 'GK', x: 34, y: 96, team: 'blue' },
+      { number: '2', name: 'Stopper Der.', role: 'CB', x: 18, y: 82, team: 'blue' },
+      { number: '4', name: 'Líbero', role: 'CB', x: 34, y: 83, team: 'blue' },
+      { number: '3', name: 'Stopper Izq.', role: 'CB', x: 50, y: 82, team: 'blue' },
+      { number: '6', name: 'Pivote', role: 'CDM', x: 34, y: 66, team: 'blue' },
+      { number: '8', name: 'Interior', role: 'CM', x: 23, y: 54, team: 'blue' },
+      { number: '10', name: 'Enganche', role: 'CM', x: 45, y: 54, team: 'blue' },
+      { number: '7', name: 'Carrilero Der.', role: 'RWB', x: 8, y: 48, team: 'blue' },
+      { number: '11', name: 'Carrilero Izq.', role: 'LWB', x: 60, y: 48, team: 'blue' },
+      { number: '9', name: 'Delantero', role: 'ST', x: 26, y: 26, team: 'blue' },
+      { number: '19', name: 'Segundo Punta', role: 'ST', x: 42, y: 26, team: 'blue' },
     ]
   };
 };
@@ -127,93 +124,87 @@ function SoccerBall({ x, y, onPointerDown }) {
   );
 }
 
-function TrainingMaterial({ obj, onPointerDown }) {
-  if (obj.type === 'mini_goal') {
-    return (
-      <g transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={onPointerDown} className="cursor-grab touch-none select-none">
-        <rect x="-4.2" y="-2.2" width="8.4" height="4.4" fill="rgba(0,0,0,0.2)" rx="0.5" transform="translate(0.3, 0.4)" />
-        <rect x="-4.2" y="-2.2" width="8.4" height="4.4" fill="rgba(255,255,255,0.25)" stroke="#eab308" strokeWidth="0.7" rx="0.4" />
-        <line x1="-4.2" y1="-0.7" x2="4.2" y2="-0.7" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
-        <line x1="-4.2" y1="0.7" x2="4.2" y2="0.7" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
-        <line x1="-2.1" y1="-2.2" x2="-2.1" y2="2.2" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
-        <line x1="0" y1="-2.2" x2="0" y2="2.2" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
-        <line x1="2.1" y1="-2.2" x2="2.1" y2="2.2" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
-        <rect x="-4.2" y="1.8" width="8.4" height="0.6" fill="#ca8a04" />
-      </g>
-    );
-  }
+// Materiales con soporte de rotación interactiva
+function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
+  const rotation = obj.rotation || 0;
+  return (
+    <g
+      transform={`translate(${obj.x}, ${obj.y}) rotate(${rotation})`}
+      onPointerDown={onPointerDown}
+      onDoubleClick={onDoubleClick}
+      className="cursor-grab active:cursor-grabbing touch-none select-none"
+    >
+      {obj.type === 'mini_goal' && (
+        <g>
+          <rect x="-4.2" y="-2.2" width="8.4" height="4.4" fill="rgba(0,0,0,0.2)" rx="0.5" transform="translate(0.3, 0.4)" />
+          <rect x="-4.2" y="-2.2" width="8.4" height="4.4" fill="rgba(255,255,255,0.25)" stroke="#eab308" strokeWidth="0.7" rx="0.4" />
+          <line x1="-4.2" y1="-0.7" x2="4.2" y2="-0.7" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
+          <line x1="-4.2" y1="0.7" x2="4.2" y2="0.7" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
+          <line x1="-2.1" y1="-2.2" x2="-2.1" y2="2.2" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
+          <line x1="0" y1="-2.2" x2="0" y2="2.2" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
+          <line x1="2.1" y1="-2.2" x2="2.1" y2="2.2" stroke="#ffffff" strokeWidth="0.25" strokeDasharray="0.8,0.8" />
+          <rect x="-4.2" y="1.8" width="8.4" height="0.6" fill="#ca8a04" />
+        </g>
+      )}
 
-  if (obj.type === 'ladder') {
-    return (
-      <g transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={onPointerDown} className="cursor-grab touch-none select-none">
-        <rect x="-2.2" y="-7.2" width="4.4" height="14.4" fill="rgba(0,0,0,0.25)" rx="0.3" transform="translate(0.3, 0.3)" />
-        <line x1="-2.2" y1="-7.2" x2="-2.2" y2="7.2" stroke="#0f172a" strokeWidth="0.6" />
-        <line x1="2.2" y1="-7.2" x2="2.2" y2="7.2" stroke="#0f172a" strokeWidth="0.6" />
-        {[-5.4, -3.6, -1.8, 0, 1.8, 3.6, 5.4].map((step) => (
-          <line key={step} x1="-2.2" y1={step} x2="2.2" y2={step} stroke="#facc15" strokeWidth="0.7" />
-        ))}
-      </g>
-    );
-  }
+      {obj.type === 'ladder' && (
+        <g>
+          <rect x="-2.2" y="-7.2" width="4.4" height="14.4" fill="rgba(0,0,0,0.25)" rx="0.3" transform="translate(0.3, 0.3)" />
+          <line x1="-2.2" y1="-7.2" x2="-2.2" y2="7.2" stroke="#0f172a" strokeWidth="0.6" />
+          <line x1="2.2" y1="-7.2" x2="2.2" y2="7.2" stroke="#0f172a" strokeWidth="0.6" />
+          {[-5.4, -3.6, -1.8, 0, 1.8, 3.6, 5.4].map((step) => (
+            <line key={step} x1="-2.2" y1={step} x2="2.2" y2={step} stroke="#facc15" strokeWidth="0.7" />
+          ))}
+        </g>
+      )}
 
-  if (obj.type === 'dummy') {
-    return (
-      <g transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={onPointerDown} className="cursor-grab touch-none select-none">
-        <ellipse cx="0" cy="4.2" rx="2" ry="0.8" fill="rgba(0,0,0,0.3)" />
-        <circle cx="0" cy="-3.6" r="1.3" fill="#eab308" stroke="#ca8a04" strokeWidth="0.3" />
-        <path d="M -2.2 -2.1 Q 0 -2.6 2.2 -2.1 L 1.8 2.2 Q 0 2.5 -1.8 2.2 Z" fill="#facc15" stroke="#ca8a04" strokeWidth="0.35" />
-        <line x1="-1.1" y1="2.2" x2="-1.1" y2="4.2" stroke="#0f172a" strokeWidth="0.5" />
-        <line x1="1.1" y1="2.2" x2="1.1" y2="4.2" stroke="#0f172a" strokeWidth="0.5" />
-      </g>
-    );
-  }
+      {obj.type === 'dummy' && (
+        <g>
+          <ellipse cx="0" cy="4.2" rx="2" ry="0.8" fill="rgba(0,0,0,0.3)" />
+          <circle cx="0" cy="-3.6" r="1.3" fill="#eab308" stroke="#ca8a04" strokeWidth="0.3" />
+          <path d="M -2.2 -2.1 Q 0 -2.6 2.2 -2.1 L 1.8 2.2 Q 0 2.5 -1.8 2.2 Z" fill="#facc15" stroke="#ca8a04" strokeWidth="0.35" />
+          <line x1="-1.1" y1="2.2" x2="-1.1" y2="4.2" stroke="#0f172a" strokeWidth="0.5" />
+          <line x1="1.1" y1="2.2" x2="1.1" y2="4.2" stroke="#0f172a" strokeWidth="0.5" />
+        </g>
+      )}
 
-  if (obj.type === 'cone') {
-    return (
-      <g transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={onPointerDown} className="cursor-grab touch-none select-none">
-        <ellipse cx="0" cy="1.6" rx="2.2" ry="0.9" fill="rgba(0,0,0,0.3)" />
-        <ellipse cx="0" cy="1.2" rx="2.0" ry="0.7" fill={obj.color || '#ea580c'} />
-        <polygon points="-1.6,1.2 1.6,1.2 0,-2.6" fill={obj.color || '#f97316'} stroke="#c2410c" strokeWidth="0.25" />
-        <polygon points="-0.8,0.2 0.8,0.2 0,-1.4" fill="#ffffff" />
-      </g>
-    );
-  }
+      {obj.type === 'cone' && (
+        <g>
+          <ellipse cx="0" cy="1.6" rx="2.2" ry="0.9" fill="rgba(0,0,0,0.3)" />
+          <ellipse cx="0" cy="1.2" rx="2.0" ry="0.7" fill={obj.color || '#ea580c'} />
+          <polygon points="-1.6,1.2 1.6,1.2 0,-2.6" fill={obj.color || '#f97316'} stroke="#c2410c" strokeWidth="0.25" />
+          <polygon points="-0.8,0.2 0.8,0.2 0,-1.4" fill="#ffffff" />
+        </g>
+      )}
 
-  if (obj.type === 'saucer') {
-    return (
-      <g transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={onPointerDown} className="cursor-grab touch-none select-none">
-        <ellipse cx="0" cy="0.9" rx="2.4" ry="1.1" fill="rgba(0,0,0,0.3)" />
-        <ellipse cx="0" cy="0.6" rx="2.2" ry="0.9" fill={obj.color || '#facc15'} stroke="#000" strokeWidth="0.2" />
-        <ellipse cx="0" cy="0.3" rx="0.7" ry="0.35" fill="#1e293b" />
-      </g>
-    );
-  }
+      {obj.type === 'saucer' && (
+        <g>
+          <ellipse cx="0" cy="0.9" rx="2.4" ry="1.1" fill="rgba(0,0,0,0.3)" />
+          <ellipse cx="0" cy="0.6" rx="2.2" ry="0.9" fill={obj.color || '#facc15'} stroke="#000" strokeWidth="0.2" />
+          <ellipse cx="0" cy="0.3" rx="0.7" ry="0.35" fill="#1e293b" />
+        </g>
+      )}
 
-  if (obj.type === 'ring') {
-    return (
-      <g transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={onPointerDown} className="cursor-grab touch-none select-none">
-        <ellipse cx="0" cy="0.4" rx="3.1" ry="3.1" fill="rgba(0,0,0,0.25)" />
-        <circle cx="0" cy="0" r="3.0" fill="none" stroke={obj.color || '#facc15'} strokeWidth="0.7" />
-      </g>
-    );
-  }
+      {obj.type === 'ring' && (
+        <g>
+          <ellipse cx="0" cy="0.4" rx="3.1" ry="3.1" fill="rgba(0,0,0,0.25)" />
+          <circle cx="0" cy="0" r="3.0" fill="none" stroke={obj.color || '#facc15'} strokeWidth="0.7" />
+        </g>
+      )}
 
-  if (obj.type === 'hurdle') {
-    return (
-      <g transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={onPointerDown} className="cursor-grab touch-none select-none">
-        <ellipse cx="0" cy="2.2" rx="3.2" ry="0.7" fill="rgba(0,0,0,0.25)" />
-        <line x1="-3" y1="2" x2="-3" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" />
-        <line x1="3" y1="2" x2="3" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" />
-        <rect x="-3.2" y="-2.2" width="6.4" height="0.8" fill="#facc15" stroke="#ca8a04" strokeWidth="0.2" rx="0.2" />
-      </g>
-    );
-  }
-
-  return null;
+      {obj.type === 'hurdle' && (
+        <g>
+          <ellipse cx="0" cy="2.2" rx="3.2" ry="0.7" fill="rgba(0,0,0,0.25)" />
+          <line x1="-3" y1="2" x2="-3" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" />
+          <line x1="3" y1="2" x2="3" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" />
+          <rect x="-3.2" y="-2.2" width="6.4" height="0.8" fill="#facc15" stroke="#ca8a04" strokeWidth="0.2" rx="0.2" />
+        </g>
+      )}
+    </g>
+  );
 }
 
 export default function App() {
-  // Detección automática de pantalla: ¿Está en PC/Monitor o en Celular?
   const [isPC, setIsPC] = useState(window.innerWidth > 768);
 
   useEffect(() => {
@@ -222,15 +213,42 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const [pitchMode, setPitchMode] = useState('full'); // 'full' o 'half'
+  const [pitchMode, setPitchMode] = useState('full');
   const [showTrainingMenu, setShowTrainingMenu] = useState(false);
   const [showLineMenu, setShowLineMenu] = useState(false);
   const [showSystemsMenu, setShowSystemsMenu] = useState(false);
 
-  // Estados metodológicos
+  // Módulos: Guardar, Biblioteca y Roster de Jugadores
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [showSquadRosterModal, setShowSquadRosterModal] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState(null); // Modal para editar nombre de ficha
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+
+  // Padrón / Roster de jugadores por categoría
+  const [squadRoster, setSquadRoster] = useState(() => {
+    const localRoster = localStorage.getItem('andez_squad_roster');
+    if (localRoster) {
+      try { return JSON.parse(localRoster); } catch (e) {}
+    }
+    return [
+      { id: 'p-1', name: 'Matías Fernández', rut: '21.432.891-K', birthDate: '2012-05-14', category: 'sub14', number: '10', position: 'Volante' },
+      { id: 'p-2', name: 'Lucas González', rut: '22.105.774-3', birthDate: '2012-08-22', category: 'sub14', number: '9', position: 'Delantero' },
+      { id: 'p-3', name: 'Esteban Paredes', rut: '20.984.112-5', birthDate: '2010-02-18', category: 'sub18', number: '7', position: 'Extremo' }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('andez_squad_roster', JSON.stringify(squadRoster));
+  }, [squadRoster]);
+
+  // Formulario nuevo alumno en plantel
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [newPlayerRut, setNewPlayerRut] = useState('');
+  const [newPlayerBirth, setNewPlayerBirth] = useState('');
+  const [newPlayerCat, setNewPlayerCat] = useState('sub14');
+  const [newPlayerNum, setNewPlayerNum] = useState('');
+  const [newPlayerPos, setNewPlayerPos] = useState('Volante');
 
   const [drillTitle, setDrillTitle] = useState('Salida de Balón y Transición');
   const [drillCategory, setDrillCategory] = useState('sub14');
@@ -254,7 +272,6 @@ export default function App() {
   const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
 
-  // Formulario nuevo usuario
   const [newCoachName, setNewCoachName] = useState('');
   const [newCoachClub, setNewCoachClub] = useState('');
   const [newCoachPlan, setNewCoachPlan] = useState('DT Personal (2 Equipos: Móvil + PC) - $15.000');
@@ -287,7 +304,7 @@ export default function App() {
   const [lineColor, setLineColor] = useState('#ffffff');
   const [lineWidth, setLineWidth] = useState(1.4);
 
-  // Inicialización de jugadores según dispositivo
+  // Inicialización de jugadores
   const [objects, setObjects] = useState(() => {
     const systems = GET_TACTICAL_SYSTEMS(window.innerWidth > 768);
     const initialPlayers = systems['4-3-3'].map((p) => ({ ...p, id: 'init-' + p.number, type: 'player' }));
@@ -305,9 +322,6 @@ export default function App() {
   const isDraggingRef = useRef(false);
   const [selectedObj, setSelectedObj] = useState(null);
 
-  // Dimensiones según pantalla y modo:
-  // En PC horizontal: Cancha 105 x 68. Media Cancha 55 x 68.
-  // En Móvil vertical: Cancha 68 x 105. Media Cancha 68 x 85.
   const maxX = isPC ? (pitchMode === 'half' ? 55 : 105) : 68;
   const maxY = isPC ? 68 : (pitchMode === 'half' ? 85 : 105);
 
@@ -336,6 +350,18 @@ export default function App() {
     if (tool !== 'move') return;
     setSelectedObj(obj);
     isDraggingRef.current = true;
+  };
+
+  // Rotar material de entrenamiento 45°
+  const rotateMaterial = (objId) => {
+    const updated = objects.map(o => {
+      if (o.id === objId) {
+        return { ...o, rotation: ((o.rotation || 0) + 45) % 360 };
+      }
+      return o;
+    });
+    setObjects(updated);
+    recordHistory(updated);
   };
 
   const handleLinePointerDown = (e, lineId) => {
@@ -413,10 +439,11 @@ export default function App() {
     const id = 'item-' + Date.now();
     const spawnX = isPC ? (pitchMode === 'half' ? 27.5 : 52.5) : 34;
     const spawnY = isPC ? 34 : (pitchMode === 'half' ? 42.5 : 52.5);
-    let newItem = { id, type: itemType, x: spawnX, y: spawnY, ...extra };
+    let newItem = { id, type: itemType, x: spawnX, y: spawnY, rotation: 0, ...extra };
     if (itemType === 'player') {
       const count = objects.filter((o) => o.type === 'player' && o.team === (extra.team || 'blue')).length + 1;
       newItem.number = String(extra.number || count);
+      newItem.name = extra.name || `Jugador ${newItem.number}`;
     }
     const nextObjs = [...objects, newItem];
     setObjects(nextObjs);
@@ -457,6 +484,50 @@ export default function App() {
     if (confirm('¿Deseas eliminar este ejercicio guardado?')) {
       setSavedDrills(savedDrills.filter(d => d.id !== drillId));
     }
+  };
+
+  // Agregar nuevo jugador a la nómina del club
+  const handleAddPlayerToRoster = (e) => {
+    e.preventDefault();
+    if (!newPlayerName.trim()) {
+      alert('Ingresa el nombre del jugador');
+      return;
+    }
+    const playerEntry = {
+      id: 'pl-' + Date.now(),
+      name: newPlayerName,
+      rut: newPlayerRut || 'Sin RUT',
+      birthDate: newPlayerBirth || 'No registrada',
+      category: newPlayerCat,
+      number: newPlayerNum || '1',
+      position: newPlayerPos
+    };
+    setSquadRoster([...squadRoster, playerEntry]);
+    setNewPlayerName('');
+    setNewPlayerRut('');
+    setNewPlayerBirth('');
+    setNewPlayerNum('');
+    alert('¡Jugador añadido a la nómina oficial!');
+  };
+
+  // Asignar jugador de la nómina a una ficha seleccionada
+  const assignPlayerToPitch = (player) => {
+    addElement('player', {
+      number: player.number,
+      name: player.name,
+      team: 'blue'
+    });
+    setShowSquadRosterModal(false);
+  };
+
+  // Guardar cambios al editar el nombre/dorsal de un jugador en cancha
+  const handleSavePlayerEdit = (e) => {
+    e.preventDefault();
+    if (!editingPlayer) return;
+    const updated = objects.map(o => o.id === editingPlayer.id ? editingPlayer : o);
+    setObjects(updated);
+    recordHistory(updated);
+    setEditingPlayer(null);
   };
 
   const applySevenDaysTrial = () => {
@@ -687,12 +758,14 @@ export default function App() {
             <span className="text-base font-bold">▲</span>
           </button>
 
+          {/* Gestión de Nómina y Plantel Oficial */}
           <button
-            onClick={() => addElement('player', { team: 'blue' })}
-            className="text-blue-400 hover:text-blue-300 active:scale-95 transition"
-            title="Agregar Jugador Azul"
+            onClick={() => setShowSquadRosterModal(true)}
+            className="text-blue-400 hover:text-blue-300 active:scale-95 transition flex items-center gap-1"
+            title="Nómina de Jugadores por Categoría"
           >
             <Shirt className="w-5 h-5" />
+            <span className="text-[10px] font-black uppercase hidden sm:inline">Plantel</span>
           </button>
         </div>
 
@@ -731,7 +804,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. LIENZO DE CANCHA ADAPTATIVO: HORIZONTAL EN PC Y VERTICAL EN MÓVIL */}
+      {/* 2. LIENZO DE CANCHA ADAPTATIVO */}
       <main
         className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]"
         onPointerMove={handlePointerMove}
@@ -750,11 +823,10 @@ export default function App() {
         >
           <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
 
-          {/* DIBUJO CANCHA SEGÚN DISPOSITIVO */}
+          {/* DIBUJO CANCHA */}
           {isPC ? (
-            /* FORMATO PC (HORIZONTAL PANORÁMICO QUE OCUPA TODA LA PANTALLA) */
+            /* FORMATO PC (HORIZONTAL PANORÁMICO) */
             pitchMode === 'half' ? (
-              /* Media Cancha PC */
               <g>
                 <rect x="2" y="2" width="51" height="64" fill="none" stroke="white" strokeWidth="0.8" />
                 <rect x="2" y="13.84" width="16.5" height="40.32" fill="none" stroke="white" strokeWidth="0.8" />
@@ -767,21 +839,18 @@ export default function App() {
                 <circle cx="53" cy="34" r="0.6" fill="white" />
               </g>
             ) : (
-              /* Cancha Completa PC Horizontal */
               <g>
                 <rect x="2" y="2" width="101" height="64" fill="none" stroke="white" strokeWidth="0.8" />
                 <line x1="52.5" y1="2" x2="52.5" y2="66" stroke="white" strokeWidth="0.8" />
                 <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="white" strokeWidth="0.8" />
                 <circle cx="52.5" cy="34" r="0.6" fill="white" />
 
-                {/* Área Izquierda (Oeste) */}
                 <rect x="2" y="13.84" width="16.5" height="40.32" fill="none" stroke="white" strokeWidth="0.8" />
                 <rect x="2" y="24.84" width="5.5" height="18.32" fill="none" stroke="white" strokeWidth="0.8" />
                 <circle cx="11" cy="34" r="0.6" fill="white" />
                 <path d="M 18.5 27.5 A 9.15 9.15 0 0 1 18.5 40.5" fill="none" stroke="white" strokeWidth="0.8" />
                 <rect x="0.2" y="30.34" width="1.8" height="7.32" fill="rgba(255,255,255,0.4)" stroke="white" strokeWidth="0.6" />
 
-                {/* Área Derecha (Este) */}
                 <rect x="86.5" y="13.84" width="16.5" height="40.32" fill="none" stroke="white" strokeWidth="0.8" />
                 <rect x="97.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="white" strokeWidth="0.8" />
                 <circle cx="94" cy="34" r="0.6" fill="white" />
@@ -790,7 +859,7 @@ export default function App() {
               </g>
             )
           ) : (
-            /* FORMATO MÓVIL (VERTICAL EXACTO COMO YA ESTÁ VALIDADO) */
+            /* FORMATO MÓVIL (VERTICAL) */
             pitchMode === 'half' ? (
               <g>
                 <rect x="2" y="3" width="64" height="79" fill="none" stroke="white" strokeWidth="0.8" />
@@ -829,7 +898,7 @@ export default function App() {
           {drawings.map((line) => renderLinePath(line, false))}
           {currentLine && renderLinePath(currentLine, true)}
 
-          {/* Elementos en cancha */}
+          {/* Renderizado de Elementos y Fichas */}
           {objects.map((obj) => {
             if (obj.type === 'player') {
               return (
@@ -837,6 +906,7 @@ export default function App() {
                   key={obj.id}
                   transform={`translate(${obj.x}, ${obj.y})`}
                   onPointerDown={(e) => handlePointerDown(e, obj)}
+                  onDoubleClick={() => setEditingPlayer(obj)}
                   className={`touch-none select-none ${tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : 'cursor-grab active:cursor-grabbing'}`}
                 >
                   <circle r="3.2" fill="rgba(0,0,0,0.25)" transform="translate(0.3, 0.3)" />
@@ -856,6 +926,31 @@ export default function App() {
                   >
                     {obj.number}
                   </text>
+
+                  {/* Nombre del Jugador Visible en Cancha */}
+                  {obj.name && (
+                    <g transform="translate(0, 4.8)">
+                      <rect
+                        x={-Math.max(8, obj.name.length * 1.5) / 2}
+                        y="-1.8"
+                        width={Math.max(8, obj.name.length * 1.5)}
+                        height="3.2"
+                        rx="1"
+                        fill="rgba(0,0,0,0.7)"
+                      />
+                      <text
+                        textAnchor="middle"
+                        dy="0.6"
+                        fontSize="1.9"
+                        fontWeight="bold"
+                        fill="#ffffff"
+                        pointerEvents="none"
+                      >
+                        {obj.name}
+                      </text>
+                    </g>
+                  )}
+
                   {tool === 'eraser' && (
                     <circle r="3.4" fill="none" stroke="#ef4444" strokeWidth="0.6" strokeDasharray="1,1" />
                   )}
@@ -879,12 +974,191 @@ export default function App() {
                 key={obj.id}
                 obj={obj}
                 onPointerDown={(e) => handlePointerDown(e, obj)}
+                onDoubleClick={() => rotateMaterial(obj.id)}
               />
             );
           })}
         </svg>
 
-        {/* 3. MODAL PARA GUARDAR CON CATEGORÍA */}
+        {/* 3. MODAL EDITAR NOMBRE Y DORSAL DE FICHA (DOBLE CLIC/TOQUE) */}
+        {editingPlayer && (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
+                <h3 className="font-black text-sm text-white flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-amber-400" /> Editar Ficha Jugador
+                </h3>
+                <button onClick={() => setEditingPlayer(null)} className="text-zinc-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePlayerEdit} className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Nombre o Apodo</label>
+                  <input
+                    type="text"
+                    value={editingPlayer.name || ''}
+                    onChange={(e) => setEditingPlayer({ ...editingPlayer, name: e.target.value })}
+                    placeholder="Ej. Alexis Sánchez"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Dorsal / Número</label>
+                  <input
+                    type="text"
+                    value={editingPlayer.number || ''}
+                    onChange={(e) => setEditingPlayer({ ...editingPlayer, number: e.target.value })}
+                    placeholder="Ej. 10"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const filtered = objects.filter(o => o.id !== editingPlayer.id);
+                      setObjects(filtered);
+                      recordHistory(filtered);
+                      setEditingPlayer(null);
+                    }}
+                    className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 text-red-400 text-xs font-bold rounded-xl"
+                  >
+                    Eliminar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 4. MODAL GESTIÓN DE PLANTEL POR CATEGORÍA (NÓMINA CON RUT Y NACIMIENTO) */}
+        {showSquadRosterModal && (
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg p-5 shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
+                <div>
+                  <span className="bg-blue-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">NÓMINA OFICIAL</span>
+                  <h3 className="font-black text-base text-white mt-1">Plantel de Jugadores por Categoría</h3>
+                </div>
+                <button onClick={() => setShowSquadRosterModal(false)} className="text-zinc-400 hover:text-white p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Formulario rápido para registrar alumno */}
+              <form onSubmit={handleAddPlayerToRoster} className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 mb-3 shrink-0 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="text-[9px] font-bold text-zinc-400 block mb-0.5">Nombre Alumno</label>
+                  <input
+                    type="text"
+                    value={newPlayerName}
+                    onChange={(e) => setNewPlayerName(e.target.value)}
+                    placeholder="Nombre y Apellido"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-zinc-400 block mb-0.5">RUT</label>
+                  <input
+                    type="text"
+                    value={newPlayerRut}
+                    onChange={(e) => setNewPlayerRut(e.target.value)}
+                    placeholder="12.345.678-9"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-zinc-400 block mb-0.5">Fecha Nacimiento</label>
+                  <input
+                    type="date"
+                    value={newPlayerBirth}
+                    onChange={(e) => setNewPlayerBirth(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-zinc-400 block mb-0.5">Categoría</label>
+                  <select
+                    value={newPlayerCat}
+                    onChange={(e) => setNewPlayerCat(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white"
+                  >
+                    {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name.split(' ')[0]}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-zinc-400 block mb-0.5">Dorsal</label>
+                  <input
+                    type="text"
+                    value={newPlayerNum}
+                    onChange={(e) => setNewPlayerNum(e.target.value)}
+                    placeholder="10"
+                    className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full py-1.5 bg-red-600 hover:bg-red-500 font-bold text-xs rounded-lg text-white shadow"
+                  >
+                    + Guardar
+                  </button>
+                </div>
+              </form>
+
+              {/* Lista del Plantel con botón para poner en cancha */}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {squadRoster.map((player) => (
+                  <div key={player.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-600 font-black text-white text-[10px] flex items-center justify-center">
+                          {player.number}
+                        </span>
+                        <span className="font-bold text-xs text-white">{player.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400 uppercase font-bold">
+                          {player.category}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-zinc-400 mt-0.5">
+                        RUT: <span className="text-zinc-300 font-mono">{player.rut}</span> • Nacimiento: <span className="text-zinc-300">{player.birthDate}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => assignPlayerToPitch(player)}
+                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow"
+                      >
+                        Poner en Cancha
+                      </button>
+                      <button
+                        onClick={() => setSquadRoster(squadRoster.filter(p => p.id !== player.id))}
+                        className="p-1 text-zinc-600 hover:text-red-400 rounded"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 5. MODAL PARA GUARDAR CON CATEGORÍA */}
         {showSaveModal && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
@@ -944,7 +1218,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 4. MODAL BIBLIOTECA DE SESIONES */}
+        {/* 6. MODAL BIBLIOTECA DE SESIONES */}
         {showLibraryModal && (
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col max-h-[85vh]">
@@ -1017,7 +1291,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 5. MODAL DE LOGIN ADMINISTRADOR DUEÑO */}
+        {/* 7. MODAL DE LOGIN ADMINISTRADOR DUEÑO */}
         {showAdminLogin && (
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
@@ -1054,7 +1328,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 6. MODAL PANEL SUPERADMIN: CONTROL DE LICENCIAS COMPLETO */}
+        {/* 8. MODAL PANEL SUPERADMIN */}
         {showAdminDashboard && (
           <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg p-5 shadow-2xl flex flex-col max-h-[90vh]">
@@ -1068,7 +1342,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Métricas e Ingresos */}
               <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
                 <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800">
                   <span className="text-[10px] text-zinc-400 block font-bold">Ingresos Recurrentes</span>
@@ -1088,7 +1361,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Lista de Profesores / Licencias */}
               <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                 {adminLicenses.map((lic) => {
                   const isExpired = new Date(lic.expiry) < new Date();
@@ -1138,7 +1410,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 7. MODAL CREAR NUEVO USUARIO */}
+        {/* 9. MODAL CREAR NUEVO USUARIO */}
         {showNewUserModal && (
           <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
@@ -1236,27 +1508,34 @@ export default function App() {
           </div>
         )}
 
-        {/* 8. MENÚ FLOTANTE DE MATERIALES */}
+        {/* 10. MENÚ DE MATERIALES CON BOTÓN DE ROTACIÓN */}
         {showTrainingMenu && (
-          <aside className="absolute right-2 top-2 bg-black/90 backdrop-blur-md border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 max-h-[82vh] overflow-y-auto w-44">
+          <aside className="absolute right-2 top-2 bg-black/90 backdrop-blur-md border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 max-h-[82vh] overflow-y-auto w-48">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5 mb-1">
-              <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Materiales</span>
+              <div>
+                <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Materiales</span>
+                <span className="text-[8px] text-zinc-400 block">Doble clic para girar</span>
+              </div>
               <button onClick={() => setShowTrainingMenu(false)} className="text-zinc-400 hover:text-white">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <button onClick={() => addElement('mini_goal')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-amber-400 font-bold">🥅</span> Mini Portería
+            <button onClick={() => addElement('mini_goal')} className="flex items-center justify-between p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="flex items-center gap-2"><span className="text-amber-400 font-bold">🥅</span> Mini Portería</span>
+              <RotateCw className="w-3.5 h-3.5 text-zinc-500" />
             </button>
-            <button onClick={() => addElement('ladder')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-amber-400 font-bold">🪜</span> Escalera
+            <button onClick={() => addElement('ladder')} className="flex items-center justify-between p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="flex items-center gap-2"><span className="text-amber-400 font-bold">🪜</span> Escalera</span>
+              <RotateCw className="w-3.5 h-3.5 text-zinc-500" />
             </button>
-            <button onClick={() => addElement('dummy')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-amber-400 font-bold">🧍</span> Maniquí Barrera
+            <button onClick={() => addElement('dummy')} className="flex items-center justify-between p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="flex items-center gap-2"><span className="text-amber-400 font-bold">🧍</span> Maniquí Barrera</span>
+              <RotateCw className="w-3.5 h-3.5 text-zinc-500" />
             </button>
-            <button onClick={() => addElement('hurdle')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-amber-400 font-bold">🚧</span> Valla de Salto
+            <button onClick={() => addElement('hurdle')} className="flex items-center justify-between p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="flex items-center gap-2"><span className="text-amber-400 font-bold">🚧</span> Valla de Salto</span>
+              <RotateCw className="w-3.5 h-3.5 text-zinc-500" />
             </button>
             <button onClick={() => addElement('cone', { color: '#ea580c' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
               <span className="text-orange-500 font-bold">▲</span> Cono Naranja
@@ -1276,7 +1555,7 @@ export default function App() {
           </aside>
         )}
 
-        {/* 9. MODAL DE SISTEMAS TÁCTICOS */}
+        {/* 11. MODAL DE SISTEMAS TÁCTICOS */}
         {showSystemsMenu && (
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
@@ -1302,7 +1581,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 10. MODAL DE TRAZOS */}
+        {/* 12. MODAL DE TRAZOS */}
         {showLineMenu && (
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
