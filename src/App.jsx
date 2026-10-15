@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Folder, Play, RotateCcw, Shirt, Share2, Save,
   Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser,
-  Lock, KeyRound, ShieldCheck, Check, Search, Plus, Calendar, AlertTriangle, Users
+  Lock, KeyRound, ShieldCheck, Check, Search, Plus, Calendar, AlertTriangle, Users, Gift
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -210,10 +210,12 @@ export default function App() {
   const [showNewUserModal, setShowNewUserModal] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
 
-  // Formulario nuevo usuario
+  // Formulario nuevo usuario con los planes reales
   const [newCoachName, setNewCoachName] = useState('');
   const [newCoachClub, setNewCoachClub] = useState('');
-  const [newCoachPlan, setNewCoachPlan] = useState('Coach Single ($15.000)');
+  const [newCoachPlan, setNewCoachPlan] = useState('DT Personal (2 Equipos: Móvil + PC - $15.000)');
+  const [newCoachPrice, setNewCoachPrice] = useState(15000);
+  const [newCoachSeats, setNewCoachSeats] = useState(2);
   const [newCoachExpiry, setNewCoachExpiry] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
@@ -226,9 +228,9 @@ export default function App() {
       try { return JSON.parse(localLic); } catch (e) {}
     }
     return [
-      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 2, status: 'active', plan: 'Club Dúo ($25.000)', price: 25000, expiry: '2026-11-15' },
-      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, status: 'active', plan: 'Coach Single ($15.000)', price: 15000, expiry: '2026-11-10' },
-      { id: 'lic-3', coach: 'Prof. Esteban Tapia', club: 'Deportivo Central', code: 'AND-9934', seats: 2, status: 'suspended', plan: 'Coach Single ($15.000)', price: 15000, expiry: '2026-10-01' },
+      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 5, status: 'active', plan: 'Escuela / Club (5 Equipos: 4 Móviles + 1 PC)', price: 35000, expiry: '2026-11-15' },
+      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, status: 'active', plan: 'DT Personal (2 Equipos: Móvil + PC)', price: 15000, expiry: '2026-11-10' },
+      { id: 'lic-3', coach: 'Prof. Esteban Tapia', club: 'Deportivo Central', code: 'AND-9934', seats: 2, status: 'suspended', plan: 'DT Personal (2 Equipos: Móvil + PC)', price: 15000, expiry: '2026-10-01' },
     ];
   });
 
@@ -404,7 +406,17 @@ export default function App() {
     }
   };
 
-  // Crear Usuario en Panel
+  // Botón directo: 7 Días Gratis
+  const applySevenDaysTrial = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    setNewCoachExpiry(d.toISOString().split('T')[0]);
+    setNewCoachPlan('Prueba Gratuita (7 Días - 2 Equipos)');
+    setNewCoachPrice(0);
+    setNewCoachSeats(2);
+  };
+
+  // Crear Usuario en Panel con los Planes Correctos
   const handleCreateNewUser = (e) => {
     e.preventDefault();
     if (!newCoachName.trim()) {
@@ -412,16 +424,20 @@ export default function App() {
       return;
     }
     const randomCode = 'AND-' + Math.floor(1000 + Math.random() * 9000);
-    const priceVal = newCoachPlan.includes('Dúo') ? 25000 : 15000;
+    const isSchool = newCoachPlan.includes('Escuela');
+    const isTrial = newCoachPlan.includes('Prueba');
+    const finalSeats = isSchool ? 5 : 2;
+    const finalPrice = isTrial ? 0 : (isSchool ? 35000 : 15000);
+
     const newLicense = {
       id: 'lic-' + Date.now(),
       coach: newCoachName,
       club: newCoachClub || 'Club Particular',
       code: randomCode,
-      seats: newCoachPlan.includes('Dúo') ? 2 : 1,
+      seats: finalSeats,
       status: 'active',
       plan: newCoachPlan,
-      price: priceVal,
+      price: finalPrice,
       expiry: newCoachExpiry
     };
 
@@ -429,7 +445,7 @@ export default function App() {
     setShowNewUserModal(false);
     setNewCoachName('');
     setNewCoachClub('');
-    alert(`¡Usuario creado exitosamente!\n\nProfesor: ${newCoachName}\nCódigo de Activación: ${randomCode}\nFecha de Vencimiento: ${newCoachExpiry}`);
+    alert(`¡Usuario creado exitosamente!\n\nProfesor: ${newCoachName}\nPlan: ${newCoachPlan}\nEquipos simultáneos: ${finalSeats}\nCódigo de Activación: ${randomCode}\nVence el: ${newCoachExpiry}`);
   };
 
   const handleDeleteLicense = (id) => {
@@ -580,11 +596,11 @@ export default function App() {
 
   const totalRevenue = adminLicenses
     .filter(l => l.status === 'active')
-    .reduce((sum, l) => sum + (l.price || 15000), 0);
+    .reduce((sum, l) => sum + (l.price || 0), 0);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#000000] overflow-hidden select-none font-sans">
-      {/* 1. BARRA SUPERIOR CON ACCESO CLARO A ADMINISTRADOR */}
+      {/* 1. BARRA SUPERIOR */}
       <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 shadow-md">
         <div className="flex items-center gap-3 sm:gap-4">
           <button
@@ -628,7 +644,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Acciones Derecha: Compartir, Guardar y Botón Dueño */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={handleShare}
@@ -646,11 +661,11 @@ export default function App() {
             <Save className="w-5 h-5" />
           </button>
 
-          {/* BOTÓN MAESTRO DE DUEÑO: Área táctil amplia y visible */}
+          {/* BOTÓN MAESTRO DE DUEÑO */}
           <button
             onClick={() => setShowAdminLogin(true)}
             title="Panel de Dueño / Licencias"
-            className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 px-2 py-1 rounded-full active:scale-95 transition"
+            className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 px-2.5 py-1 rounded-full active:scale-95 transition"
           >
             <img
               src="/logo-andez.png"
@@ -658,7 +673,7 @@ export default function App() {
               className="w-5 h-5 rounded-full object-cover border border-red-500"
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
-            <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider hidden sm:inline">Dueño</span>
+            <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider">Dueño</span>
             <Lock className="w-3 h-3 text-zinc-400" />
           </button>
         </div>
@@ -926,7 +941,7 @@ export default function App() {
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                     autoFocus
                   />
-                  <p className="text-[9px] text-zinc-500 mt-1">Clave por defecto: andez2026</p>
+                  <p className="text-[9px] text-zinc-500 mt-1">Clave: andez2026</p>
                 </div>
                 <button
                   type="submit"
@@ -991,6 +1006,7 @@ export default function App() {
                           <span className={`text-[9px] font-bold flex items-center gap-1 ${isExpired ? 'text-red-400' : 'text-zinc-400'}`}>
                             <Calendar className="w-3 h-3" /> Vence: {lic.expiry}
                           </span>
+                          <span className="text-[9px] text-zinc-500 font-bold">({lic.seats} Equipos)</span>
                           {isExpired && (
                             <span className="text-[8px] bg-red-950 text-red-400 px-1 rounded border border-red-800 font-bold">
                               Vencido
@@ -1022,7 +1038,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 7. MODAL CREAR NUEVO USUARIO Y ASIGNAR CLAVE */}
+        {/* 7. MODAL CREAR NUEVO USUARIO CON PLANES Y PRUEBA GRATIS */}
         {showNewUserModal && (
           <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
@@ -1035,6 +1051,15 @@ export default function App() {
                 </button>
               </div>
 
+              {/* Botón Rápido: 7 Días de Prueba Gratis */}
+              <button
+                type="button"
+                onClick={applySevenDaysTrial}
+                className="w-full mb-3 py-1.5 px-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 rounded-xl text-amber-400 font-bold text-xs flex items-center justify-center gap-2 transition"
+              >
+                <Gift className="w-4 h-4" /> Asignar 7 Días de Prueba Gratis
+              </button>
+
               <form onSubmit={handleCreateNewUser} className="space-y-3">
                 <div>
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Nombre del Profesor / DT</label>
@@ -1042,7 +1067,7 @@ export default function App() {
                     type="text"
                     value={newCoachName}
                     onChange={(e) => setNewCoachName(e.target.value)}
-                    placeholder="Ej. DT Juan Pérez"
+                    placeholder="Ej. DT Juan Arriagada"
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                     required
                   />
@@ -1054,7 +1079,7 @@ export default function App() {
                     type="text"
                     value={newCoachClub}
                     onChange={(e) => setNewCoachClub(e.target.value)}
-                    placeholder="Ej. Escuela Fútbol Chillán"
+                    placeholder="Ej. Cd Porvenir"
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                   />
                 </div>
@@ -1063,11 +1088,30 @@ export default function App() {
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Plan Contratado</label>
                   <select
                     value={newCoachPlan}
-                    onChange={(e) => setNewCoachPlan(e.target.value)}
+                    onChange={(e) => {
+                      setNewCoachPlan(e.target.value);
+                      if (e.target.value.includes('Escuela')) {
+                        setNewCoachPrice(35000);
+                        setNewCoachSeats(5);
+                      } else if (e.target.value.includes('Prueba')) {
+                        setNewCoachPrice(0);
+                        setNewCoachSeats(2);
+                      } else {
+                        setNewCoachPrice(15000);
+                        setNewCoachSeats(2);
+                      }
+                    }}
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                   >
-                    <option value="Coach Single (\$15.000)">Coach Single (1 Pantalla - \$15.000)</option>
-                    <option value="Club Dúo (\$25.000)">Club Dúo (2 Pantallas - \$25.000)</option>
+                    <option value="DT Personal (2 Equipos: Móvil + PC - \$15.000)">
+                      DT Personal (2 Equipos: Móvil + PC) - \$15.000
+                    </option>
+                    <option value="Escuela / Club (5 Equipos: 4 Móviles + 1 PC - \$35.000)">
+                      Escuela / Club (5 Equipos: 4 Móviles + 1 PC) - \$35.000
+                    </option>
+                    <option value="Prueba Gratuita (7 Días - 2 Equipos)">
+                      Prueba Gratuita (7 Días - 2 Equipos) - \$0
+                    </option>
                   </select>
                 </div>
 
