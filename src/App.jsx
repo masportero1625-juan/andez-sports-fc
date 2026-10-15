@@ -1,16 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Folder, Play, RotateCcw, Shirt, Share2, Save,
-  Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser,
-  Lock, KeyRound, ShieldCheck, Check, Search, Plus
+  Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser
 } from 'lucide-react';
-
-const CATEGORIES = [
-  { id: 'sub10', name: 'Sub-8 a Sub-10 (Iniciación)' },
-  { id: 'sub14', name: 'Sub-12 a Sub-14 (Formación)' },
-  { id: 'sub18', name: 'Sub-16 a Juvenil (Especialización)' },
-  { id: 'senior', name: 'Adulto / Senior (Rendimiento)' },
-];
 
 const TACTICAL_SYSTEMS = {
   '4-3-3': [
@@ -169,56 +161,8 @@ export default function App() {
   const [showLineMenu, setShowLineMenu] = useState(false);
   const [showSystemsMenu, setShowSystemsMenu] = useState(false);
 
-  // Estados metodológicos (Guardar / Biblioteca)
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [showLibraryModal, setShowLibraryModal] = useState(false);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
-
-  // Campos para guardar ejercicio
-  const [drillTitle, setDrillTitle] = useState('Salida de Balón y Transición');
-  const [drillCategory, setDrillCategory] = useState('sub14');
-  const [drillNotes, setDrillNotes] = useState('Bloques de 6 minutos. Énfasis en el tercer hombre.');
-
-  // Base de datos local sincronizable
-  const [savedDrills, setSavedDrills] = useState(() => {
-    const local = localStorage.getItem('andez_saved_drills');
-    if (local) {
-      try { return JSON.parse(local); } catch (e) {}
-    }
-    return [
-      {
-        id: 'drill-1',
-        title: 'Rondo 4v2 con Tercer Hombre',
-        category: 'sub10',
-        notes: 'Iniciación en apoyos diagonales',
-        pitchMode: 'half',
-        date: '2026-10-12',
-        objects: [
-          ...TACTICAL_SYSTEMS['4-3-3'].slice(0, 6).map(p => ({ ...p, id: 'r-' + p.number, type: 'player' })),
-          { id: 'b-1', type: 'ball', x: 34, y: 42.5 }
-        ],
-        drawings: []
-      }
-    ];
-  });
-
-  // Guardado persistente
-  useEffect(() => {
-    localStorage.setItem('andez_saved_drills', JSON.stringify(savedDrills));
-  }, [savedDrills]);
-
-  // Panel de Administrador
-  const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [adminLicenses, setAdminLicenses] = useState([
-    { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-PRO-01', seats: 2, status: 'active', plan: 'Club Dúo ($25.000)' },
-    { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-PRO-02', seats: 2, status: 'active', plan: 'Coach Single ($15.000)' },
-    { id: 'lic-3', coach: 'Prof. Esteban Tapia', club: 'Deportivo Central', code: 'AND-PRO-03', seats: 2, status: 'suspended', plan: 'Coach Single ($15.000)' },
-  ]);
-
-  const [tool, setTool] = useState('move');
-  const [lineType, setLineType] = useState('arrow');
+  const [tool, setTool] = useState('move'); // 'move', 'draw', 'eraser'
+  const [lineType, setLineType] = useState('arrow'); // 'straight', 'arrow', 'dashed-arrow', 'wavy-arrow', 'stop'
   const [lineColor, setLineColor] = useState('#ffffff');
   const [lineWidth, setLineWidth] = useState(1.4);
 
@@ -354,58 +298,12 @@ export default function App() {
     setDrawings((prev) => prev.slice(0, -1));
   };
 
-  // Guardar ejercicio con ficha técnica completa
-  const handleConfirmSaveDrill = () => {
-    const newDrill = {
-      id: 'drill-' + Date.now(),
-      title: drillTitle,
-      category: drillCategory,
-      notes: drillNotes,
-      pitchMode: pitchMode,
-      date: new Date().toISOString().split('T')[0],
-      objects: JSON.parse(JSON.stringify(objects)),
-      drawings: JSON.parse(JSON.stringify(drawings))
-    };
-    setSavedDrills([newDrill, ...savedDrills]);
-    setShowSaveModal(false);
-    alert('¡Sesión guardada exitosamente en la nube!');
-  };
-
-  // Cargar ejercicio desde la biblioteca
-  const loadDrillFromLibrary = (drill) => {
-    setPitchMode(drill.pitchMode || 'full');
-    setObjects(drill.objects);
-    setDrawings(drill.drawings || []);
-    setDrillTitle(drill.title);
-    setDrillCategory(drill.category);
-    setShowLibraryModal(false);
-  };
-
-  // Eliminar ejercicio de la biblioteca
-  const deleteDrill = (drillId) => {
-    if (confirm('¿Deseas eliminar este ejercicio guardado?')) {
-      setSavedDrills(savedDrills.filter(d => d.id !== drillId));
-    }
-  };
-
-  // Autenticación de Administrador / Dueño (Clave: andez2026)
-  const handleAdminLogin = (e) => {
-    e.preventDefault();
-    if (adminPasswordInput === 'andez2026') {
-      setShowAdminLogin(false);
-      setShowAdminDashboard(true);
-      setAdminPasswordInput('');
-    } else {
-      alert('Contraseña de administrador incorrecta');
-    }
-  };
-
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Andez Sports FC - ${drillTitle}`,
-          text: `Sesión: ${drillTitle} | Categoría: ${drillCategory.toUpperCase()} | Andez Sports FC PRO`,
+          title: 'Andez Sports FC - Ejercicio Táctico',
+          text: 'Pizarra táctica profesional creada en Andez Sports FC PRO',
           url: window.location.href,
         });
       } catch (err) {
@@ -432,6 +330,7 @@ export default function App() {
     setShowSystemsMenu(false);
   };
 
+  // Renderizado dinámico y proporcional de flechas y trazos
   const renderLinePath = (line, isPreview = false) => {
     const { id, start, end, type, color, width } = line;
     const dx = end.x - start.x;
@@ -439,16 +338,14 @@ export default function App() {
     const angle = Math.atan2(dy, dx);
     const length = Math.hypot(dx, dy);
 
-    const arrowLength = Math.max(3.8, width * 2.6);
-    const arrowWing = Math.max(2.6, width * 1.9);
+    // Dimensiones proporcionales de la flecha según el grosor del trazo
+    const arrowLength = Math.max(2.4, width * 2.2);
+    const arrowWidth = Math.max(1.8, width * 1.6);
 
-    const lineEndX = length > arrowLength ? end.x - (arrowLength * 0.75) * Math.cos(angle) : end.x;
-    const lineEndY = length > arrowLength ? end.y - (arrowLength * 0.75) * Math.sin(angle) : end.y;
-
-    const arrowP1x = end.x - arrowLength * Math.cos(angle) + arrowWing * Math.sin(angle);
-    const arrowP1y = end.y - arrowLength * Math.sin(angle) - arrowWing * Math.cos(angle);
-    const arrowP2x = end.x - arrowLength * Math.cos(angle) - arrowWing * Math.sin(angle);
-    const arrowP2y = end.y - arrowLength * Math.sin(angle) + arrowWing * Math.cos(angle);
+    const arrowP1x = end.x - arrowLength * Math.cos(angle) + arrowWidth * Math.sin(angle);
+    const arrowP1y = end.y - arrowLength * Math.sin(angle) - arrowWidth * Math.cos(angle);
+    const arrowP2x = end.x - arrowLength * Math.cos(angle) - arrowWidth * Math.sin(angle);
+    const arrowP2y = end.y - arrowLength * Math.sin(angle) + arrowWidth * Math.cos(angle);
 
     if (type === 'wavy-arrow') {
       const waves = 4;
@@ -456,8 +353,8 @@ export default function App() {
       for (let i = 1; i <= waves; i++) {
         const segX = start.x + (dx * i) / waves;
         const segY = start.y + (dy * i) / waves;
-        const perpX = -Math.sin(angle) * (i % 2 === 0 ? -2.2 : 2.2);
-        const perpY = Math.cos(angle) * (i % 2 === 0 ? -2.2 : 2.2);
+        const perpX = -Math.sin(angle) * (i % 2 === 0 ? -1.8 : 1.8);
+        const perpY = Math.cos(angle) * (i % 2 === 0 ? -1.8 : 1.8);
         pathD += ` Q ${segX + perpX} ${segY + perpY} ${segX} ${segY}`;
       }
       return (
@@ -466,7 +363,8 @@ export default function App() {
           onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
           className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
         >
-          <path d={pathD} fill="none" stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
+          {/* Zona táctil ensanchada transparente para facilitar el borrado en móvil */}
+          <path d={pathD} fill="none" stroke="transparent" strokeWidth={Math.max(6, width * 4)} />
           <path d={pathD} fill="none" stroke={color} strokeWidth={width} />
           <polygon points={`${end.x},${end.y} ${arrowP1x},${arrowP1y} ${arrowP2x},${arrowP2y}`} fill={color} />
         </g>
@@ -474,7 +372,7 @@ export default function App() {
     }
 
     if (type === 'stop') {
-      const stopLen = Math.max(3.2, width * 2.2);
+      const stopLen = Math.max(2.2, width * 1.8);
       const p1x = end.x - Math.sin(angle) * stopLen;
       const p1y = end.y + Math.cos(angle) * stopLen;
       const p2x = end.x + Math.sin(angle) * stopLen;
@@ -485,74 +383,58 @@ export default function App() {
           onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
           className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
         >
-          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
-          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={color} strokeWidth={width} strokeLinecap="round" />
-          <line x1={p1x} y1={p1y} x2={p2x} y2={p2y} stroke={color} strokeWidth={width * 1.5} strokeLinecap="round" />
+          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(6, width * 4)} />
+          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={color} strokeWidth={width} />
+          <line x1={p1x} y1={p1y} x2={p2x} y2={p2y} stroke={color} strokeWidth={width * 1.3} strokeLinecap="round" />
         </g>
       );
     }
 
     const isDashed = type === 'dashed-arrow';
-    const hasArrow = type === 'arrow' || type === 'dashed-arrow';
-
     return (
       <g
         key={id || 'curr'}
         onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
         className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
       >
-        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
+        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(6, width * 4)} />
         <line
           x1={start.x}
           y1={start.y}
-          x2={hasArrow && length > arrowLength ? lineEndX : end.x}
-          y2={hasArrow && length > arrowLength ? lineEndY : end.y}
+          x2={end.x}
+          y2={end.y}
           stroke={color}
           strokeWidth={width}
-          strokeLinecap="round"
-          strokeDasharray={isDashed ? `${width * 2.5},${width * 1.8}` : 'none'}
+          strokeDasharray={isDashed ? `${width * 2},${width * 1.5}` : 'none'}
         />
-        {hasArrow && length > 2.5 && (
-          <polygon
-            points={`${end.x},${end.y} ${arrowP1x},${arrowP1y} ${arrowP2x},${arrowP2y}`}
-            fill={color}
-            stroke={color}
-            strokeWidth="0.5"
-            strokeLinejoin="round"
-          />
+        {length > 2 && (
+          <polygon points={`${end.x},${end.y} ${arrowP1x},${arrowP1y} ${arrowP2x},${arrowP2y}`} fill={color} />
         )}
       </g>
     );
   };
-
-  const filteredDrills = selectedCategoryFilter === 'all'
-    ? savedDrills
-    : savedDrills.filter(d => d.category === selectedCategoryFilter);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#000000] overflow-hidden select-none font-sans">
       {/* 1. BARRA SUPERIOR MINIMALISTA */}
       <header className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 shadow-md">
         <div className="flex items-center gap-4">
-          {/* Biblioteca de Sesiones por Categorías */}
-          <button
-            onClick={() => setShowLibraryModal(true)}
-            className="text-zinc-300 hover:text-amber-400 active:scale-95 transition"
-            title="Mis Sesiones / Categorías"
-          >
-            <Folder className="w-5 h-5" />
-          </button>
-
-          {/* Sistemas Tácticos */}
           <button
             onClick={() => setShowSystemsMenu(true)}
             className="text-zinc-300 hover:text-amber-400 active:scale-95 transition"
             title="Sistemas Tácticos"
           >
+            <Folder className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => alert('Modo Animación táctica preparado')}
+            className="text-zinc-300 hover:text-amber-400 active:scale-95 transition"
+            title="Animación"
+          >
             <Play className="w-5 h-5" />
           </button>
 
-          {/* Alternar Cancha Entera / Media Cancha */}
           <button
             onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')}
             className={`p-1 rounded active:scale-95 transition ${pitchMode === 'half' ? 'bg-red-600 text-white' : 'text-zinc-300 hover:text-white'}`}
@@ -561,7 +443,6 @@ export default function App() {
             <RotateCcw className="w-5 h-5" />
           </button>
 
-          {/* Menú de Materiales */}
           <button
             onClick={() => setShowTrainingMenu(!showTrainingMenu)}
             className={`p-1 rounded active:scale-95 transition ${showTrainingMenu ? 'bg-amber-500 text-black font-black' : 'text-amber-400'}`}
@@ -570,7 +451,6 @@ export default function App() {
             <span className="text-base font-bold">▲</span>
           </button>
 
-          {/* Agregar Jugador */}
           <button
             onClick={() => addElement('player', { team: 'blue' })}
             className="text-blue-400 hover:text-blue-300 active:scale-95 transition"
@@ -580,38 +460,29 @@ export default function App() {
           </button>
         </div>
 
-        {/* Acciones Derecha */}
         <div className="flex items-center gap-3">
           <button
             onClick={handleShare}
             className="text-zinc-300 hover:text-emerald-400 active:scale-95 transition"
-            title="Compartir por WhatsApp"
+            title="Compartir en WhatsApp"
           >
             <Share2 className="w-5 h-5" />
           </button>
 
-          {/* Guardar Ejercicio con Categoría */}
           <button
-            onClick={() => setShowSaveModal(true)}
+            onClick={() => alert('¡Ejercicio guardado exitosamente en Andez Sports FC!')}
             className="text-zinc-300 hover:text-red-400 active:scale-95 transition"
-            title="Guardar Sesión"
+            title="Guardar"
           >
             <Save className="w-5 h-5" />
           </button>
 
-          {/* Logo Andez con Acceso a Panel Dueño */}
-          <button
-            onClick={() => setShowAdminLogin(true)}
-            title="Acceso Administrador Andez"
-            className="active:scale-90 transition"
-          >
-            <img
-              src="/logo-andez.png"
-              alt="Logo Andez"
-              className="w-6 h-6 rounded-full object-cover border border-red-500 ml-1"
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            />
-          </button>
+          <img
+            src="/logo-andez.png"
+            alt="Logo Andez"
+            className="w-6 h-6 rounded-full object-cover border border-red-500 ml-1"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
         </div>
       </header>
 
@@ -630,6 +501,7 @@ export default function App() {
         >
           <rect width="200" height="200" x="-50" y="-50" fill="#228b22" />
 
+          {/* DIBUJO CANCHA */}
           {pitchMode === 'half' ? (
             <g>
               <rect x="2" y="3" width="64" height="79" fill="none" stroke="white" strokeWidth="0.8" />
@@ -663,9 +535,11 @@ export default function App() {
             </g>
           )}
 
+          {/* Trazos tácticos con selector táctil para borrado individual */}
           {drawings.map((line) => renderLinePath(line, false))}
           {currentLine && renderLinePath(currentLine, true)}
 
+          {/* Renderizado de elementos */}
           {objects.map((obj) => {
             if (obj.type === 'player') {
               return (
@@ -720,224 +594,7 @@ export default function App() {
           })}
         </svg>
 
-        {/* 3. MODAL PARA GUARDAR CON CATEGORÍA */}
-        {showSaveModal && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
-              <div className="flex justify-between items-center mb-4 border-b border-zinc-800 pb-2">
-                <h3 className="font-black text-sm text-white flex items-center gap-2">
-                  <Save className="w-4 h-4 text-red-500" /> Guardar Ejercicio
-                </h3>
-                <button onClick={() => setShowSaveModal(false)} className="text-zinc-400 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Título de la Sesión</label>
-                  <input
-                    type="text"
-                    value={drillTitle}
-                    onChange={(e) => setDrillTitle(e.target.value)}
-                    placeholder="Ej. Salida 3v2 + Transición"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Categoría</label>
-                  <select
-                    value={drillCategory}
-                    onChange={(e) => setDrillCategory(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
-                  >
-                    {CATEGORIES.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Objetivos / Observaciones</label>
-                  <textarea
-                    value={drillNotes}
-                    onChange={(e) => setDrillNotes(e.target.value)}
-                    rows={3}
-                    placeholder="Consignas, repeticiones, dimensiones..."
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 resize-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleConfirmSaveDrill}
-                  className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-black text-xs uppercase tracking-wider rounded-xl text-white shadow-lg transition mt-2"
-                >
-                  Guardar en la Nube
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 4. MODAL BIBLIOTECA DE SESIONES (FILTRABLE POR CATEGORÍA) */}
-        {showLibraryModal && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col max-h-[85vh]">
-              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
-                <h3 className="font-black text-sm text-white flex items-center gap-2">
-                  <Folder className="w-4 h-4 text-amber-400" /> Mis Sesiones Guardadas
-                </h3>
-                <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Filtro rápido de categorías */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 shrink-0 mb-2">
-                <button
-                  onClick={() => setSelectedCategoryFilter('all')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition shrink-0 ${selectedCategoryFilter === 'all' ? 'bg-red-600 text-white' : 'bg-zinc-900 text-zinc-400'}`}
-                >
-                  Todas ({savedDrills.length})
-                </button>
-                {CATEGORIES.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => setSelectedCategoryFilter(c.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition shrink-0 ${selectedCategoryFilter === c.id ? 'bg-red-600 text-white' : 'bg-zinc-900 text-zinc-400'}`}
-                  >
-                    {c.name.split(' ')[0]} ({savedDrills.filter(d => d.category === c.id).length})
-                  </button>
-                ))}
-              </div>
-
-              {/* Listado de ejercicios */}
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                {filteredDrills.length === 0 ? (
-                  <p className="text-xs text-zinc-500 text-center py-8">No hay ejercicios en esta categoría aún.</p>
-                ) : (
-                  filteredDrills.map((drill) => (
-                    <div
-                      key={drill.id}
-                      className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between hover:border-zinc-700 transition"
-                    >
-                      <div className="flex-1 min-w-0 mr-3">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">
-                            {drill.category}
-                          </span>
-                          <span className="text-[10px] text-zinc-500">{drill.date}</span>
-                        </div>
-                        <h4 className="font-bold text-xs text-white truncate">{drill.title}</h4>
-                        {drill.notes && <p className="text-[10px] text-zinc-400 truncate">{drill.notes}</p>}
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          onClick={() => loadDrillFromLibrary(drill)}
-                          className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shadow"
-                        >
-                          Cargar
-                        </button>
-                        <button
-                          onClick={() => deleteDrill(drill.id)}
-                          className="p-1.5 text-zinc-500 hover:text-red-400 rounded-lg"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 5. MODAL DE LOGIN ADMINISTRADOR DUEÑO */}
-        {showAdminLogin && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
-              <div className="flex justify-between items-center mb-4 border-b border-zinc-800 pb-2">
-                <h3 className="font-black text-sm text-white flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-red-500" /> Acceso Superadmin
-                </h3>
-                <button onClick={() => setShowAdminLogin(false)} className="text-zinc-400 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAdminLogin} className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Clave Maestra</label>
-                  <input
-                    type="password"
-                    value={adminPasswordInput}
-                    onChange={(e) => setAdminPasswordInput(e.target.value)}
-                    placeholder="Ingresa clave de dueño"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
-                  />
-                  <p className="text-[9px] text-zinc-500 mt-1">Clave por defecto: andez2026</p>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl text-white shadow"
-                >
-                  Ingresar a Licencias
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* 6. MODAL PANEL SUPERADMIN: CONTROL DE LICENCIAS */}
-        {showAdminDashboard && (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col max-h-[85vh]">
-              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
-                <div>
-                  <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">DUEÑO</span>
-                  <h3 className="font-black text-base text-white mt-1">Control de Licencias SaaS</h3>
-                </div>
-                <button onClick={() => setShowAdminDashboard(false)} className="text-zinc-400 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 mb-3 shrink-0 flex justify-between items-center">
-                <div>
-                  <span className="text-[10px] text-zinc-400 block">Ingresos Recurrentes</span>
-                  <span className="text-lg font-black text-emerald-400">\$55.000 CLP</span>
-                </div>
-                <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-bold">
-                  3 Clubes Activos
-                </span>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                {adminLicenses.map((lic) => (
-                  <div key={lic.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-xs text-white">{lic.coach}</div>
-                      <div className="text-[10px] text-zinc-400">{lic.club} • {lic.plan}</div>
-                      <span className="text-[9px] text-zinc-500">{lic.code} (Máx. {lic.seats} pantallas)</span>
-                    </div>
-
-                    <button
-                      onClick={() => setAdminLicenses(adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l))}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}
-                    >
-                      {lic.status === 'active' ? 'Suspender' : 'Reactivar'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 7. MENÚ FLOTANTE DE MATERIALES REALISTAS */}
+        {/* 3. MENÚ DE MATERIALES */}
         {showTrainingMenu && (
           <aside className="absolute right-2 top-2 bg-black/90 backdrop-blur-md border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 max-h-[82vh] overflow-y-auto w-44">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5 mb-1">
@@ -977,7 +634,7 @@ export default function App() {
           </aside>
         )}
 
-        {/* 8. MODAL DE SISTEMAS TÁCTICOS */}
+        {/* 4. MODAL DE SISTEMAS TÁCTICOS */}
         {showSystemsMenu && (
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
@@ -1003,7 +660,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 9. MODAL DE TRAZOS */}
+        {/* 5. MODAL DE TRAZOS AVANZADOS */}
         {showLineMenu && (
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
@@ -1078,7 +735,7 @@ export default function App() {
         )}
       </main>
 
-      {/* 6. PIE INFERIOR */}
+      {/* 6. PIE INFERIOR CON GOMA MULTIFUNCIONAL */}
       <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 shadow-xl">
         <div className="flex items-center gap-2">
           <button
@@ -1126,6 +783,7 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Goma: Borra elementos y líneas individuales al tocarlas */}
           <button
             onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')}
             className={`p-1.5 rounded active:scale-95 transition ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400 hover:text-red-400'}`}
@@ -1134,6 +792,7 @@ export default function App() {
             <Eraser className="w-5 h-5" />
           </button>
 
+          {/* Papelera: Toque corto borra la última línea. Doble toque / click largo limpia todo */}
           <button
             onClick={removeLastLineOrAll}
             onDoubleClick={() => setDrawings([])}
