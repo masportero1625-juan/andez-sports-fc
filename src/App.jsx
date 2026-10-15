@@ -1,8 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Folder, Play, RotateCcw, Shirt, Share2, Save,
-  Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser
+  Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser,
+  Lock, KeyRound, ShieldCheck, Check, Search, Plus, Calendar, AlertTriangle, Users
 } from 'lucide-react';
+
+const CATEGORIES = [
+  { id: 'sub10', name: 'Sub-8 a Sub-10 (Iniciación)' },
+  { id: 'sub14', name: 'Sub-12 a Sub-14 (Formación)' },
+  { id: 'sub18', name: 'Sub-16 a Juvenil (Especialización)' },
+  { id: 'senior', name: 'Adulto / Senior (Rendimiento)' },
+];
 
 const TACTICAL_SYSTEMS = {
   '4-3-3': [
@@ -161,8 +169,75 @@ export default function App() {
   const [showLineMenu, setShowLineMenu] = useState(false);
   const [showSystemsMenu, setShowSystemsMenu] = useState(false);
 
-  const [tool, setTool] = useState('move'); // 'move', 'draw', 'eraser'
-  const [lineType, setLineType] = useState('arrow'); // 'straight', 'arrow', 'dashed-arrow', 'wavy-arrow', 'stop'
+  // Estados metodológicos
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+
+  const [drillTitle, setDrillTitle] = useState('Salida de Balón y Transición');
+  const [drillCategory, setDrillCategory] = useState('sub14');
+  const [drillNotes, setDrillNotes] = useState('Bloques de 6 minutos. Énfasis en el tercer hombre.');
+
+  const [savedDrills, setSavedDrills] = useState(() => {
+    const local = localStorage.getItem('andez_saved_drills');
+    if (local) {
+      try { return JSON.parse(local); } catch (e) {}
+    }
+    return [
+      {
+        id: 'drill-1',
+        title: 'Rondo 4v2 con Tercer Hombre',
+        category: 'sub10',
+        notes: 'Iniciación en apoyos diagonales',
+        pitchMode: 'half',
+        date: '2026-10-12',
+        objects: [
+          ...TACTICAL_SYSTEMS['4-3-3'].slice(0, 6).map(p => ({ ...p, id: 'r-' + p.number, type: 'player' })),
+          { id: 'b-1', type: 'ball', x: 34, y: 42.5 }
+        ],
+        drawings: []
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('andez_saved_drills', JSON.stringify(savedDrills));
+  }, [savedDrills]);
+
+  // Panel de Administrador / Dueño
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showNewUserModal, setShowNewUserModal] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+
+  // Formulario nuevo usuario
+  const [newCoachName, setNewCoachName] = useState('');
+  const [newCoachClub, setNewCoachClub] = useState('');
+  const [newCoachPlan, setNewCoachPlan] = useState('Coach Single (\$15.000)');
+  const [newCoachExpiry, setNewCoachExpiry] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  });
+
+  const [adminLicenses, setAdminLicenses] = useState(() => {
+    const localLic = localStorage.getItem('andez_licenses');
+    if (localLic) {
+      try { return JSON.parse(localLic); } catch (e) {}
+    }
+    return [
+      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 2, status: 'active', plan: 'Club Dúo (\$25.000)', price: 25000, expiry: '2026-11-15' },
+      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, status: 'active', plan: 'Coach Single (\$15.000)', price: 15000, expiry: '2026-11-10' },
+      { id: 'lic-3', coach: 'Prof. Esteban Tapia', club: 'Deportivo Central', code: 'AND-9934', seats: 2, status: 'suspended', plan: 'Coach Single (\$15.000)', price: 15000, expiry: '2026-10-01' },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('andez_licenses', JSON.stringify(adminLicenses));
+  }, [adminLicenses]);
+
+  const [tool, setTool] = useState('move');
+  const [lineType, setLineType] = useState('arrow');
   const [lineColor, setLineColor] = useState('#ffffff');
   const [lineWidth, setLineWidth] = useState(1.4);
 
@@ -298,12 +373,88 @@ export default function App() {
     setDrawings((prev) => prev.slice(0, -1));
   };
 
+  const handleConfirmSaveDrill = () => {
+    const newDrill = {
+      id: 'drill-' + Date.now(),
+      title: drillTitle,
+      category: drillCategory,
+      notes: drillNotes,
+      pitchMode: pitchMode,
+      date: new Date().toISOString().split('T')[0],
+      objects: JSON.parse(JSON.stringify(objects)),
+      drawings: JSON.parse(JSON.stringify(drawings))
+    };
+    setSavedDrills([newDrill, ...savedDrills]);
+    setShowSaveModal(false);
+    alert('¡Sesión guardada exitosamente en la biblioteca!');
+  };
+
+  const loadDrillFromLibrary = (drill) => {
+    setPitchMode(drill.pitchMode || 'full');
+    setObjects(drill.objects);
+    setDrawings(drill.drawings || []);
+    setDrillTitle(drill.title);
+    setDrillCategory(drill.category);
+    setShowLibraryModal(false);
+  };
+
+  const deleteDrill = (drillId) => {
+    if (confirm('¿Deseas eliminar este ejercicio guardado?')) {
+      setSavedDrills(savedDrills.filter(d => d.id !== drillId));
+    }
+  };
+
+  // Crear Usuario en Panel
+  const handleCreateNewUser = (e) => {
+    e.preventDefault();
+    if (!newCoachName.trim()) {
+      alert('Ingresa el nombre del profesor o club');
+      return;
+    }
+    const randomCode = 'AND-' + Math.floor(1000 + Math.random() * 9000);
+    const priceVal = newCoachPlan.includes('Dúo') ? 25000 : 15000;
+    const newLicense = {
+      id: 'lic-' + Date.now(),
+      coach: newCoachName,
+      club: newCoachClub || 'Club Particular',
+      code: randomCode,
+      seats: newCoachPlan.includes('Dúo') ? 2 : 1,
+      status: 'active',
+      plan: newCoachPlan,
+      price: priceVal,
+      expiry: newCoachExpiry
+    };
+
+    setAdminLicenses([newLicense, ...adminLicenses]);
+    setShowNewUserModal(false);
+    setNewCoachName('');
+    setNewCoachClub('');
+    alert(`¡Usuario creado exitosamente!\n\nProfesor: ${newCoachName}\nCódigo de Activación: ${randomCode}\nFecha de Vencimiento: ${newCoachExpiry}`);
+  };
+
+  const handleDeleteLicense = (id) => {
+    if (confirm('¿Seguro que deseas eliminar esta licencia?')) {
+      setAdminLicenses(adminLicenses.filter(l => l.id !== id));
+    }
+  };
+
+  const handleAdminLogin = (e) => {
+    e.preventDefault();
+    if (adminPasswordInput === 'andez2026') {
+      setShowAdminLogin(false);
+      setShowAdminDashboard(true);
+      setAdminPasswordInput('');
+    } else {
+      alert('Contraseña incorrecta. (Clave por defecto: andez2026)');
+    }
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Andez Sports FC - Ejercicio Táctico',
-          text: 'Pizarra táctica profesional creada en Andez Sports FC PRO',
+          title: `Andez Sports FC - ${drillTitle}`,
+          text: `Sesión: ${drillTitle} | Categoría: ${drillCategory.toUpperCase()} | Andez Sports FC PRO`,
           url: window.location.href,
         });
       } catch (err) {
@@ -330,7 +481,6 @@ export default function App() {
     setShowSystemsMenu(false);
   };
 
-  // Renderizado dinámico y proporcional de flechas y trazos
   const renderLinePath = (line, isPreview = false) => {
     const { id, start, end, type, color, width } = line;
     const dx = end.x - start.x;
@@ -338,14 +488,16 @@ export default function App() {
     const angle = Math.atan2(dy, dx);
     const length = Math.hypot(dx, dy);
 
-    // Dimensiones proporcionales de la flecha según el grosor del trazo
-    const arrowLength = Math.max(2.4, width * 2.2);
-    const arrowWidth = Math.max(1.8, width * 1.6);
+    const arrowLength = Math.max(3.8, width * 2.6);
+    const arrowWing = Math.max(2.6, width * 1.9);
 
-    const arrowP1x = end.x - arrowLength * Math.cos(angle) + arrowWidth * Math.sin(angle);
-    const arrowP1y = end.y - arrowLength * Math.sin(angle) - arrowWidth * Math.cos(angle);
-    const arrowP2x = end.x - arrowLength * Math.cos(angle) - arrowWidth * Math.sin(angle);
-    const arrowP2y = end.y - arrowLength * Math.sin(angle) + arrowWidth * Math.cos(angle);
+    const lineEndX = length > arrowLength ? end.x - (arrowLength * 0.75) * Math.cos(angle) : end.x;
+    const lineEndY = length > arrowLength ? end.y - (arrowLength * 0.75) * Math.sin(angle) : end.y;
+
+    const arrowP1x = end.x - arrowLength * Math.cos(angle) + arrowWing * Math.sin(angle);
+    const arrowP1y = end.y - arrowLength * Math.sin(angle) - arrowWing * Math.cos(angle);
+    const arrowP2x = end.x - arrowLength * Math.cos(angle) - arrowWing * Math.sin(angle);
+    const arrowP2y = end.y - arrowLength * Math.sin(angle) + arrowWing * Math.cos(angle);
 
     if (type === 'wavy-arrow') {
       const waves = 4;
@@ -353,8 +505,8 @@ export default function App() {
       for (let i = 1; i <= waves; i++) {
         const segX = start.x + (dx * i) / waves;
         const segY = start.y + (dy * i) / waves;
-        const perpX = -Math.sin(angle) * (i % 2 === 0 ? -1.8 : 1.8);
-        const perpY = Math.cos(angle) * (i % 2 === 0 ? -1.8 : 1.8);
+        const perpX = -Math.sin(angle) * (i % 2 === 0 ? -2.2 : 2.2);
+        const perpY = Math.cos(angle) * (i % 2 === 0 ? -2.2 : 2.2);
         pathD += ` Q ${segX + perpX} ${segY + perpY} ${segX} ${segY}`;
       }
       return (
@@ -363,8 +515,7 @@ export default function App() {
           onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
           className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
         >
-          {/* Zona táctil ensanchada transparente para facilitar el borrado en móvil */}
-          <path d={pathD} fill="none" stroke="transparent" strokeWidth={Math.max(6, width * 4)} />
+          <path d={pathD} fill="none" stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
           <path d={pathD} fill="none" stroke={color} strokeWidth={width} />
           <polygon points={`${end.x},${end.y} ${arrowP1x},${arrowP1y} ${arrowP2x},${arrowP2y}`} fill={color} />
         </g>
@@ -372,7 +523,7 @@ export default function App() {
     }
 
     if (type === 'stop') {
-      const stopLen = Math.max(2.2, width * 1.8);
+      const stopLen = Math.max(3.2, width * 2.2);
       const p1x = end.x - Math.sin(angle) * stopLen;
       const p1y = end.y + Math.cos(angle) * stopLen;
       const p2x = end.x + Math.sin(angle) * stopLen;
@@ -383,54 +534,71 @@ export default function App() {
           onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
           className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
         >
-          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(6, width * 4)} />
-          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={color} strokeWidth={width} />
-          <line x1={p1x} y1={p1y} x2={p2x} y2={p2y} stroke={color} strokeWidth={width * 1.3} strokeLinecap="round" />
+          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
+          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={color} strokeWidth={width} strokeLinecap="round" />
+          <line x1={p1x} y1={p1y} x2={p2x} y2={p2y} stroke={color} strokeWidth={width * 1.5} strokeLinecap="round" />
         </g>
       );
     }
 
     const isDashed = type === 'dashed-arrow';
+    const hasArrow = type === 'arrow' || type === 'dashed-arrow';
+
     return (
       <g
         key={id || 'curr'}
         onPointerDown={(e) => !isPreview && handleLinePointerDown(e, id)}
         className={tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : ''}
       >
-        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(6, width * 4)} />
+        <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="transparent" strokeWidth={Math.max(8, width * 4)} />
         <line
           x1={start.x}
           y1={start.y}
-          x2={end.x}
-          y2={end.y}
+          x2={hasArrow && length > arrowLength ? lineEndX : end.x}
+          y2={hasArrow && length > arrowLength ? lineEndY : end.y}
           stroke={color}
           strokeWidth={width}
-          strokeDasharray={isDashed ? `${width * 2},${width * 1.5}` : 'none'}
+          strokeLinecap="round"
+          strokeDasharray={isDashed ? `${width * 2.5},${width * 1.8}` : 'none'}
         />
-        {length > 2 && (
-          <polygon points={`${end.x},${end.y} ${arrowP1x},${arrowP1y} ${arrowP2x},${arrowP2y}`} fill={color} />
+        {hasArrow && length > 2.5 && (
+          <polygon
+            points={`${end.x},${end.y} ${arrowP1x},${arrowP1y} ${arrowP2x},${arrowP2y}`}
+            fill={color}
+            stroke={color}
+            strokeWidth="0.5"
+            strokeLinejoin="round"
+          />
         )}
       </g>
     );
   };
 
+  const filteredDrills = selectedCategoryFilter === 'all'
+    ? savedDrills
+    : savedDrills.filter(d => d.category === selectedCategoryFilter);
+
+  const totalRevenue = adminLicenses
+    .filter(l => l.status === 'active')
+    .reduce((sum, l) => sum + (l.price || 15000), 0);
+
   return (
     <div className="flex flex-col h-screen w-screen bg-[#000000] overflow-hidden select-none font-sans">
-      {/* 1. BARRA SUPERIOR MINIMALISTA */}
-      <header className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 shadow-md">
-        <div className="flex items-center gap-4">
+      {/* 1. BARRA SUPERIOR CON ACCESO CLARO A ADMINISTRADOR */}
+      <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 shadow-md">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
-            onClick={() => setShowSystemsMenu(true)}
+            onClick={() => setShowLibraryModal(true)}
             className="text-zinc-300 hover:text-amber-400 active:scale-95 transition"
-            title="Sistemas Tácticos"
+            title="Mis Sesiones / Categorías"
           >
             <Folder className="w-5 h-5" />
           </button>
 
           <button
-            onClick={() => alert('Modo Animación táctica preparado')}
+            onClick={() => setShowSystemsMenu(true)}
             className="text-zinc-300 hover:text-amber-400 active:scale-95 transition"
-            title="Animación"
+            title="Sistemas Tácticos"
           >
             <Play className="w-5 h-5" />
           </button>
@@ -460,29 +628,39 @@ export default function App() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Acciones Derecha: Compartir, Guardar y Botón Dueño */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={handleShare}
             className="text-zinc-300 hover:text-emerald-400 active:scale-95 transition"
-            title="Compartir en WhatsApp"
+            title="Compartir por WhatsApp"
           >
             <Share2 className="w-5 h-5" />
           </button>
 
           <button
-            onClick={() => alert('¡Ejercicio guardado exitosamente en Andez Sports FC!')}
+            onClick={() => setShowSaveModal(true)}
             className="text-zinc-300 hover:text-red-400 active:scale-95 transition"
-            title="Guardar"
+            title="Guardar Sesión"
           >
             <Save className="w-5 h-5" />
           </button>
 
-          <img
-            src="/logo-andez.png"
-            alt="Logo Andez"
-            className="w-6 h-6 rounded-full object-cover border border-red-500 ml-1"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
+          {/* BOTÓN MAESTRO DE DUEÑO: Área táctil amplia y visible */}
+          <button
+            onClick={() => setShowAdminLogin(true)}
+            title="Panel de Dueño / Licencias"
+            className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 px-2 py-1 rounded-full active:scale-95 transition"
+          >
+            <img
+              src="/logo-andez.png"
+              alt="Logo Andez"
+              className="w-5 h-5 rounded-full object-cover border border-red-500"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+            <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider hidden sm:inline">Dueño</span>
+            <Lock className="w-3 h-3 text-zinc-400" />
+          </button>
         </div>
       </header>
 
@@ -501,7 +679,6 @@ export default function App() {
         >
           <rect width="200" height="200" x="-50" y="-50" fill="#228b22" />
 
-          {/* DIBUJO CANCHA */}
           {pitchMode === 'half' ? (
             <g>
               <rect x="2" y="3" width="64" height="79" fill="none" stroke="white" strokeWidth="0.8" />
@@ -535,11 +712,9 @@ export default function App() {
             </g>
           )}
 
-          {/* Trazos tácticos con selector táctil para borrado individual */}
           {drawings.map((line) => renderLinePath(line, false))}
           {currentLine && renderLinePath(currentLine, true)}
 
-          {/* Renderizado de elementos */}
           {objects.map((obj) => {
             if (obj.type === 'player') {
               return (
@@ -594,223 +769,106 @@ export default function App() {
           })}
         </svg>
 
-        {/* 3. MENÚ DE MATERIALES */}
-        {showTrainingMenu && (
-          <aside className="absolute right-2 top-2 bg-black/90 backdrop-blur-md border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 max-h-[82vh] overflow-y-auto w-44">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5 mb-1">
-              <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Materiales</span>
-              <button onClick={() => setShowTrainingMenu(false)} className="text-zinc-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <button onClick={() => addElement('mini_goal')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-amber-400 font-bold">🥅</span> Mini Portería
-            </button>
-            <button onClick={() => addElement('ladder')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-amber-400 font-bold">🪜</span> Escalera
-            </button>
-            <button onClick={() => addElement('dummy')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-amber-400 font-bold">🧍</span> Maniquí Barrera
-            </button>
-            <button onClick={() => addElement('hurdle')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-amber-400 font-bold">🚧</span> Valla de Salto
-            </button>
-            <button onClick={() => addElement('cone', { color: '#ea580c' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-orange-500 font-bold">▲</span> Cono Naranja
-            </button>
-            <button onClick={() => addElement('cone', { color: '#2563eb' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-blue-500 font-bold">▲</span> Cono Azul
-            </button>
-            <button onClick={() => addElement('cone', { color: '#eab308' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-yellow-400 font-bold">▲</span> Cono Amarillo
-            </button>
-            <button onClick={() => addElement('saucer', { color: '#facc15' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-yellow-300 font-bold">🟡</span> Plato Chino
-            </button>
-            <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
-              <span className="text-sky-400 font-bold">⭕</span> Aro de Salto
-            </button>
-          </aside>
-        )}
-
-        {/* 4. MODAL DE SISTEMAS TÁCTICOS */}
-        {showSystemsMenu && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
-              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
-                <h3 className="font-black text-sm text-white">Sistemas Tácticos</h3>
-                <button onClick={() => setShowSystemsMenu(false)} className="text-zinc-400 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex flex-col gap-2">
-                {Object.keys(TACTICAL_SYSTEMS).map((sysKey) => (
-                  <button
-                    key={sysKey}
-                    onClick={() => applyTacticalSystem(sysKey)}
-                    className="flex items-center justify-between p-2.5 bg-zinc-900 hover:bg-red-600 rounded-xl text-xs font-bold text-white transition"
-                  >
-                    <span>Formación {sysKey}</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 5. MODAL DE TRAZOS AVANZADOS */}
-        {showLineMenu && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
-              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
-                <h3 className="font-black text-sm text-white">Tipo de Línea</h3>
-                <button onClick={() => setShowLineMenu(false)} className="text-zinc-400 hover:text-white">
+        {/* 3. MODAL PARA GUARDAR CON CATEGORÍA */}
+        {showSaveModal && (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
+              <div className="flex justify-between items-center mb-4 border-b border-zinc-800 pb-2">
+                <h3 className="font-black text-sm text-white flex items-center gap-2">
+                  <Save className="w-4 h-4 text-red-500" /> Guardar Ejercicio
+                </h3>
+                <button onClick={() => setShowSaveModal(false)} className="text-zinc-400 hover:text-white">
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <button
-                onClick={() => { setTool('draw'); setShowLineMenu(false); }}
-                className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl text-white mb-3 shadow"
-              >
-                Activar Trazo Seleccionado
-              </button>
-
-              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Estilo de Línea</label>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <button
-                  onClick={() => setLineType('arrow')}
-                  className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
-                >
-                  <span className="font-black text-sm">→</span> Pase Directo
-                </button>
-                <button
-                  onClick={() => setLineType('dashed-arrow')}
-                  className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'dashed-arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
-                >
-                  <span className="font-black text-sm">⇢</span> Desmarque
-                </button>
-                <button
-                  onClick={() => setLineType('wavy-arrow')}
-                  className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'wavy-arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
-                >
-                  <span className="font-black text-sm">∿></span> Conducción
-                </button>
-                <button
-                  onClick={() => setLineType('stop')}
-                  className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'stop' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
-                >
-                  <span className="font-black text-sm">—|</span> Bloqueo
-                </button>
-              </div>
-
-              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Color</label>
-              <div className="flex items-center justify-between mb-3 bg-zinc-900 p-2 rounded-xl">
-                {['#ffffff', '#ef4444', '#3b82f6', '#facc15'].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setLineColor(color)}
-                    style={{ backgroundColor: color }}
-                    className={`w-7 h-7 rounded-full border-2 transition ${lineColor === color ? 'border-white scale-110 shadow-lg' : 'border-transparent'}`}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Título de la Sesión</label>
+                  <input
+                    type="text"
+                    value={drillTitle}
+                    onChange={(e) => setDrillTitle(e.target.value)}
+                    placeholder="Ej. Salida 3v2 + Transición"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                   />
-                ))}
-              </div>
+                </div>
 
-              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Grosor</label>
-              <div className="flex items-center justify-between bg-zinc-900 p-2 rounded-xl">
-                {[0.8, 1.4, 2.0, 2.8].map((w) => (
-                  <button
-                    key={w}
-                    onClick={() => setLineWidth(w)}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg ${lineWidth === w ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Categoría</label>
+                  <select
+                    value={drillCategory}
+                    onChange={(e) => setDrillCategory(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                   >
-                    {w === 0.8 ? 'Fino' : w === 1.4 ? 'Medio' : w === 2.0 ? 'Grueso' : 'Extra'}
-                  </button>
-                ))}
+                    {CATEGORIES.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Objetivos / Observaciones</label>
+                  <textarea
+                    value={drillNotes}
+                    onChange={(e) => setDrillNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Consignas, repeticiones, dimensiones..."
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 resize-none"
+                  />
+                </div>
+
+                <button
+                  onClick={handleConfirmSaveDrill}
+                  className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-black text-xs uppercase tracking-wider rounded-xl text-white shadow-lg transition mt-2"
+                >
+                  Guardar en la Nube
+                </button>
               </div>
             </div>
           </div>
         )}
-      </main>
 
-      {/* 6. PIE INFERIOR CON GOMA MULTIFUNCIONAL */}
-      <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 shadow-xl">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={undo}
-            disabled={historyIndex <= 0}
-            className="p-1.5 text-zinc-300 hover:text-white disabled:opacity-30 active:scale-95 transition"
-            title="Deshacer"
-          >
-            <Undo2 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={redo}
-            disabled={historyIndex >= history.length - 1}
-            className="p-1.5 text-zinc-300 hover:text-white disabled:opacity-30 active:scale-95 transition"
-            title="Rehacer"
-          >
-            <Redo2 className="w-5 h-5" />
-          </button>
-        </div>
+        {/* 4. MODAL BIBLIOTECA DE SESIONES */}
+        {showLibraryModal && (
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col max-h-[85vh]">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
+                <h3 className="font-black text-sm text-white flex items-center gap-2">
+                  <Folder className="w-4 h-4 text-amber-400" /> Mis Sesiones Guardadas
+                </h3>
+                <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => addElement('player', { team: 'blue' })}
-            className="w-9 h-9 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center font-black text-white text-xs shadow-lg active:scale-95 transition"
-            title="Agregar Jugador Azul"
-          >
-            11
-          </button>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 shrink-0 mb-2">
+                <button
+                  onClick={() => setSelectedCategoryFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition shrink-0 ${selectedCategoryFilter === 'all' ? 'bg-red-600 text-white' : 'bg-zinc-900 text-zinc-400'}`}
+                >
+                  Todas ({savedDrills.length})
+                </button>
+                {CATEGORIES.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedCategoryFilter(c.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition shrink-0 ${selectedCategoryFilter === c.id ? 'bg-red-600 text-white' : 'bg-zinc-900 text-zinc-400'}`}
+                  >
+                    {c.name.split(' ')[0]} ({savedDrills.filter(d => d.category === c.id).length})
+                  </button>
+                ))}
+              </div>
 
-          <button
-            onClick={() => addElement('player', { team: 'red' })}
-            className="w-9 h-9 rounded-full bg-red-600 border-2 border-white flex items-center justify-center font-black text-white text-xs shadow-lg active:scale-95 transition"
-            title="Agregar Jugador Rojo"
-          >
-            11
-          </button>
-
-          <button
-            onClick={() => addElement('ball')}
-            className="w-9 h-9 rounded-full bg-white border border-zinc-800 flex items-center justify-center text-sm shadow-lg active:scale-95 transition"
-            title="Agregar Balón"
-          >
-            ⚽
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Goma: Borra elementos y líneas individuales al tocarlas */}
-          <button
-            onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')}
-            className={`p-1.5 rounded active:scale-95 transition ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400 hover:text-red-400'}`}
-            title="Goma de Borrar: Toca cualquier línea o material para eliminarlo"
-          >
-            <Eraser className="w-5 h-5" />
-          </button>
-
-          {/* Papelera: Toque corto borra la última línea. Doble toque / click largo limpia todo */}
-          <button
-            onClick={removeLastLineOrAll}
-            onDoubleClick={() => setDrawings([])}
-            className="p-1.5 text-zinc-400 hover:text-amber-400 active:scale-95 transition"
-            title="Borrar última línea (Doble clic borra todas)"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => setShowLineMenu(true)}
-            className={`p-1.5 rounded active:scale-95 transition ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300 hover:text-white'}`}
-            title="Herramienta de Trazo"
-          >
-            <PenTool className="w-5 h-5" />
-          </button>
-        </div>
-      </footer>
-    </div>
-  );
-}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {filteredDrills.length === 0 ? (
+                  <p className="text-xs text-zinc-500 text-center py-8">No hay ejercicios en esta categoría aún.</p>
+                ) : (
+                  filteredDrills.map((drill) => (
+                    <div
+                      key={drill.id}
+                      className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between hover:border-zinc-700 transition"
+                    >
+                      <div className="flex-1 min-w-0 mr-3">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-950 text-
