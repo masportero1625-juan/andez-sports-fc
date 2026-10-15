@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Folder, Play, RotateCcw, Shirt, Share2, Save,
   Undo2, Redo2, Trash2, PenTool, X, ChevronRight, Eraser,
-  Lock, KeyRound, ShieldCheck, Check, Search, Plus, Calendar, AlertTriangle, Users, Gift, RotateCw, LogOut, MessageCircle
+  Lock, KeyRound, ShieldCheck, Check, Search, Plus, Calendar, AlertTriangle, Users, Gift, RotateCw, LogOut, MessageCircle,
+  Upload, Printer, Edit2, Phone, UserCheck
 } from 'lucide-react';
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id: 'sub10', name: 'Sub-8 a Sub-10 (Iniciación)' },
   { id: 'sub14', name: 'Sub-12 a Sub-14 (Formación)' },
   { id: 'sub18', name: 'Sub-16 a Juvenil (Especialización)' },
@@ -209,6 +210,31 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   );
 }
 
+// Botón de WhatsApp reutilizable con formato de teléfono limpio
+function WhatsAppButton({ phone, label = '', name = '' }) {
+  if (!phone) {
+    return (
+      <span className="text-[10px] text-zinc-600 italic">Sin WhatsApp</span>
+    );
+  }
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const finalPhone = cleanPhone.startsWith('56') ? cleanPhone : `56${cleanPhone}`;
+  const message = encodeURIComponent(`Hola ${name ? name : ''}, te contacto desde Andez Sports FC.`);
+
+  return (
+    <a
+      href={`https://wa.me/${finalPhone}?text=${message}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-bold shadow transition active:scale-95"
+      title={`Abrir WhatsApp con ${phone}`}
+    >
+      <MessageCircle className="w-3 h-3 text-white" />
+      <span>{label || phone}</span>
+    </a>
+  );
+}
+
 export default function App() {
   const [isPC, setIsPC] = useState(window.innerWidth > 768);
 
@@ -243,6 +269,115 @@ export default function App() {
     return null;
   });
 
+  // LOGOTIPO PERSONALIZADO DE LA ESCUELA / CLUB
+  const [customLogo, setCustomLogo] = useState(() => {
+    return localStorage.getItem('andez_custom_club_logo') || null;
+  });
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const base64 = uploadEvent.target.result;
+        setCustomLogo(base64);
+        localStorage.setItem('andez_custom_club_logo', base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveCustomLogo = () => {
+    if (confirm('¿Deseas restablecer el logotipo al predeterminado de Andez Sports?')) {
+      setCustomLogo(null);
+      localStorage.removeItem('andez_custom_club_logo');
+    }
+  };
+
+  // CATEGORÍAS DINÁMICAS (Crear, Editar, Eliminar a voluntad)
+  const [categories, setCategories] = useState(() => {
+    const localCats = localStorage.getItem('andez_dynamic_categories');
+    if (localCats) {
+      try { return JSON.parse(localCats); } catch (e) {}
+    }
+    return DEFAULT_CATEGORIES;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('andez_dynamic_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  const [newCatName, setNewCatName] = useState('');
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [editingCatName, setEditingCatName] = useState('');
+
+  const handleAddCategory = (e) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    const catId = 'cat-' + Date.now();
+    const updated = [...categories, { id: catId, name: newCatName.trim() }];
+    setCategories(updated);
+    setNewCatName('');
+  };
+
+  const handleSaveEditCategory = (id) => {
+    if (!editingCatName.trim()) return;
+    setCategories(categories.map(c => c.id === id ? { ...c, name: editingCatName.trim() } : c));
+    setEditingCatId(null);
+    setEditingCatName('');
+  };
+
+  const handleDeleteCategory = (id) => {
+    if (confirm('¿Eliminar esta categoría? Los alumnos y registros se mantendrán almacenados.')) {
+      setCategories(categories.filter(c => c.id !== id));
+      if (selectedCategoryFilter === id) {
+        setSelectedCategoryFilter(categories[0]?.id || 'all');
+      }
+    }
+  };
+
+  // NÓMINA DE PROFESORES Y CUERPO TÉCNICO
+  const [coachesList, setCoachesList] = useState(() => {
+    const local = localStorage.getItem('andez_coaches_staff');
+    if (local) {
+      try { return JSON.parse(local); } catch (e) {}
+    }
+    return [
+      { id: 'c1', name: 'Prof. Carlos Morales', role: 'DT Principal', categoryId: 'sub10', phone: '+56932100183' },
+      { id: 'c2', name: 'Prof. Andrés Gómez', role: 'Preparador Físico', categoryId: 'sub14', phone: '+56987654321' }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('andez_coaches_staff', JSON.stringify(coachesList));
+  }, [coachesList]);
+
+  const [newCoachStaffName, setNewCoachStaffName] = useState('');
+  const [newCoachStaffRole, setNewCoachStaffRole] = useState('Director Técnico');
+  const [newCoachStaffCategory, setNewCoachStaffCategory] = useState(categories[0]?.id || 'sub10');
+  const [newCoachStaffPhone, setNewCoachStaffPhone] = useState('+569');
+
+  const handleAddCoachStaff = (e) => {
+    e.preventDefault();
+    if (!newCoachStaffName.trim()) return;
+    const newStaff = {
+      id: 'staff-' + Date.now(),
+      name: newCoachStaffName.trim(),
+      role: newCoachStaffRole.trim(),
+      categoryId: newCoachStaffCategory,
+      phone: newCoachStaffPhone.trim()
+    };
+    setCoachesList([...coachesList, newStaff]);
+    setNewCoachStaffName('');
+    setNewCoachStaffPhone('+569');
+  };
+
+  const handleDeleteCoachStaff = (id) => {
+    if (confirm('¿Deseas eliminar a este profesor de la nómina?')) {
+      setCoachesList(coachesList.filter(c => c.id !== id));
+    }
+  };
+
   const [inputLicenseCode, setInputLicenseCode] = useState('');
   const [loginError, setLoginError] = useState('');
 
@@ -254,7 +389,7 @@ export default function App() {
 
     // 1. Acceso de Dueño irrestricto
     if (codeClean === 'ANDEZ2026') {
-      const ownerUser = { role: 'owner', name: 'Administrador Maestro' };
+      const ownerUser = { role: 'owner', name: 'Administrador Maestro', club: 'Andez Sports FC Principal' };
       setAuthenticatedUser(ownerUser);
       localStorage.setItem('andez_auth_session', JSON.stringify(ownerUser));
       return;
@@ -297,13 +432,14 @@ export default function App() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [activeTabLibrary, setActiveTabLibrary] = useState('sessions');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('sub14');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(categories[0]?.id || 'sub14');
 
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerCustomName, setPlayerCustomName] = useState('');
   const [playerCustomNumber, setPlayerCustomNumber] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState(null);
 
+  // NÓMINAS POR CATEGORÍA
   const [rosters, setRosters] = useState(() => {
     const local = localStorage.getItem('andez_category_rosters');
     if (local) {
@@ -311,12 +447,12 @@ export default function App() {
     }
     return {
       sub10: [
-        { id: 'p1', name: 'Lucas Valenzuela', rut: '24.123.456-7', birth: '2016-04-12', role: 'Delantero' },
-        { id: 'p2', name: 'Joaquín Navarrete', rut: '24.789.012-3', birth: '2016-08-25', role: 'Volante' }
+        { id: 'p1', name: 'Lucas Valenzuela', rut: '24.123.456-7', birth: '2016-04-12', role: 'Delantero', phone: '+56932100183' },
+        { id: 'p2', name: 'Joaquín Navarrete', rut: '24.789.012-3', birth: '2016-08-25', role: 'Volante', phone: '+56911223344' }
       ],
       sub14: [
-        { id: 'p3', name: 'Martín Sepúlveda', rut: '22.345.678-9', birth: '2012-02-14', role: 'Portero' },
-        { id: 'p4', name: 'Benjamín Castro', rut: '22.987.654-1', birth: '2012-11-03', role: 'Defensa' }
+        { id: 'p3', name: 'Martín Sepúlveda', rut: '22.345.678-9', birth: '2012-02-14', role: 'Portero', phone: '+56932100183' },
+        { id: 'p4', name: 'Benjamín Castro', rut: '22.987.654-1', birth: '2012-11-03', role: 'Defensa', phone: '+56955667788' }
       ],
       sub18: [],
       senior: []
@@ -331,9 +467,10 @@ export default function App() {
   const [newRosterRut, setNewRosterRut] = useState('');
   const [newRosterBirth, setNewRosterBirth] = useState('');
   const [newRosterRole, setNewRosterRole] = useState('Delantero');
+  const [newRosterPhone, setNewRosterPhone] = useState('+569');
 
   const [drillTitle, setDrillTitle] = useState('Salida de Balón y Transición');
-  const [drillCategory, setDrillCategory] = useState('sub14');
+  const [drillCategory, setDrillCategory] = useState(categories[0]?.id || 'sub14');
   const [drillNotes, setDrillNotes] = useState('Bloques de 6 minutos. Énfasis en el tercer hombre.');
 
   const [savedDrills, setSavedDrills] = useState(() => {
@@ -551,10 +688,11 @@ export default function App() {
     if (!newRosterName.trim()) return;
     const newPlayer = {
       id: 'ros-' + Date.now(),
-      name: newRosterName,
+      name: newRosterName.trim(),
       rut: newRosterRut || 'Sin RUT',
       birth: newRosterBirth || '2012-01-01',
-      role: newRosterRole
+      role: newRosterRole,
+      phone: newRosterPhone.trim() || '+56932100183'
     };
     const currentList = rosters[selectedCategoryFilter] || [];
     setRosters({
@@ -563,12 +701,13 @@ export default function App() {
     });
     setNewRosterName('');
     setNewRosterRut('');
+    setNewRosterPhone('+569');
   };
 
   const handleDeletePlayerFromRoster = (catId, playerId) => {
     setRosters({
       ...rosters,
-      [catId]: rosters[catId].filter(p => p.id !== playerId)
+      [catId]: (rosters[catId] || []).filter(p => p.id !== playerId)
     });
   };
 
@@ -678,6 +817,10 @@ export default function App() {
       navigator.clipboard.writeText(window.location.href);
       alert('¡Enlace del ejercicio copiado al portapapeles!');
     }
+  };
+
+  const handlePrintDocument = () => {
+    window.print();
   };
 
   const applyTacticalSystem = (systemKey) => {
@@ -798,6 +941,16 @@ export default function App() {
     .filter(l => l.status === 'active')
     .reduce((sum, l) => sum + (l.price || 0), 0);
 
+  // Logo visible actual (del usuario o predeterminado de Andez)
+  const currentDisplayLogo = customLogo || '/logo-andez.png';
+
+  // Nombre de categoría activa
+  const activeCategoryObject = categories.find(c => c.id === drillCategory);
+  const activeCategoryName = activeCategoryObject ? activeCategoryObject.name : drillCategory;
+
+  // Profesor a cargo de la categoría de la sesión actual
+  const coachInCharge = coachesList.find(c => c.categoryId === drillCategory) || coachesList[0];
+
   // PANTALLA DE ACCESO / BLOQUEO
   if (!authenticatedUser) {
     return (
@@ -811,12 +964,12 @@ export default function App() {
         </button>
 
         <div className="w-full max-w-md bg-zinc-950/90 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 p-0.5 mb-4 shadow-lg">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 p-0.5 mb-4 shadow-lg overflow-hidden">
             <img
-              src="/logo-andez.png"
+              src={currentDisplayLogo}
               alt="Andez Logo"
               className="w-full h-full object-cover rounded-2xl"
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              onError={(e) => { e.currentTarget.src = '/logo-andez.png'; }}
             />
           </div>
 
@@ -860,7 +1013,7 @@ export default function App() {
             </button>
           </form>
 
-          {/* Enlace WhatsApp con tu número real */}
+          {/* Enlace WhatsApp */}
           <div className="w-full pt-4 border-t border-zinc-900">
             <span className="text-[11px] text-zinc-500 block mb-2">
               ¿No tienes una clave activa o necesitas renovar tu membresía?
@@ -895,7 +1048,7 @@ export default function App() {
               <form onSubmit={(e) => {
                 e.preventDefault();
                 if (adminPasswordInput.trim().toUpperCase() === 'ANDEZ2026') {
-                  const owner = { role: 'owner', name: 'Administrador Maestro' };
+                  const owner = { role: 'owner', name: 'Administrador Maestro', club: 'Andez Sports FC Principal' };
                   setAuthenticatedUser(owner);
                   localStorage.setItem('andez_auth_session', JSON.stringify(owner));
                   setShowAdminLogin(false);
@@ -931,13 +1084,100 @@ export default function App() {
 
   // PLATAFORMA DESBLOQUEADA
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#000000] overflow-hidden select-none font-sans">
-      <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 shadow-md">
-        <div className="flex items-center gap-3 sm:gap-4">
+    <div className="flex flex-col h-screen w-screen bg-[#000000] overflow-hidden select-none font-sans print:bg-white print:text-black">
+
+      {/* ESTILOS DE IMPRESIÓN OFICIAL Y ARMONIZADA */}
+      <style>{`
+        @media print {
+          body {
+            background-color: white !important;
+            color: black !important;
+          }
+          header, footer, aside, .no-print {
+            display: none !important;
+          }
+          .print-header-sheet {
+            display: flex !important;
+          }
+          main {
+            height: auto !important;
+            background: none !important;
+            padding: 0 !important;
+          }
+          svg {
+            width: 100% !important;
+            height: 520px !important;
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
+
+      {/* CABECERA ARMONIOSA EXCLUSIVA PARA IMPRESIÓN (MEMBRETE OFICIAL) */}
+      <div className="hidden print-header-sheet p-6 border-b-2 border-zinc-300 items-center justify-between mb-4 w-full">
+        <div className="flex items-center gap-4">
+          <img
+            src={currentDisplayLogo}
+            alt="Logo Club"
+            className="w-20 h-20 object-contain rounded-xl border border-zinc-300"
+          />
+          <div>
+            <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest block">
+              {authenticatedUser.club || 'Escuela de Fútbol'}
+            </span>
+            <h1 className="text-2xl font-black text-black uppercase tracking-tight">
+              {drillTitle}
+            </h1>
+            <p className="text-xs text-zinc-700 mt-0.5">
+              Categoría: <span className="font-bold text-black">{activeCategoryName}</span> • DT a Cargo: <span className="font-bold text-black">{coachInCharge?.name || authenticatedUser.coach || 'Profesor Titular'}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className="text-xs font-mono font-bold text-zinc-600">Fecha: {new Date().toISOString().split('T')[0]}</div>
+          {coachInCharge?.phone && (
+            <div className="text-xs text-zinc-600 font-semibold mt-1">
+              WhatsApp: {coachInCharge.phone}
+            </div>
+          )}
+          <span className="text-[10px] bg-zinc-200 px-2 py-0.5 rounded text-zinc-700 font-bold block mt-1">
+            Andez Sports FC PRO
+          </span>
+        </div>
+      </div>
+
+      {/* BARRA SUPERIOR DE APLICACIÓN */}
+      <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 shadow-md no-print">
+        <div className="flex items-center gap-2 sm:gap-3">
+
+          {/* LOGO SUBIDO / LOGO ANDEZ CON UPLOAD AL CLIC */}
+          <label
+            htmlFor="club-logo-uploader"
+            className="relative cursor-pointer group flex items-center justify-center"
+            title="Subir / Cambiar logotipo de tu Escuela o Club"
+          >
+            <img
+              src={currentDisplayLogo}
+              alt="Logo Club"
+              className="w-8 h-8 rounded-full object-cover border-2 border-amber-400 group-hover:opacity-80 transition shadow"
+              onError={(e) => { e.currentTarget.src = '/logo-andez.png'; }}
+            />
+            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+              <Upload className="w-3.5 h-3.5 text-white" />
+            </div>
+            <input
+              id="club-logo-uploader"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
+          </label>
+
           <button
             onClick={() => setShowLibraryModal(true)}
             className="text-zinc-300 hover:text-amber-400 active:scale-95 transition"
-            title="Mis Sesiones / Nóminas por Categoría"
+            title="Biblioteca: Sesiones, Nómina de Profesores y Alumnos por Categoría"
           >
             <Folder className="w-5 h-5" />
           </button>
@@ -986,6 +1226,15 @@ export default function App() {
             </button>
           )}
 
+          {/* BOTÓN IMPRIMIR SESIÓN / DOCUMENTO ARMONIZADO */}
+          <button
+            onClick={handlePrintDocument}
+            className="p-1.5 text-zinc-300 hover:text-amber-400 active:scale-95 transition"
+            title="Imprimir Sesión Técnica con membrete y logotipo oficial"
+          >
+            <Printer className="w-5 h-5" />
+          </button>
+
           <button
             onClick={handleShare}
             className="text-zinc-300 hover:text-emerald-400 active:scale-95 transition"
@@ -1008,19 +1257,13 @@ export default function App() {
               title="Panel de Dueño / Licencias"
               className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 px-2.5 py-1 rounded-full active:scale-95 transition"
             >
-              <img
-                src="/logo-andez.png"
-                alt="Logo Andez"
-                className="w-5 h-5 rounded-full object-cover border border-red-500"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
               <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider">Dueño</span>
               <Lock className="w-3 h-3 text-zinc-400" />
             </button>
           ) : (
             <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full">
-              <span className="text-[10px] font-bold text-zinc-300 max-w-[100px] truncate">
-                {authenticatedUser.coach || 'DT Pro'}
+              <span className="text-[10px] font-bold text-zinc-300 max-w-[110px] truncate">
+                {authenticatedUser.club || authenticatedUser.coach || 'DT Pro'}
               </span>
             </div>
           )}
@@ -1035,7 +1278,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* LIENZO */}
+      {/* LIENZO DE LA CANCHA */}
       <main
         className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]"
         onPointerMove={handlePointerMove}
@@ -1211,8 +1454,15 @@ export default function App() {
           })}
         </svg>
 
+        {/* NOTAS Y MEMBRETE EN HOJA IMPRESA AL FINAL DE LA CANCHA */}
+        <div className="hidden print:block p-4 border-t border-zinc-400 mt-2 text-xs">
+          <p className="font-bold text-zinc-900 mb-1">Objetivos y Consignas de la Sesión:</p>
+          <p className="text-zinc-700 whitespace-pre-wrap">{drillNotes || 'Sin observaciones registradas.'}</p>
+        </div>
+
+        {/* MODAL EDICIÓN DE JUGADOR */}
         {editingPlayer && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
                 <h3 className="font-black text-sm text-white">Editar Jugador</h3>
@@ -1273,148 +1523,416 @@ export default function App() {
           </div>
         )}
 
+        {/* MODAL BIBLIOTECA GENERAL (SESIONES, ALUMNOS, PROFESORES Y GESTIÓN DE CATEGORÍAS) */}
         {showLibraryModal && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg p-5 shadow-2xl flex flex-col max-h-[88vh]">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 no-print">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
+              
+              {/* PESTAÑAS PRINCIPALES */}
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   <button
                     onClick={() => setActiveTabLibrary('sessions')}
                     className={`px-3 py-1 rounded-lg text-xs font-black transition ${activeTabLibrary === 'sessions' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white'}`}
                   >
-                    📁 Sesiones Guardadas
+                    📁 Sesiones
                   </button>
                   <button
                     onClick={() => setActiveTabLibrary('roster')}
                     className={`px-3 py-1 rounded-lg text-xs font-black transition ${activeTabLibrary === 'roster' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white'}`}
                   >
-                    📋 Nóminas del Plantel
+                    📋 Alumnos
+                  </button>
+                  <button
+                    onClick={() => setActiveTabLibrary('coaches')}
+                    className={`px-3 py-1 rounded-lg text-xs font-black transition ${activeTabLibrary === 'coaches' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+                  >
+                    🧑‍🏫 Profesores / Staff
+                  </button>
+                  <button
+                    onClick={() => setActiveTabLibrary('categories')}
+                    className={`px-3 py-1 rounded-lg text-xs font-black transition ${activeTabLibrary === 'categories' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                  >
+                    ⚙️ Categorías
+                  </button>
+                  <button
+                    onClick={() => setActiveTabLibrary('club_settings')}
+                    className={`px-3 py-1 rounded-lg text-xs font-black transition ${activeTabLibrary === 'club_settings' ? 'bg-zinc-800 text-white border border-zinc-700' : 'text-zinc-400 hover:text-white'}`}
+                  >
+                    🛡️ Logo Club
                   </button>
                 </div>
-                <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white">
-                  <X className="w-4 h-4" />
+                <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white ml-2">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-2 shrink-0 mb-3">
-                {CATEGORIES.map(c => (
+              {/* BARRA FILTRO DE CATEGORÍAS (Para Sesiones y Alumnos) */}
+              {(activeTabLibrary === 'sessions' || activeTabLibrary === 'roster') && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 shrink-0 mb-3">
                   <button
-                    key={c.id}
-                    onClick={() => setSelectedCategoryFilter(c.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition shrink-0 ${selectedCategoryFilter === c.id ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-400'}`}
+                    onClick={() => setSelectedCategoryFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition shrink-0 ${selectedCategoryFilter === 'all' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-400'}`}
                   >
-                    {c.name.split(' ')[0]}
+                    Ver Todo
                   </button>
-                ))}
-              </div>
+                  {categories.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedCategoryFilter(c.id)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition shrink-0 ${selectedCategoryFilter === c.id ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-zinc-400'}`}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              )}
 
+              {/* 1. PESTAÑA: SESIONES */}
               {activeTabLibrary === 'sessions' && (
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                   {filteredDrills.length === 0 ? (
                     <p className="text-xs text-zinc-500 text-center py-8">No hay ejercicios en esta categoría aún.</p>
                   ) : (
-                    filteredDrills.map((drill) => (
-                      <div
-                        key={drill.id}
-                        className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between hover:border-zinc-700 transition"
-                      >
-                        <div className="flex-1 min-w-0 mr-3">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">
-                              {drill.category}
-                            </span>
-                            <span className="text-[10px] text-zinc-500">{drill.date}</span>
+                    filteredDrills.map((drill) => {
+                      const catName = categories.find(c => c.id === drill.category)?.name || drill.category;
+                      return (
+                        <div
+                          key={drill.id}
+                          className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between hover:border-zinc-700 transition"
+                        >
+                          <div className="flex-1 min-w-0 mr-3">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">
+                                {catName}
+                              </span>
+                              <span className="text-[10px] text-zinc-500">{drill.date}</span>
+                            </div>
+                            <h4 className="font-bold text-xs text-white truncate">{drill.title}</h4>
+                            {drill.notes && <p className="text-[10px] text-zinc-400 truncate">{drill.notes}</p>}
                           </div>
-                          <h4 className="font-bold text-xs text-white truncate">{drill.title}</h4>
-                          {drill.notes && <p className="text-[10px] text-zinc-400 truncate">{drill.notes}</p>}
-                        </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            onClick={() => loadDrillFromLibrary(drill)}
-                            className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shadow"
-                          >
-                            Cargar
-                          </button>
-                          <button
-                            onClick={() => deleteDrill(drill.id)}
-                            className="p-1.5 text-zinc-500 hover:text-red-400 rounded-lg"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => loadDrillFromLibrary(drill)}
+                              className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shadow"
+                            >
+                              Cargar
+                            </button>
+                            <button
+                              onClick={() => deleteDrill(drill.id)}
+                              className="p-1.5 text-zinc-500 hover:text-red-400 rounded-lg"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               )}
 
+              {/* 2. PESTAÑA: ALUMNOS POR CATEGORÍA CON BOTÓN WHATSAPP */}
               {activeTabLibrary === 'roster' && (
                 <div className="flex-1 flex flex-col min-h-0">
-                  <form onSubmit={handleAddPlayerToRoster} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <form onSubmit={handleAddPlayerToRoster} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-5 gap-2">
                     <input
                       type="text"
                       placeholder="Nombre y Apellido"
                       value={newRosterName}
                       onChange={(e) => setNewRosterName(e.target.value)}
-                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none focus:border-amber-400"
+                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
                       required
                     />
                     <input
                       type="text"
-                      placeholder="RUT / ID"
+                      placeholder="RUT / Identificación"
                       value={newRosterRut}
                       onChange={(e) => setNewRosterRut(e.target.value)}
-                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none focus:border-amber-400"
+                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
                     />
                     <input
                       type="date"
                       value={newRosterBirth}
                       onChange={(e) => setNewRosterBirth(e.target.value)}
-                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none focus:border-amber-400"
+                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="WhatsApp (ej: +569...)"
+                      value={newRosterPhone}
+                      onChange={(e) => setNewRosterPhone(e.target.value)}
+                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                      required
                     />
                     <button
                       type="submit"
-                      className="bg-red-600 hover:bg-red-500 text-white font-bold text-[11px] rounded-lg py-1 flex items-center justify-center gap-1 shadow"
+                      className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg py-1.5 flex items-center justify-center gap-1 shadow"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Agregar
+                      <Plus className="w-4 h-4" /> Agregar Alumno
                     </button>
                   </form>
 
-                  <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
-                    {(rosters[selectedCategoryFilter] || []).length === 0 ? (
-                      <p className="text-xs text-zinc-500 text-center py-6">No hay alumnos registrados en esta categoría aún.</p>
-                    ) : (
-                      (rosters[selectedCategoryFilter] || []).map((player) => (
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                    {(() => {
+                      const listToDisplay = selectedCategoryFilter === 'all'
+                        ? Object.entries(rosters).flatMap(([cId, pList]) => pList.map(p => ({ ...p, categoryId: cId })))
+                        : (rosters[selectedCategoryFilter] || []).map(p => ({ ...p, categoryId: selectedCategoryFilter }));
+
+                      if (listToDisplay.length === 0) {
+                        return <p className="text-xs text-zinc-500 text-center py-6">No hay alumnos registrados en esta categoría aún.</p>;
+                      }
+
+                      return listToDisplay.map((player) => (
                         <div
                           key={player.id}
-                          className="bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-xl flex items-center justify-between"
+                          className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex items-center justify-between gap-3"
                         >
-                          <div>
-                            <div className="font-bold text-xs text-white">{player.name}</div>
-                            <div className="text-[10px] text-zinc-400">
-                              RUT: <span className="text-zinc-300 font-mono">{player.rut}</span> • Nacimiento: <span className="text-zinc-300">{player.birth}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-white truncate">{player.name}</span>
+                              <span className="text-[9px] bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded border border-zinc-700">
+                                {categories.find(c => c.id === player.categoryId)?.name || player.categoryId}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-zinc-400 mt-0.5">
+                              RUT: <span className="text-zinc-300 font-mono">{player.rut}</span> • Nacimiento: <span className="text-zinc-300">{player.birth}</span> • Posición: <span className="text-zinc-300">{player.role}</span>
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleDeletePlayerFromRoster(selectedCategoryFilter, player.id)}
-                            className="p-1 text-zinc-500 hover:text-red-400 rounded"
-                            title="Eliminar de nómina"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* BOTÓN WHATSAPP DEL ALUMNO / APODERADO */}
+                            <WhatsAppButton phone={player.phone} name={player.name} label="WhatsApp" />
+                            <button
+                              onClick={() => handleDeletePlayerFromRoster(player.categoryId, player.id)}
+                              className="p-1 text-zinc-500 hover:text-red-400 rounded"
+                              title="Eliminar de la nómina"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. PESTAÑA: PROFESORES Y CUERPO TÉCNICO CON CATEGORÍA Y WHATSAPP */}
+              {activeTabLibrary === 'coaches' && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <form onSubmit={handleAddCoachStaff} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nombre del Profesor / DT"
+                      value={newCoachStaffName}
+                      onChange={(e) => setNewCoachStaffName(e.target.value)}
+                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Cargo (ej. DT, Preparador Físico)"
+                      value={newCoachStaffRole}
+                      onChange={(e) => setNewCoachStaffRole(e.target.value)}
+                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                    />
+                    <select
+                      value={newCoachStaffCategory}
+                      onChange={(e) => setNewCoachStaffCategory(e.target.value)}
+                      className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                    >
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="tel"
+                        placeholder="+569..."
+                        value={newCoachStaffPhone}
+                        onChange={(e) => setNewCoachStaffPhone(e.target.value)}
+                        className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                        required
+                      />
+                      <button
+                        type="submit"
+                        className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg px-3 py-1.5 flex items-center justify-center gap-1 shadow"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Agregar
+                      </button>
+                    </div>
+                  </form>
+
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                    {coachesList.length === 0 ? (
+                      <p className="text-xs text-zinc-500 text-center py-6">No hay profesores registrados aún.</p>
+                    ) : (
+                      coachesList.map((coach) => (
+                        <div
+                          key={coach.id}
+                          className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between gap-3"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-white">{coach.name}</span>
+                              <span className="text-[10px] bg-red-950 text-red-400 px-2 py-0.5 rounded border border-red-800 font-bold">
+                                {coach.role}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-zinc-400 mt-1">
+                              Categoría a Cargo: <span className="text-amber-400 font-bold">{categories.find(c => c.id === coach.categoryId)?.name || 'Sin asignar'}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {/* BOTÓN WHATSAPP DEL PROFESOR */}
+                            <WhatsAppButton phone={coach.phone} name={coach.name} label="WhatsApp DT" />
+                            <button
+                              onClick={() => handleDeleteCoachStaff(coach.id)}
+                              className="p-1 text-zinc-500 hover:text-red-400 rounded"
+                              title="Eliminar profesor"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}
                   </div>
                 </div>
               )}
+
+              {/* 4. PESTAÑA: CONFIGURACIÓN Y EDICIÓN DE CATEGORÍAS */}
+              {activeTabLibrary === 'categories' && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <form onSubmit={handleAddCategory} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-3 shrink-0 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nombre de la nueva categoría (ej: Sub-6, Femenino Adulto)"
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-lg px-4 py-2 flex items-center gap-1 shadow"
+                    >
+                      <Plus className="w-4 h-4" /> Crear Categoría
+                    </button>
+                  </form>
+
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                    {categories.map((cat) => (
+                      <div
+                        key={cat.id}
+                        className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex items-center justify-between"
+                      >
+                        {editingCatId === cat.id ? (
+                          <div className="flex items-center gap-2 flex-1 mr-2">
+                            <input
+                              type="text"
+                              value={editingCatName}
+                              onChange={(e) => setEditingCatName(e.target.value)}
+                              className="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-xs text-white flex-1"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleSaveEditCategory(cat.id)}
+                              className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-bold"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              onClick={() => setEditingCatId(null)}
+                              className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-xs"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xs text-white">{cat.name}</span>
+                            <span className="text-[9px] text-zinc-500 font-mono">({(rosters[cat.id] || []).length} alumnos)</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingCatId(cat.id);
+                              setEditingCatName(cat.name);
+                            }}
+                            className="p-1.5 text-zinc-400 hover:text-amber-400"
+                            title="Editar nombre"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCategory(cat.id)}
+                            className="p-1.5 text-zinc-400 hover:text-red-400"
+                            title="Eliminar categoría"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 5. PESTAÑA: GESTIÓN DE LOGO Y ESCUDO DE LA ESCUELA */}
+              {activeTabLibrary === 'club_settings' && (
+                <div className="flex-1 flex flex-col items-center justify-center p-4 bg-zinc-900 rounded-xl border border-zinc-800 text-center">
+                  <div className="w-24 h-24 rounded-2xl border-2 border-amber-400 p-1 mb-3 overflow-hidden bg-black flex items-center justify-center">
+                    <img
+                      src={currentDisplayLogo}
+                      alt="Escudo Escuela"
+                      className="w-full h-full object-contain rounded-xl"
+                    />
+                  </div>
+                  <h4 className="text-white font-bold text-sm mb-1">{authenticatedUser.club || 'Escuela de Fútbol'}</h4>
+                  <p className="text-zinc-400 text-xs max-w-sm mb-4">
+                    Este logotipo aparecerá automáticamente en tu sesión diaria y en la cabecera oficial de impresión de cada ejercicio o informe que generes.
+                  </p>
+
+                  <div className="flex gap-2">
+                    <label
+                      htmlFor="club-logo-uploader-modal"
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl cursor-pointer flex items-center gap-1.5 shadow"
+                    >
+                      <Upload className="w-4 h-4" /> Subir Nueva Imagen
+                      <input
+                        id="club-logo-uploader-modal"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                      />
+                    </label>
+
+                    {customLogo && (
+                      <button
+                        onClick={handleRemoveCustomLogo}
+                        className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-red-400 font-bold text-xs rounded-xl border border-zinc-700"
+                      >
+                        Restablecer Original
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         )}
 
+        {/* MODAL GUARDAR EJERCICIO */}
         {showSaveModal && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
               <div className="flex justify-between items-center mb-4 border-b border-zinc-800 pb-2">
                 <h3 className="font-black text-sm text-white flex items-center gap-2">
@@ -1444,7 +1962,7 @@ export default function App() {
                     onChange={(e) => setDrillCategory(e.target.value)}
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                   >
-                    {CATEGORIES.map(c => (
+                    {categories.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
@@ -1472,8 +1990,9 @@ export default function App() {
           </div>
         )}
 
+        {/* MODAL PANEL DE CONTROL DUEÑO */}
         {showAdminDashboard && (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg p-5 shadow-2xl flex flex-col max-h-[90vh]">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
                 <div>
@@ -1553,8 +2072,9 @@ export default function App() {
           </div>
         )}
 
+        {/* MODAL CREAR NUEVO USUARIO / LICENCIA */}
         {showNewUserModal && (
-          <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
                 <h3 className="font-black text-sm text-white flex items-center gap-1.5">
@@ -1638,8 +2158,9 @@ export default function App() {
           </div>
         )}
 
+        {/* MENÚ DE MATERIALES */}
         {showTrainingMenu && (
-          <aside className="absolute right-2 top-2 bg-black/90 backdrop-blur-md border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 max-h-[82vh] overflow-y-auto w-44">
+          <aside className="absolute right-2 top-2 bg-black/90 backdrop-blur-md border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 max-h-[82vh] overflow-y-auto w-44 no-print">
             <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5 mb-1">
               <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Materiales</span>
               <button onClick={() => setShowTrainingMenu(false)} className="text-zinc-400 hover:text-white">
@@ -1677,8 +2198,9 @@ export default function App() {
           </aside>
         )}
 
+        {/* MENÚ DE SISTEMAS TÁCTICOS */}
         {showSystemsMenu && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
                 <h3 className="font-black text-sm text-white">Sistemas Tácticos</h3>
@@ -1702,8 +2224,9 @@ export default function App() {
           </div>
         )}
 
+        {/* MENÚ DE TRAZOS */}
         {showLineMenu && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
                 <h3 className="font-black text-sm text-white">Tipo de Línea</h3>
@@ -1737,7 +2260,7 @@ export default function App() {
                   onClick={() => setLineType('wavy-arrow')}
                   className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'wavy-arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
                 >
-                  <span className="font-black text-sm">∿></span> Conducción
+                  <span className="font-black text-sm">∿&gt;</span> Conducción
                 </button>
                 <button
                   onClick={() => setLineType('stop')}
@@ -1777,7 +2300,7 @@ export default function App() {
       </main>
 
       {/* PIE INFERIOR */}
-      <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 shadow-xl">
+      <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 shadow-xl no-print">
         <div className="flex items-center gap-2">
           <button
             onClick={undo}
