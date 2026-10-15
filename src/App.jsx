@@ -210,7 +210,6 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   );
 }
 
-// Botón de WhatsApp reutilizable con formato de teléfono limpio
 function WhatsAppButton({ phone, label = '', name = '' }) {
   if (!phone) {
     return (
@@ -226,10 +225,10 @@ function WhatsAppButton({ phone, label = '', name = '' }) {
       href={`https://wa.me/${finalPhone}?text=${message}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-bold shadow transition active:scale-95"
+      className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow transition active:scale-95"
       title={`Abrir WhatsApp con ${phone}`}
     >
-      <MessageCircle className="w-3 h-3 text-white" />
+      <MessageCircle className="w-3.5 h-3.5 text-white" />
       <span>{label || phone}</span>
     </a>
   );
@@ -294,7 +293,7 @@ export default function App() {
     }
   };
 
-  // CATEGORÍAS DINÁMICAS (Crear, Editar, Eliminar a voluntad)
+  // CATEGORÍAS DINÁMICAS
   const [categories, setCategories] = useState(() => {
     const localCats = localStorage.getItem('andez_dynamic_categories');
     if (localCats) {
@@ -328,10 +327,10 @@ export default function App() {
   };
 
   const handleDeleteCategory = (id) => {
-    if (confirm('¿Eliminar esta categoría? Los alumnos y registros se mantendrán almacenados.')) {
+    if (confirm('¿Eliminar esta categoría? Los alumnos registrados se mantendrán.')) {
       setCategories(categories.filter(c => c.id !== id));
       if (selectedCategoryFilter === id) {
-        setSelectedCategoryFilter(categories[0]?.id || 'all');
+        setSelectedCategoryFilter('all');
       }
     }
   };
@@ -432,8 +431,9 @@ export default function App() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [activeTabLibrary, setActiveTabLibrary] = useState('sessions');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(categories[0]?.id || 'sub14');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
 
+  // MODAL EDITAR FICHA JUGADOR (Móvil y PC)
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerCustomName, setPlayerCustomName] = useState('');
   const [playerCustomNumber, setPlayerCustomNumber] = useState('');
@@ -504,9 +504,15 @@ export default function App() {
   const [lineColor, setLineColor] = useState('#ffffff');
   const [lineWidth, setLineWidth] = useState(1.4);
 
+  // INICIALIZAR OBJETOS: POR DEFECTO SOLO NÚMEROS Y NADA MÁS
   const [objects, setObjects] = useState(() => {
     const systems = GET_TACTICAL_SYSTEMS(window.innerWidth > 768);
-    const initialPlayers = systems['4-3-3'].map((p) => ({ ...p, id: 'init-' + p.number, type: 'player', name: '' }));
+    const initialPlayers = systems['4-3-3'].map((p) => ({
+      ...p,
+      id: 'init-' + p.number,
+      type: 'player',
+      name: '' // Por defecto sin texto
+    }));
     const ballPos = window.innerWidth > 768 ? { x: 52.5, y: 34 } : { x: 34, y: 52.5 };
     return [...initialPlayers, { id: 'ball-1', type: 'ball', ...ballPos }];
   });
@@ -558,6 +564,12 @@ export default function App() {
     isDraggingRef.current = true;
   };
 
+  const openPlayerEditor = (playerObj) => {
+    setEditingPlayer(playerObj);
+    setPlayerCustomName(playerObj.name || '');
+    setPlayerCustomNumber(playerObj.number || '');
+  };
+
   const rotateObject = (objId) => {
     const updated = objects.map(o => {
       if (o.id === objId) {
@@ -598,6 +610,7 @@ export default function App() {
     if (isDraggingRef.current && selectedObj) {
       if (e.cancelable) e.preventDefault();
       const coords = getCoordinates(e);
+      // Al mover el jugador, la ficha y el texto se mueven juntos en una sola coordenada (x, y)
       setObjects((prev) =>
         prev.map((o) => (o.id === selectedObj.id ? { ...o, x: coords.x, y: coords.y } : o))
       );
@@ -656,6 +669,7 @@ export default function App() {
     recordHistory(nextObjs);
   };
 
+  // GUARDAR EDICIÓN DE FICHA
   const handleSavePlayerDetails = (e) => {
     e.preventDefault();
     if (!editingPlayer) return;
@@ -674,6 +688,15 @@ export default function App() {
     setEditingPlayer(null);
   };
 
+  // ELIMINAR TEXTO/NOMBRE DE LA FICHA DIRECTAMENTE DESDE EL MODAL
+  const handleRemovePlayerNameFromModal = () => {
+    if (!editingPlayer) return;
+    const updated = objects.map(o => o.id === editingPlayer.id ? { ...o, name: '' } : o);
+    setObjects(updated);
+    recordHistory(updated);
+    setEditingPlayer(null);
+  };
+
   const handleErasePlayerName = (e, objId) => {
     if (tool === 'eraser') {
       e.stopPropagation();
@@ -686,6 +709,7 @@ export default function App() {
   const handleAddPlayerToRoster = (e) => {
     e.preventDefault();
     if (!newRosterName.trim()) return;
+    const targetCat = selectedCategoryFilter === 'all' ? (categories[0]?.id || 'sub10') : selectedCategoryFilter;
     const newPlayer = {
       id: 'ros-' + Date.now(),
       name: newRosterName.trim(),
@@ -694,10 +718,10 @@ export default function App() {
       role: newRosterRole,
       phone: newRosterPhone.trim() || '+56932100183'
     };
-    const currentList = rosters[selectedCategoryFilter] || [];
+    const currentList = rosters[targetCat] || [];
     setRosters({
       ...rosters,
-      [selectedCategoryFilter]: [...currentList, newPlayer]
+      [targetCat]: [...currentList, newPlayer]
     });
     setNewRosterName('');
     setNewRosterRut('');
@@ -830,7 +854,7 @@ export default function App() {
     const newPlayers = sys.map((p, idx) => ({
       id: 'sys-p-' + idx,
       type: 'player',
-      name: '',
+      name: '', // Por defecto limpio, solo número
       ...p
     }));
     const nonPlayers = objects.filter((o) => o.type !== 'player');
@@ -941,14 +965,9 @@ export default function App() {
     .filter(l => l.status === 'active')
     .reduce((sum, l) => sum + (l.price || 0), 0);
 
-  // Logo visible actual (del usuario o predeterminado de Andez)
   const currentDisplayLogo = customLogo || '/logo-andez.png';
-
-  // Nombre de categoría activa
   const activeCategoryObject = categories.find(c => c.id === drillCategory);
   const activeCategoryName = activeCategoryObject ? activeCategoryObject.name : drillCategory;
-
-  // Profesor a cargo de la categoría de la sesión actual
   const coachInCharge = coachesList.find(c => c.categoryId === drillCategory) || coachesList[0];
 
   // PANTALLA DE ACCESO / BLOQUEO
@@ -1086,7 +1105,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-[#000000] overflow-hidden select-none font-sans print:bg-white print:text-black">
 
-      {/* ESTILOS DE IMPRESIÓN OFICIAL Y ARMONIZADA */}
+      {/* ESTILOS DE IMPRESIÓN OFICIAL ARMONIZADA */}
       <style>{`
         @media print {
           body {
@@ -1112,7 +1131,7 @@ export default function App() {
         }
       `}</style>
 
-      {/* CABECERA ARMONIOSA EXCLUSIVA PARA IMPRESIÓN (MEMBRETE OFICIAL) */}
+      {/* CABECERA ARMONIOSA PARA IMPRESIÓN */}
       <div className="hidden print-header-sheet p-6 border-b-2 border-zinc-300 items-center justify-between mb-4 w-full">
         <div className="flex items-center gap-4">
           <img
@@ -1146,33 +1165,44 @@ export default function App() {
         </div>
       </div>
 
-      {/* BARRA SUPERIOR DE APLICACIÓN */}
+      {/* BARRA SUPERIOR */}
       <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 shadow-md no-print">
         <div className="flex items-center gap-2 sm:gap-3">
 
-          {/* LOGO SUBIDO / LOGO ANDEZ CON UPLOAD AL CLIC */}
-          <label
-            htmlFor="club-logo-uploader"
-            className="relative cursor-pointer group flex items-center justify-center"
-            title="Subir / Cambiar logotipo de tu Escuela o Club"
-          >
-            <img
-              src={currentDisplayLogo}
-              alt="Logo Club"
-              className="w-8 h-8 rounded-full object-cover border-2 border-amber-400 group-hover:opacity-80 transition shadow"
-              onError={(e) => { e.currentTarget.src = '/logo-andez.png'; }}
-            />
-            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-              <Upload className="w-3.5 h-3.5 text-white" />
+          {/* LOGO CORPORATIVO: EDITABLE SOLO EN PC, FIJO EN MÓVIL */}
+          {isPC ? (
+            <label
+              htmlFor="club-logo-uploader-pc"
+              className="relative cursor-pointer group flex items-center justify-center"
+              title="Cambiar logotipo institucional de la Escuela o Club (Disponible en PC)"
+            >
+              <img
+                src={currentDisplayLogo}
+                alt="Logo Club"
+                className="w-8 h-8 rounded-full object-cover border-2 border-amber-400 group-hover:opacity-80 transition shadow"
+                onError={(e) => { e.currentTarget.src = '/logo-andez.png'; }}
+              />
+              <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                <Upload className="w-3.5 h-3.5 text-white" />
+              </div>
+              <input
+                id="club-logo-uploader-pc"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+            </label>
+          ) : (
+            <div className="flex items-center justify-center" title="Escudo Institucional">
+              <img
+                src={currentDisplayLogo}
+                alt="Logo Club"
+                className="w-8 h-8 rounded-full object-cover border-2 border-amber-400 shadow"
+                onError={(e) => { e.currentTarget.src = '/logo-andez.png'; }}
+              />
             </div>
-            <input
-              id="club-logo-uploader"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleLogoUpload}
-            />
-          </label>
+          )}
 
           <button
             onClick={() => setShowLibraryModal(true)}
@@ -1226,7 +1256,6 @@ export default function App() {
             </button>
           )}
 
-          {/* BOTÓN IMPRIMIR SESIÓN / DOCUMENTO ARMONIZADO */}
           <button
             onClick={handlePrintDocument}
             className="p-1.5 text-zinc-300 hover:text-amber-400 active:scale-95 transition"
@@ -1370,19 +1399,26 @@ export default function App() {
 
           {objects.map((obj) => {
             if (obj.type === 'player') {
+              const hasName = obj.name && obj.name.trim().length > 0;
+              // Ancho dinámico de la caja de texto según longitud del texto
+              const textWidth = Math.max(14, (obj.name || '').length * 1.5 + 4);
+
               return (
                 <g
                   key={obj.id}
                   transform={`translate(${obj.x}, ${obj.y})`}
                   onPointerDown={(e) => handlePointerDown(e, obj)}
-                  onDoubleClick={() => {
-                    setEditingPlayer(obj);
-                    setPlayerCustomName(obj.name || '');
-                    setPlayerCustomNumber(obj.number);
+                  onDoubleClick={() => openPlayerEditor(obj)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    openPlayerEditor(obj);
                   }}
                   className={`touch-none select-none ${tool === 'eraser' ? 'cursor-pointer hover:opacity-50' : 'cursor-grab active:cursor-grabbing'}`}
                 >
+                  {/* Sombra de la ficha */}
                   <circle r="3.2" fill="rgba(0,0,0,0.25)" transform="translate(0.3, 0.3)" />
+
+                  {/* Círculo de la Ficha con número */}
                   <circle
                     r="3.0"
                     fill={obj.role === 'GK' ? '#f59e0b' : obj.team === 'blue' ? '#2563eb' : '#dc2626'}
@@ -1400,25 +1436,27 @@ export default function App() {
                     {obj.number}
                   </text>
 
-                  {obj.name && (
+                  {/* TEXTO CON NOMBRE DEL JUGADOR: INTEGRADO Y SOLIDARIO CON LA FICHA */}
+                  {hasName && (
                     <g onPointerDown={(e) => handleErasePlayerName(e, obj.id)}>
                       <rect
-                        x="-7"
+                        x={-textWidth / 2}
                         y="3.8"
-                        width="14"
-                        height="3.4"
+                        width={textWidth}
+                        height="3.6"
                         rx="1"
-                        fill="rgba(0,0,0,0.75)"
-                        stroke="#ffffff"
-                        strokeWidth="0.2"
+                        fill="rgba(10, 10, 10, 0.88)"
+                        stroke="#27272a"
+                        strokeWidth="0.25"
                       />
                       <text
                         x="0"
-                        y="6.2"
+                        y="6.3"
                         textAnchor="middle"
                         fontSize="1.9"
                         fontWeight="bold"
                         fill="#ffffff"
+                        letterSpacing="0.1"
                       >
                         {obj.name}
                       </text>
@@ -1454,66 +1492,71 @@ export default function App() {
           })}
         </svg>
 
-        {/* NOTAS Y MEMBRETE EN HOJA IMPRESA AL FINAL DE LA CANCHA */}
+        {/* NOTAS EN HOJA IMPRESA */}
         <div className="hidden print:block p-4 border-t border-zinc-400 mt-2 text-xs">
           <p className="font-bold text-zinc-900 mb-1">Objetivos y Consignas de la Sesión:</p>
           <p className="text-zinc-700 whitespace-pre-wrap">{drillNotes || 'Sin observaciones registradas.'}</p>
         </div>
 
-        {/* MODAL EDICIÓN DE JUGADOR */}
+        {/* MODAL EDITAR FICHA JUGADOR (TAL CUAL LA CAPTURA DE PANTALLA) */}
         {editingPlayer && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
-              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
-                <h3 className="font-black text-sm text-white">Editar Jugador</h3>
-                <button onClick={() => setEditingPlayer(null)} className="text-zinc-400 hover:text-white">
-                  <X className="w-4 h-4" />
+            <div className="bg-[#121214] border border-zinc-800 rounded-3xl w-full max-w-xs p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+              
+              <div className="flex justify-between items-center mb-5 pb-1">
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <span className="text-amber-400">✏️</span> Editar Ficha Jugador
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingPlayer(null)}
+                  className="text-zinc-400 hover:text-white transition p-1"
+                >
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleSavePlayerDetails} className="space-y-3">
+              <form onSubmit={handleSavePlayerDetails} className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Nombre / Apodo (Opcional)</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-2">
+                    NOMBRE O APODO
+                  </label>
                   <input
                     type="text"
                     value={playerCustomName}
                     onChange={(e) => setPlayerCustomName(e.target.value)}
-                    placeholder="Ej. Alexis o Soto"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                    placeholder="Ej. Alexis, Vidal o Delantero"
+                    className="w-full bg-[#1c1c1f] border border-zinc-800 focus:border-red-500 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none transition"
                     autoFocus
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Dorsal / Número</label>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-2">
+                    DORSAL / NÚMERO
+                  </label>
                   <input
                     type="text"
                     value={playerCustomNumber}
                     onChange={(e) => setPlayerCustomNumber(e.target.value)}
-                    placeholder="Ej. 7"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                    placeholder="Ej. 9"
+                    className="w-full bg-[#1c1c1f] border border-zinc-800 focus:border-red-500 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none transition"
                     required
                   />
                 </div>
 
-                <div className="flex gap-2 pt-1">
-                  {editingPlayer.name && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const updated = objects.map(o => o.id === editingPlayer.id ? { ...o, name: '' } : o);
-                        setObjects(updated);
-                        recordHistory(updated);
-                        setEditingPlayer(null);
-                      }}
-                      className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-red-400 rounded-xl text-xs font-bold"
-                    >
-                      Quitar Nombre
-                    </button>
-                  )}
+                {/* BOTONES ELIMINAR / GUARDAR IDÉNTICOS A LA CAPTURA */}
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleRemovePlayerNameFromModal}
+                    className="flex-1 py-3 bg-[#242428] hover:bg-[#2c2c32] text-red-400 font-bold text-xs rounded-2xl transition active:scale-95"
+                  >
+                    Eliminar
+                  </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl text-white shadow"
+                    className="flex-1 py-3 bg-[#ef4444] hover:bg-[#dc2626] font-bold text-xs rounded-2xl text-white shadow-lg transition active:scale-95"
                   >
                     Guardar
                   </button>
@@ -1523,12 +1566,11 @@ export default function App() {
           </div>
         )}
 
-        {/* MODAL BIBLIOTECA GENERAL (SESIONES, ALUMNOS, PROFESORES Y GESTIÓN DE CATEGORÍAS) */}
+        {/* MODAL BIBLIOTECA GENERAL */}
         {showLibraryModal && (
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
               
-              {/* PESTAÑAS PRINCIPALES */}
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   <button
@@ -1555,19 +1597,20 @@ export default function App() {
                   >
                     ⚙️ Categorías
                   </button>
-                  <button
-                    onClick={() => setActiveTabLibrary('club_settings')}
-                    className={`px-3 py-1 rounded-lg text-xs font-black transition ${activeTabLibrary === 'club_settings' ? 'bg-zinc-800 text-white border border-zinc-700' : 'text-zinc-400 hover:text-white'}`}
-                  >
-                    🛡️ Logo Club
-                  </button>
+                  {isPC && (
+                    <button
+                      onClick={() => setActiveTabLibrary('club_settings')}
+                      className={`px-3 py-1 rounded-lg text-xs font-black transition ${activeTabLibrary === 'club_settings' ? 'bg-zinc-800 text-white border border-zinc-700' : 'text-zinc-400 hover:text-white'}`}
+                    >
+                      🛡️ Logo Club
+                    </button>
+                  )}
                 </div>
                 <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white ml-2">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* BARRA FILTRO DE CATEGORÍAS (Para Sesiones y Alumnos) */}
               {(activeTabLibrary === 'sessions' || activeTabLibrary === 'roster') && (
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-2 shrink-0 mb-3">
                   <button
@@ -1588,7 +1631,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 1. PESTAÑA: SESIONES */}
+              {/* 1. SESIONES */}
               {activeTabLibrary === 'sessions' && (
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                   {filteredDrills.length === 0 ? (
@@ -1633,7 +1676,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 2. PESTAÑA: ALUMNOS POR CATEGORÍA CON BOTÓN WHATSAPP */}
+              {/* 2. ALUMNOS CON BOTÓN WHATSAPP */}
               {activeTabLibrary === 'roster' && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <form onSubmit={handleAddPlayerToRoster} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-5 gap-2">
@@ -1647,7 +1690,7 @@ export default function App() {
                     />
                     <input
                       type="text"
-                      placeholder="RUT / Identificación"
+                      placeholder="RUT / ID"
                       value={newRosterRut}
                       onChange={(e) => setNewRosterRut(e.target.value)}
                       className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -1660,7 +1703,7 @@ export default function App() {
                     />
                     <input
                       type="tel"
-                      placeholder="WhatsApp (ej: +569...)"
+                      placeholder="WhatsApp (+569...)"
                       value={newRosterPhone}
                       onChange={(e) => setNewRosterPhone(e.target.value)}
                       className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -1677,7 +1720,7 @@ export default function App() {
                   <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                     {(() => {
                       const listToDisplay = selectedCategoryFilter === 'all'
-                        ? Object.entries(rosters).flatMap(([cId, pList]) => pList.map(p => ({ ...p, categoryId: cId })))
+                        ? Object.entries(rosters).flatMap(([cId, pList]) => (pList || []).map(p => ({ ...p, categoryId: cId })))
                         : (rosters[selectedCategoryFilter] || []).map(p => ({ ...p, categoryId: selectedCategoryFilter }));
 
                       if (listToDisplay.length === 0) {
@@ -1702,7 +1745,6 @@ export default function App() {
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
-                            {/* BOTÓN WHATSAPP DEL ALUMNO / APODERADO */}
                             <WhatsAppButton phone={player.phone} name={player.name} label="WhatsApp" />
                             <button
                               onClick={() => handleDeletePlayerFromRoster(player.categoryId, player.id)}
@@ -1719,7 +1761,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 3. PESTAÑA: PROFESORES Y CUERPO TÉCNICO CON CATEGORÍA Y WHATSAPP */}
+              {/* 3. PROFESORES Y STAFF */}
               {activeTabLibrary === 'coaches' && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <form onSubmit={handleAddCoachStaff} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-4 gap-2">
@@ -1733,7 +1775,7 @@ export default function App() {
                     />
                     <input
                       type="text"
-                      placeholder="Cargo (ej. DT, Preparador Físico)"
+                      placeholder="Cargo (DT, Ayudante, PF)"
                       value={newCoachStaffRole}
                       onChange={(e) => setNewCoachStaffRole(e.target.value)}
                       className="bg-zinc-950 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -1787,7 +1829,6 @@ export default function App() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {/* BOTÓN WHATSAPP DEL PROFESOR */}
                             <WhatsAppButton phone={coach.phone} name={coach.name} label="WhatsApp DT" />
                             <button
                               onClick={() => handleDeleteCoachStaff(coach.id)}
@@ -1804,7 +1845,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 4. PESTAÑA: CONFIGURACIÓN Y EDICIÓN DE CATEGORÍAS */}
+              {/* 4. CATEGORÍAS */}
               {activeTabLibrary === 'categories' && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <form onSubmit={handleAddCategory} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl mb-3 shrink-0 flex gap-2">
@@ -1884,8 +1925,8 @@ export default function App() {
                 </div>
               )}
 
-              {/* 5. PESTAÑA: GESTIÓN DE LOGO Y ESCUDO DE LA ESCUELA */}
-              {activeTabLibrary === 'club_settings' && (
+              {/* 5. GESTIÓN DE LOGO (DISPONIBLE EXCLUSIVAMENTE EN PC) */}
+              {activeTabLibrary === 'club_settings' && isPC && (
                 <div className="flex-1 flex flex-col items-center justify-center p-4 bg-zinc-900 rounded-xl border border-zinc-800 text-center">
                   <div className="w-24 h-24 rounded-2xl border-2 border-amber-400 p-1 mb-3 overflow-hidden bg-black flex items-center justify-center">
                     <img
@@ -1896,7 +1937,7 @@ export default function App() {
                   </div>
                   <h4 className="text-white font-bold text-sm mb-1">{authenticatedUser.club || 'Escuela de Fútbol'}</h4>
                   <p className="text-zinc-400 text-xs max-w-sm mb-4">
-                    Este logotipo aparecerá automáticamente en tu sesión diaria y en la cabecera oficial de impresión de cada ejercicio o informe que generes.
+                    Este escudo aparecerá en la sesión y en la cabecera de impresión oficial.
                   </p>
 
                   <div className="flex gap-2">
@@ -1990,7 +2031,7 @@ export default function App() {
           </div>
         )}
 
-        {/* MODAL PANEL DE CONTROL DUEÑO */}
+        {/* MODAL CONTROL DUEÑO */}
         {showAdminDashboard && (
           <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg p-5 shadow-2xl flex flex-col max-h-[90vh]">
@@ -2072,7 +2113,7 @@ export default function App() {
           </div>
         )}
 
-        {/* MODAL CREAR NUEVO USUARIO / LICENCIA */}
+        {/* MODAL CREAR NUEVA LICENCIA */}
         {showNewUserModal && (
           <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
