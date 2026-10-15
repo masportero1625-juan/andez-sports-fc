@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Folder, Play, RotateCcw, Shirt, Share2, Save, Undo2, Redo2, Trash2, PenTool, X, ChevronRight,
   Eraser, Lock, ShieldCheck, Plus, Calendar, AlertTriangle, RotateCw, LogOut, MessageCircle,
-  Upload, Printer, Edit2, Video, Square, Download, Sparkles
+  Upload, Printer, Edit2, Video, Square, Download, Sparkles, Gift
 } from 'lucide-react';
 
 const DEFAULT_CATEGORIES = [
@@ -58,6 +58,22 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
         {[-5.4, -3.6, -1.8, 0, 1.8, 3.6, 5.4].map(s => <line key={s} x1="-2.2" y1={s} x2="2.2" y2={s} stroke="#facc15" strokeWidth="0.7" />)}
       </>
     );
+  } else if (obj.type === 'dummy') {
+    body = (
+      <>
+        <circle cx="0" cy="-3.6" r="1.3" fill="#eab308" stroke="#ca8a04" strokeWidth="0.3" />
+        <path d="M -2.2 -2.1 Q 0 -2.6 2.2 -2.1 L 1.8 2.2 Q 0 2.5 -1.8 2.2 Z" fill="#facc15" stroke="#ca8a04" strokeWidth="0.35" />
+      </>
+    );
+  } else if (obj.type === 'hurdle') {
+    body = (
+      <>
+        <ellipse cx="0" cy="2.2" rx="3.2" ry="0.7" fill="rgba(0,0,0,0.25)" />
+        <line x1="-3" y1="2" x2="-3" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" />
+        <line x1="3" y1="2" x2="3" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" />
+        <rect x="-3.2" y="-2.2" width="6.4" height="0.8" fill="#facc15" stroke="#ca8a04" strokeWidth="0.2" rx="0.2" />
+      </>
+    );
   } else if (obj.type === 'cone') {
     body = (
       <>
@@ -72,15 +88,8 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
         <ellipse cx="0" cy="0.3" rx="0.7" ry="0.35" fill="#1e293b" />
       </>
     );
-  } else if (obj.type === 'dummy') {
-    body = (
-      <>
-        <circle cx="0" cy="-3.6" r="1.3" fill="#eab308" stroke="#ca8a04" strokeWidth="0.3" />
-        <path d="M -2.2 -2.1 Q 0 -2.6 2.2 -2.1 L 1.8 2.2 Q 0 2.5 -1.8 2.2 Z" fill="#facc15" stroke="#ca8a04" strokeWidth="0.35" />
-      </>
-    );
-  } else {
-    body = <circle cx="0" cy="0" r="3.0" fill="none" stroke={obj.color || '#facc15'} strokeWidth="0.7" />;
+  } else if (obj.type === 'ring') {
+    body = <circle cx="0" cy="0" r="3.0" fill="none" stroke={obj.color || '#38bdf8'} strokeWidth="0.7" />;
   }
 
   return (
@@ -125,6 +134,15 @@ export default function App() {
     return s ? JSON.parse(s) : null;
   });
 
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showNewUserModal, setShowNewUserModal] = useState(false);
+  const [newCoachName, setNewCoachName] = useState('');
+  const [newCoachClub, setNewCoachClub] = useState('');
+  const [newCoachPlan, setNewCoachPlan] = useState('DT Personal (2 Equipos: Móvil + PC) - $15.000');
+  const [newCoachExpiry, setNewCoachExpiry] = useState(() => {
+    const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0];
+  });
+
   const [customLogo, setCustomLogo] = useState(() => localStorage.getItem('andez_custom_club_logo') || null);
   const handleLogoUpload = (e) => {
     const file = e.target.files && e.target.files[0];
@@ -144,6 +162,10 @@ export default function App() {
   });
   useEffect(() => localStorage.setItem('andez_dynamic_categories', JSON.stringify(categories)), [categories]);
 
+  const [newCatName, setNewCatName] = useState('');
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [editingCatName, setEditingCatName] = useState('');
+
   const [coachesList, setCoachesList] = useState(() => {
     const c = localStorage.getItem('andez_coaches_staff');
     return c ? JSON.parse(c) : [
@@ -151,6 +173,11 @@ export default function App() {
     ];
   });
   useEffect(() => localStorage.setItem('andez_coaches_staff', JSON.stringify(coachesList)), [coachesList]);
+
+  const [newCoachStaffName, setNewCoachStaffName] = useState('');
+  const [newCoachStaffRole, setNewCoachStaffRole] = useState('Director Técnico');
+  const [newCoachStaffCategory, setNewCoachStaffCategory] = useState(categories[0]?.id || 'sub10');
+  const [newCoachStaffPhone, setNewCoachStaffPhone] = useState('+569');
 
   const [rosters, setRosters] = useState(() => {
     const r = localStorage.getItem('andez_category_rosters');
@@ -161,6 +188,12 @@ export default function App() {
     };
   });
   useEffect(() => localStorage.setItem('andez_category_rosters', JSON.stringify(rosters)), [rosters]);
+
+  const [newRosterName, setNewRosterName] = useState('');
+  const [newRosterRut, setNewRosterRut] = useState('');
+  const [newRosterBirth, setNewRosterBirth] = useState('');
+  const [newRosterRole, setNewRosterRole] = useState('Delantero');
+  const [newRosterPhone, setNewRosterPhone] = useState('+569');
 
   const [inputLicenseCode, setInputLicenseCode] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -232,7 +265,7 @@ export default function App() {
   const isDraggingRef = useRef(false);
   const [selectedObj, setSelectedObj] = useState(null);
 
-  // NUEVA FUNCIÓN: GRABACIÓN DE VIDEO NATIVO (WebM/MP4)
+  // GRABACIÓN DE VIDEO NATIVO
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -242,8 +275,7 @@ export default function App() {
     setRecordedVideoUrl(null);
     recordedChunksRef.current = [];
     try {
-      const stream = svgRef.current.ownerDocument.defaultView ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 } }) : null;
-      if (!stream) return;
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 } });
       const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
       mediaRecorderRef.current = mr;
       mr.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
@@ -256,18 +288,16 @@ export default function App() {
       mr.start();
       setIsRecording(true);
     } catch (err) {
-      alert('Para grabar, selecciona la ventana de la pizarra táctica.');
+      alert('Selecciona la ventana de la pizarra para grabar.');
       setIsRecording(false);
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-    }
+    if (mediaRecorderRef.current && isRecording) mediaRecorderRef.current.stop();
   };
 
-  // NUEVA FUNCIÓN: GENERADOR TÁCTICO POR PROMPT ESCRITO
+  // GENERADOR TÁCTICO POR PROMPT
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [promptText, setPromptText] = useState('');
 
@@ -390,12 +420,13 @@ export default function App() {
   };
 
   const currentDisplayLogo = customLogo || '/logo-andez.png';
+  const totalRevenue = adminLicenses.filter(l => l.status === 'active').reduce((sum, l) => sum + (l.price || 0), 0);
 
   if (!authenticatedUser) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-[#070b12] text-white p-4 font-sans select-none relative">
         <div className="w-full max-w-md bg-zinc-950/90 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center">
-          <img src={currentDisplayLogo} alt="Logo" className="w-16 h-16 rounded-2xl mb-4 border border-amber-400" />
+          <img src={currentDisplayLogo} alt="Logo" className="w-16 h-16 rounded-2xl mb-4 border border-amber-400 object-cover" />
           <h1 className="text-2xl font-black text-white mb-1">ANDEZ SPORTS FC <span className="text-amber-400">PRO</span></h1>
           <form onSubmit={handleClientLogin} className="w-full space-y-3 my-4">
             <input type="text" value={inputLicenseCode} onChange={e => setInputLicenseCode(e.target.value)} placeholder="Clave (ej. ANDEZ2026)" className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-sm text-center font-mono font-bold text-white uppercase focus:border-red-500 outline-none" required />
@@ -416,11 +447,11 @@ export default function App() {
         <div className="flex items-center gap-2 sm:gap-3">
           {isPC ? (
             <label htmlFor="logo-up" className="cursor-pointer" title="Cambiar Logo Club (PC)">
-              <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400" />
+              <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
               <input id="logo-up" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
             </label>
           ) : (
-            <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400" />
+            <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
           )}
 
           <button onClick={() => setShowLibraryModal(true)} className="text-zinc-300 hover:text-amber-400" title="Biblioteca y Nóminas"><Folder className="w-5 h-5" /></button>
@@ -428,7 +459,6 @@ export default function App() {
           <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} className={`p-1 rounded ${pitchMode === 'half' ? 'bg-red-600 text-white' : 'text-zinc-300'}`}><RotateCcw className="w-5 h-5" /></button>
           <button onClick={() => setShowTrainingMenu(!showTrainingMenu)} className={`p-1 rounded ${showTrainingMenu ? 'bg-amber-500 text-black' : 'text-amber-400'}`}><span className="font-bold">▲</span></button>
           
-          {/* BOTÓN PROMPT TÁCTICO */}
           <button onClick={() => setShowPromptModal(true)} className="flex items-center gap-1 bg-amber-500/20 border border-amber-400 text-amber-300 px-2 py-1 rounded-full text-[11px] font-bold shadow active:scale-95">
             <Sparkles className="w-3.5 h-3.5" /> Prompt IA
           </button>
@@ -439,7 +469,6 @@ export default function App() {
             <button onClick={() => rotateObject(selectedMaterial.id)} className="flex items-center gap-1 bg-amber-500 text-black px-2 py-1 rounded-full text-[10px] font-black"><RotateCw className="w-3.5 h-3.5" /> 45°</button>
           )}
 
-          {/* BOTÓN GRABAR / DETENER VIDEO */}
           {isRecording ? (
             <button onClick={stopRecording} className="flex items-center gap-1.5 bg-red-600 text-white px-2.5 py-1 rounded-full text-[10px] font-black animate-pulse shadow">
               <Square className="w-3.5 h-3.5" /> Detener
@@ -452,6 +481,18 @@ export default function App() {
 
           <button onClick={() => window.print()} className="text-zinc-300 hover:text-amber-400"><Printer className="w-5 h-5" /></button>
           <button onClick={() => setShowSaveModal(true)} className="text-zinc-300 hover:text-red-400"><Save className="w-5 h-5" /></button>
+
+          {/* BOTÓN PANEL DE DUEÑO */}
+          {authenticatedUser.role === 'owner' ? (
+            <button onClick={() => setShowAdminDashboard(true)} className="flex items-center gap-1 bg-zinc-900 border border-zinc-700 px-2.5 py-1 rounded-full text-[10px] font-black text-amber-400 uppercase tracking-wider">
+              <span>Dueño</span> <Lock className="w-3 h-3 text-zinc-400" />
+            </button>
+          ) : (
+            <div className="bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-[10px] font-bold text-zinc-300 max-w-[100px] truncate">
+              {authenticatedUser.club || authenticatedUser.coach || 'DT Pro'}
+            </div>
+          )}
+
           <button onClick={handleLogout} className="text-zinc-400 hover:text-red-400"><LogOut className="w-4 h-4" /></button>
         </div>
       </header>
@@ -460,7 +501,6 @@ export default function App() {
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
         <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl" onPointerDown={handlePitchPointerDown}>
           <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
-          {/* LÍNEAS DE CANCHA HORIZONTAL / VERTICAL */}
           {isPC ? (
             <g stroke="white" strokeWidth="0.8" fill="none">
               <rect x="2" y="2" width={pitchMode === 'half' ? 51 : 101} height="64" />
@@ -479,7 +519,6 @@ export default function App() {
             </g>
           )}
 
-          {/* DIBUJO DE LÍNEAS / FLECHAS */}
           {drawings.map(l => (
             <g key={l.id} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setDrawings(prev => prev.filter(d => d.id !== l.id)); } }}>
               <line x1={l.start.x} y1={l.start.y} x2={l.end.x} y2={l.end.y} stroke={l.color} strokeWidth="1.4" strokeDasharray={l.type === 'dashed-arrow' ? '3,2' : 'none'} />
@@ -487,7 +526,6 @@ export default function App() {
           ))}
           {currentLine && <line x1={currentLine.start.x} y1={currentLine.start.y} x2={currentLine.end.x} y2={currentLine.end.y} stroke={currentLine.color} strokeWidth="1.4" />}
 
-          {/* OBJETOS TÁCTICOS */}
           {objects.map(obj => {
             if (obj.type === 'player') {
               const hasName = obj.name && obj.name.trim().length > 0;
@@ -510,7 +548,7 @@ export default function App() {
           })}
         </svg>
 
-        {/* MODAL FICHA JUGADOR (TAL CUAL LA CAPTURA) */}
+        {/* MODAL FICHA JUGADOR */}
         {editingPlayer && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-[#121214] border border-zinc-800 rounded-3xl w-full max-w-xs p-6 shadow-2xl">
@@ -579,7 +617,7 @@ export default function App() {
                       navigator.share({ title: drillTitle, files: [file] });
                     });
                   } else {
-                    alert('Descarga el archivo y envíalo directamente por WhatsApp.');
+                    alert('Descarga el video para enviarlo directamente a tu WhatsApp.');
                   }
                 }} className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 shadow">
                   <MessageCircle className="w-4 h-4" /> Enviar WhatsApp
@@ -589,18 +627,22 @@ export default function App() {
           </div>
         )}
 
-        {/* MENÚ MATERIALES */}
+        {/* MENÚ DE MATERIALES COMPLETO */}
         {showTrainingMenu && (
           <aside className="absolute right-2 top-2 bg-black/90 border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 w-44 no-print">
             <div className="flex justify-between items-center border-b border-zinc-800 pb-1 mb-1">
               <span className="text-[11px] font-bold text-amber-400">Materiales</span>
               <button onClick={() => setShowTrainingMenu(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
             </div>
-            {['mini_goal', 'ladder', 'cone', 'saucer', 'dummy'].map(type => (
-              <button key={type} onClick={() => addElement(type)} className="p-1 text-left hover:bg-zinc-800 rounded text-xs text-white capitalize">
-                {type === 'mini_goal' ? '🥅 Mini Portería' : type === 'ladder' ? '🪜 Escalera' : type === 'cone' ? '▲ Cono' : type === 'saucer' ? '🟡 Plato' : '🧍 Maniquí'}
-              </button>
-            ))}
+            <button onClick={() => addElement('mini_goal')} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🥅 Mini Portería</button>
+            <button onClick={() => addElement('ladder')} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🪜 Escalera</button>
+            <button onClick={() => addElement('dummy')} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🧍 Maniquí</button>
+            <button onClick={() => addElement('hurdle')} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🚧 Valla de Salto</button>
+            <button onClick={() => addElement('cone', { color: '#ea580c' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-orange-500">▲</span> Cono Naranja</button>
+            <button onClick={() => addElement('cone', { color: '#2563eb' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-blue-500">▲</span> Cono Azul</button>
+            <button onClick={() => addElement('cone', { color: '#eab308' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-yellow-400">▲</span> Cono Amarillo</button>
+            <button onClick={() => addElement('saucer', { color: '#facc15' })} className="p-1.5 text-left hover:bg-zinc-800 rounded-xs text-xs text-white">🟡 Plato Chino</button>
+            <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">⭕ Aro de Salto</button>
           </aside>
         )}
 
@@ -613,7 +655,7 @@ export default function App() {
                 <button onClick={() => setShowSystemsMenu(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
               {['4-3-3', '4-4-2', '3-5-2'].map(sys => (
-                <button key={sys} onClick={() => applyTacticalSystem(sys)} className="w-full text-left p-2 hover:bg-red-600 rounded-xl text-xs font-bold text-white mb-1">
+                <button key={sys} onClick={() => applyTacticalSystem(sys)} className="w-full text-left p-2.5 hover:bg-red-600 rounded-xl text-xs font-bold text-white mb-1 transition">
                   Formación {sys}
                 </button>
               ))}
@@ -621,75 +663,264 @@ export default function App() {
           </div>
         )}
 
-        {/* MODAL BIBLIOTECA, ALUMNOS Y PROFESORES */}
+        {/* MODAL BIBLIOTECA, ALUMNOS, PROFESORES Y CATEGORÍAS */}
         {showLibraryModal && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
-                <div className="flex gap-2">
-                  <button onClick={() => setActiveTabLibrary('sessions')} className={`px-3 py-1 rounded text-xs font-bold ${activeTabLibrary === 'sessions' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📁 Sesiones</button>
-                  <button onClick={() => setActiveTabLibrary('roster')} className={`px-3 py-1 rounded text-xs font-bold ${activeTabLibrary === 'roster' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📋 Alumnos</button>
-                  <button onClick={() => setActiveTabLibrary('coaches')} className={`px-3 py-1 rounded text-xs font-bold ${activeTabLibrary === 'coaches' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>🧑‍🏫 Profesores</button>
+                <div className="flex gap-1.5 flex-wrap">
+                  <button onClick={() => setActiveTabLibrary('sessions')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'sessions' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📁 Sesiones</button>
+                  <button onClick={() => setActiveTabLibrary('roster')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'roster' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📋 Alumnos</button>
+                  <button onClick={() => setActiveTabLibrary('coaches')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'coaches' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>🧑‍🏫 Profesores</button>
+                  <button onClick={() => setActiveTabLibrary('categories')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'categories' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`}>⚙️ Categorías</button>
+                  {isPC && <button onClick={() => setActiveTabLibrary('club_settings')} className={`px-3 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'club_settings' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}>🛡️ Logo Club</button>}
                 </div>
                 <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
 
+              {/* PESTAÑA: SESIONES */}
               {activeTabLibrary === 'sessions' && (
                 <div className="flex-1 overflow-y-auto space-y-2">
-                  {savedDrills.map(d => (
+                  {savedDrills.length === 0 ? <p className="text-xs text-zinc-500 text-center py-8">No hay sesiones guardadas aún.</p> : savedDrills.map(d => (
                     <div key={d.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex justify-between items-center">
                       <div>
                         <div className="font-bold text-xs text-white">{d.title}</div>
-                        <div className="text-[10px] text-zinc-400">{d.date} • {d.category}</div>
+                        <div className="text-[10px] text-zinc-400">{d.date} • {categories.find(c => c.id === d.category)?.name || d.category}</div>
                       </div>
-                      <button onClick={() => { setObjects(d.objects); setDrawings(d.drawings || []); setDrillTitle(d.title); setShowLibraryModal(false); }} className="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded">Cargar</button>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setObjects(d.objects); setDrawings(d.drawings || []); setDrillTitle(d.title); setShowLibraryModal(false); }} className="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-lg shadow">Cargar</button>
+                        <button onClick={() => setSavedDrills(savedDrills.filter(x => x.id !== d.id))} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
 
+              {/* PESTAÑA: ALUMNOS (FORMULARIO Y LISTA) */}
               {activeTabLibrary === 'roster' && (
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {Object.entries(rosters).flatMap(([_, l]) => l).map(p => (
-                    <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
-                      <div>
-                        <div className="font-bold text-xs text-white">{p.name} ({p.role})</div>
-                        <div className="text-[10px] text-zinc-400">RUT: {p.rut}</div>
+                <div className="flex-1 flex flex-col min-h-0">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newRosterName.trim()) return;
+                    const target = selectedCategoryFilter === 'all' ? (categories[0]?.id || 'sub10') : selectedCategoryFilter;
+                    const newP = { id: 'ros-' + Date.now(), name: newRosterName.trim(), rut: newRosterRut || 'Sin RUT', birth: newRosterBirth || '2012-01-01', role: newRosterRole, phone: newRosterPhone.trim() || '+56932100183' };
+                    setRosters({ ...rosters, [target]: [...(rosters[target] || []), newP] });
+                    setNewRosterName(''); setNewRosterRut(''); setNewRosterPhone('+569');
+                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-5 gap-2">
+                    <input type="text" placeholder="Nombre Alumno" value={newRosterName} onChange={e => setNewRosterName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" required />
+                    <input type="text" placeholder="RUT / ID" value={newRosterRut} onChange={e => setNewRosterRut(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" />
+                    <input type="date" value={newRosterBirth} onChange={e => setNewRosterBirth(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" />
+                    <input type="tel" placeholder="WhatsApp" value={newRosterPhone} onChange={e => setNewRosterPhone(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" required />
+                    <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg py-1 shadow flex items-center justify-center gap-1"><Plus className="w-3.5 h-3.5" /> Agregar</button>
+                  </form>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => (
+                      <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-xs text-white">{p.name} <span className="text-[10px] text-zinc-400 font-normal">({categories.find(c => c.id === p.catKey)?.name || p.catKey})</span></div>
+                          <div className="text-[10px] text-zinc-400">RUT: {p.rut} • Nac: {p.birth}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <WhatsAppButton phone={p.phone} name={p.name} label="WhatsApp" />
+                          <button onClick={() => setRosters({ ...rosters, [p.catKey]: rosters[p.catKey].filter(x => x.id !== p.id) })} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
                       </div>
-                      <WhatsAppButton phone={p.phone} name={p.name} label="WhatsApp" />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
+              {/* PESTAÑA: PROFESORES (FORMULARIO Y LISTA) */}
               {activeTabLibrary === 'coaches' && (
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {coachesList.map(c => (
-                    <div key={c.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
-                      <div>
-                        <div className="font-bold text-xs text-white">{c.name}</div>
-                        <div className="text-[10px] text-amber-400 font-bold">{c.role}</div>
-                      </div>
-                      <WhatsAppButton phone={c.phone} name={c.name} label="WhatsApp DT" />
+                <div className="flex-1 flex flex-col min-h-0">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newCoachStaffName.trim()) return;
+                    setCoachesList([...coachesList, { id: 'c-' + Date.now(), name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim() }]);
+                    setNewCoachStaffName(''); setNewCoachStaffPhone('+569');
+                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input type="text" placeholder="Nombre Profesor" value={newCoachStaffName} onChange={e => setNewCoachStaffName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" required />
+                    <input type="text" placeholder="Cargo (DT, PF)" value={newCoachStaffRole} onChange={e => setNewCoachStaffRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" />
+                    <select value={newCoachStaffCategory} onChange={e => setNewCoachStaffCategory(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none">
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <div className="flex gap-1">
+                      <input type="tel" placeholder="WhatsApp" value={newCoachStaffPhone} onChange={e => setNewCoachStaffPhone(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" required />
+                      <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg px-3 shadow"><Plus className="w-3.5 h-3.5" /></button>
                     </div>
-                  ))}
+                  </form>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {coachesList.map(c => (
+                      <div key={c.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-xs text-white">{c.name} <span className="text-amber-400 font-semibold text-[10px]">({c.role})</span></div>
+                          <div className="text-[10px] text-zinc-400">Categoría: {categories.find(x => x.id === c.categoryId)?.name || 'Sin asignar'}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <WhatsAppButton phone={c.phone} name={c.name} label="WhatsApp DT" />
+                          <button onClick={() => setCoachesList(coachesList.filter(x => x.id !== c.id))} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* PESTAÑA: CATEGORÍAS (CREAR, EDITAR, ELIMINAR) */}
+              {activeTabLibrary === 'categories' && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newCatName.trim()) return;
+                    setCategories([...categories, { id: 'cat-' + Date.now(), name: newCatName.trim() }]);
+                    setNewCatName('');
+                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 flex gap-2">
+                    <input type="text" placeholder="Nueva Categoría (Ej: Sub-6, Femenino)" value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
+                    <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-lg shadow flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Crear</button>
+                  </form>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {categories.map(cat => (
+                      <div key={cat.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                        {editingCatId === cat.id ? (
+                          <div className="flex gap-2 flex-1 mr-2">
+                            <input type="text" value={editingCatName} onChange={e => setEditingCatName(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-xs text-white" autoFocus />
+                            <button onClick={() => { setCategories(categories.map(c => c.id === cat.id ? { ...c, name: editingCatName.trim() } : c)); setEditingCatId(null); }} className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar</button>
+                            <button onClick={() => setEditingCatId(null)} className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">Cancelar</button>
+                          </div>
+                        ) : (
+                          <span className="font-bold text-xs text-white">{cat.name}</span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => { setEditingCatId(cat.id); setEditingCatName(cat.name); }} className="p-1 text-zinc-400 hover:text-amber-400"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => { if (confirm('¿Eliminar categoría?')) setCategories(categories.filter(c => c.id !== cat.id)); }} className="p-1 text-zinc-400 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* PESTAÑA: LOGO */}
+              {activeTabLibrary === 'club_settings' && isPC && (
+                <div className="flex-1 flex flex-col items-center justify-center p-4 bg-zinc-900 rounded-xl border border-zinc-800 text-center">
+                  <img src={currentDisplayLogo} alt="Logo" className="w-20 h-20 rounded-2xl mb-3 border-2 border-amber-400 object-cover" />
+                  <label htmlFor="logo-up-modal" className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl cursor-pointer shadow">
+                    Subir Escudo del Club
+                    <input id="logo-up-modal" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                  </label>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* MODAL GUARDAR */}
+        {/* MODAL PANEL DE DUEÑO Y LICENCIAS */}
+        {showAdminDashboard && (
+          <div className="absolute inset-0 bg-black/90 flex items-center justify-center p-4 z-50 no-print">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-lg p-5 shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
+                <div>
+                  <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">DUEÑO</span>
+                  <h3 className="font-black text-base text-white mt-1">Control de Licencias SaaS</h3>
+                </div>
+                <button onClick={() => setShowAdminDashboard(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                  <span className="text-[10px] text-zinc-400 block font-bold">Ingresos Recurrentes</span>
+                  <span className="text-lg font-black text-emerald-400">\${totalRevenue.toLocaleString('es-CL')} CLP</span>
+                </div>
+                <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 block font-bold">Clubes Activos</span>
+                    <span className="text-lg font-black text-white">{adminLicenses.filter(l => l.status === 'active').length}</span>
+                  </div>
+                  <button onClick={() => setShowNewUserModal(true)} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+                    <Plus className="w-4 h-4" /> Nuevo
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {adminLicenses.map(lic => (
+                  <div key={lic.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-white">{lic.coach}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-amber-400 font-mono font-bold border border-zinc-700">{lic.code}</span>
+                      </div>
+                      <div className="text-[10px] text-zinc-400">{lic.club} • {lic.plan}</div>
+                      <div className="text-[9px] text-zinc-500">Vence: {lic.expiry} ({lic.seats} Equipos)</div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => setAdminLicenses(adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l))} className={`px-2 py-1 rounded text-xs font-bold ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}>
+                        {lic.status === 'active' ? 'Suspender' : 'Reactivar'}
+                      </button>
+                      <button onClick={() => { if (confirm('¿Eliminar licencia?')) setAdminLicenses(adminLicenses.filter(l => l.id !== lic.id)); }} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CREAR NUEVO ACCESO / LICENCIA */}
+        {showNewUserModal && (
+          <div className="absolute inset-0 bg-black/95 flex items-center justify-center p-4 z-50 no-print">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-sm text-white flex items-center gap-1"><Plus className="w-4 h-4 text-red-500" /> Crear Acceso DT</h3>
+                <button onClick={() => setShowNewUserModal(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+              <button type="button" onClick={() => {
+                const d = new Date(); d.setDate(d.getDate() + 7);
+                setNewCoachExpiry(d.toISOString().split('T')[0]);
+                setNewCoachPlan('Prueba Gratuita (7 Días - 2 Equipos)');
+              }} className="w-full mb-3 py-1.5 px-3 bg-amber-500/10 border border-amber-500/40 rounded-xl text-amber-400 font-bold text-xs flex items-center justify-center gap-1.5">
+                <Gift className="w-4 h-4" /> Asignar 7 Días Gratis
+              </button>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!newCoachName.trim()) return;
+                const code = 'AND-' + Math.floor(1000 + Math.random() * 9000);
+                const isSchool = newCoachPlan.includes('Escuela');
+                const isTrial = newCoachPlan.includes('Prueba');
+                const seats = isSchool ? 5 : 2;
+                const price = isTrial ? 0 : (isSchool ? 35000 : 15000);
+                setAdminLicenses([{ id: 'lic-' + Date.now(), coach: newCoachName.trim(), club: newCoachClub.trim() || 'Club Particular', code, seats, status: 'active', plan: newCoachPlan, price, expiry: newCoachExpiry }, ...adminLicenses]);
+                setShowNewUserModal(false); setNewCoachName(''); setNewCoachClub('');
+                alert(`¡Usuario creado!\nClave: ${code}`);
+              }} className="space-y-3">
+                <input type="text" placeholder="Nombre Profesor / DT" value={newCoachName} onChange={e => setNewCoachName(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
+                <input type="text" placeholder="Club o Escuela" value={newCoachClub} onChange={e => setNewCoachClub(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+                <select value={newCoachPlan} onChange={e => setNewCoachPlan(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                  <option value="DT Personal (2 Equipos: Móvil + PC) - \$15.000">DT Personal (2 Equipos) - \$15.000</option>
+                  <option value="Escuela / Club (5 Equipos: 4 Móviles + 1 PC) - \$35.000">Escuela / Club (5 Equipos) - \$35.000</option>
+                  <option value="Prueba Gratuita (7 Días - 2 Equipos)">Prueba Gratuita (7 Días) - \$0</option>
+                </select>
+                <input type="date" value={newCoachExpiry} onChange={e => setNewCoachExpiry(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
+                <button type="submit" className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase rounded-xl text-white shadow">Generar Clave</button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL GUARDAR SESIÓN */}
         {showSaveModal && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-3">
               <h3 className="font-bold text-sm text-white">Guardar Sesión</h3>
               <input type="text" value={drillTitle} onChange={e => setDrillTitle(e.target.value)} placeholder="Título" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
-              <textarea value={drillNotes} onChange={e => setDrillNotes(e.target.value)} rows={3} placeholder="Consignas..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+              <select value={drillCategory} onChange={e => setDrillCategory(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <textarea value={drillNotes} onChange={e => setDrillNotes(e.target.value)} rows={3} placeholder="Consignas..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none resize-none" />
               <button onClick={() => {
                 const n = { id: 'd-' + Date.now(), title: drillTitle, notes: drillNotes, category: drillCategory, date: new Date().toISOString().split('T')[0], objects, drawings };
-                setSavedDrills([n, ...savedDrills]); setShowSaveModal(false); alert('¡Guardado!');
-              }} className="w-full py-2 bg-red-600 font-bold text-xs rounded-xl text-white">Confirmar</button>
+                setSavedDrills([n, ...savedDrills]); setShowSaveModal(false); alert('¡Sesión guardada!');
+              }} className="w-full py-2 bg-red-600 font-bold text-xs rounded-xl text-white shadow">Confirmar</button>
             </div>
           </div>
         )}
@@ -703,8 +934,8 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button onClick={() => addElement('player', { team: 'blue' })} className="w-9 h-9 rounded-full bg-blue-600 border-2 border-white text-white font-bold text-xs">11</button>
-          <button onClick={() => addElement('player', { team: 'red' })} className="w-9 h-9 rounded-full bg-red-600 border-2 border-white text-white font-bold text-xs">11</button>
+          <button onClick={() => addElement('player', { team: 'blue' })} className="w-9 h-9 rounded-full bg-blue-600 border-2 border-white text-white font-bold text-xs shadow">11</button>
+          <button onClick={() => addElement('player', { team: 'red' })} className="w-9 h-9 rounded-full bg-red-600 border-2 border-white text-white font-bold text-xs shadow">11</button>
           <button onClick={() => addElement('ball')} className="w-9 h-9 rounded-full bg-white text-sm shadow">⚽</button>
         </div>
 
