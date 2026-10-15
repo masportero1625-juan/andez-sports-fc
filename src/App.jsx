@@ -213,7 +213,7 @@ export default function App() {
   // Formulario nuevo usuario
   const [newCoachName, setNewCoachName] = useState('');
   const [newCoachClub, setNewCoachClub] = useState('');
-  const [newCoachPlan, setNewCoachPlan] = useState('Coach Single (\$15.000)');
+  const [newCoachPlan, setNewCoachPlan] = useState('Coach Single ($15.000)');
   const [newCoachExpiry, setNewCoachExpiry] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
@@ -226,9 +226,9 @@ export default function App() {
       try { return JSON.parse(localLic); } catch (e) {}
     }
     return [
-      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 2, status: 'active', plan: 'Club Dúo (\$25.000)', price: 25000, expiry: '2026-11-15' },
-      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, status: 'active', plan: 'Coach Single (\$15.000)', price: 15000, expiry: '2026-11-10' },
-      { id: 'lic-3', coach: 'Prof. Esteban Tapia', club: 'Deportivo Central', code: 'AND-9934', seats: 2, status: 'suspended', plan: 'Coach Single (\$15.000)', price: 15000, expiry: '2026-10-01' },
+      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 2, status: 'active', plan: 'Club Dúo ($25.000)', price: 25000, expiry: '2026-11-15' },
+      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, status: 'active', plan: 'Coach Single ($15.000)', price: 15000, expiry: '2026-11-10' },
+      { id: 'lic-3', coach: 'Prof. Esteban Tapia', club: 'Deportivo Central', code: 'AND-9934', seats: 2, status: 'suspended', plan: 'Coach Single ($15.000)', price: 15000, expiry: '2026-10-01' },
     ];
   });
 
@@ -871,4 +871,443 @@ export default function App() {
                     >
                       <div className="flex-1 min-w-0 mr-3">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-950 text-
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">
+                            {drill.category}
+                          </span>
+                          <span className="text-[10px] text-zinc-500">{drill.date}</span>
+                        </div>
+                        <h4 className="font-bold text-xs text-white truncate">{drill.title}</h4>
+                        {drill.notes && <p className="text-[10px] text-zinc-400 truncate">{drill.notes}</p>}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => loadDrillFromLibrary(drill)}
+                          className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shadow"
+                        >
+                          Cargar
+                        </button>
+                        <button
+                          onClick={() => deleteDrill(drill.id)}
+                          className="p-1.5 text-zinc-500 hover:text-red-400 rounded-lg"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 5. MODAL DE LOGIN ADMINISTRADOR DUEÑO */}
+        {showAdminLogin && (
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
+              <div className="flex justify-between items-center mb-4 border-b border-zinc-800 pb-2">
+                <h3 className="font-black text-sm text-white flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-red-500" /> Acceso Superadmin
+                </h3>
+                <button onClick={() => setShowAdminLogin(false)} className="text-zinc-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAdminLogin} className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Clave Maestra de Dueño</label>
+                  <input
+                    type="password"
+                    value={adminPasswordInput}
+                    onChange={(e) => setAdminPasswordInput(e.target.value)}
+                    placeholder="Ingresa clave"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                    autoFocus
+                  />
+                  <p className="text-[9px] text-zinc-500 mt-1">Clave por defecto: andez2026</p>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl text-white shadow"
+                >
+                  Ingresar al Panel
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 6. MODAL PANEL SUPERADMIN: CONTROL DE LICENCIAS COMPLETO */}
+        {showAdminDashboard && (
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg p-5 shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2 shrink-0">
+                <div>
+                  <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">DUEÑO</span>
+                  <h3 className="font-black text-base text-white mt-1">Control de Licencias SaaS</h3>
+                </div>
+                <button onClick={() => setShowAdminDashboard(false)} className="text-zinc-400 hover:text-white p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Métricas e Ingresos */}
+              <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
+                <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                  <span className="text-[10px] text-zinc-400 block font-bold">Ingresos Recurrentes</span>
+                  <span className="text-lg font-black text-emerald-400">\${totalRevenue.toLocaleString('es-CL')} CLP</span>
+                </div>
+                <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 block font-bold">Clubes Activos</span>
+                    <span className="text-lg font-black text-white">{adminLicenses.filter(l => l.status === 'active').length}</span>
+                  </div>
+                  <button
+                    onClick={() => setShowNewUserModal(true)}
+                    className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow"
+                  >
+                    <Plus className="w-4 h-4" /> Nuevo
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista de Profesores / Licencias */}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {adminLicenses.map((lic) => {
+                  const isExpired = new Date(lic.expiry) < new Date();
+                  return (
+                    <div key={lic.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between">
+                      <div className="flex-1 min-w-0 mr-2">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="font-bold text-xs text-white truncate">{lic.coach}</span>
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-800 text-amber-400 font-mono font-bold border border-zinc-700">
+                            {lic.code}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-zinc-400 truncate">{lic.club} • {lic.plan}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[9px] font-bold flex items-center gap-1 ${isExpired ? 'text-red-400' : 'text-zinc-400'}`}>
+                            <Calendar className="w-3 h-3" /> Vence: {lic.expiry}
+                          </span>
+                          {isExpired && (
+                            <span className="text-[8px] bg-red-950 text-red-400 px-1 rounded border border-red-800 font-bold">
+                              Vencido
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => setAdminLicenses(adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l))}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}
+                        >
+                          {lic.status === 'active' ? 'Suspender' : 'Reactivar'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteLicense(lic.id)}
+                          className="p-1 text-zinc-600 hover:text-red-400 rounded"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 7. MODAL CREAR NUEVO USUARIO Y ASIGNAR CLAVE */}
+        {showNewUserModal && (
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
+                <h3 className="font-black text-sm text-white flex items-center gap-1.5">
+                  <Plus className="w-4 h-4 text-red-500" /> Crear Nuevo Acceso
+                </h3>
+                <button onClick={() => setShowNewUserModal(false)} className="text-zinc-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateNewUser} className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Nombre del Profesor / DT</label>
+                  <input
+                    type="text"
+                    value={newCoachName}
+                    onChange={(e) => setNewCoachName(e.target.value)}
+                    placeholder="Ej. DT Juan Pérez"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Club o Escuela</label>
+                  <input
+                    type="text"
+                    value={newCoachClub}
+                    onChange={(e) => setNewCoachClub(e.target.value)}
+                    placeholder="Ej. Escuela Fútbol Chillán"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Plan Contratado</label>
+                  <select
+                    value={newCoachPlan}
+                    onChange={(e) => setNewCoachPlan(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                  >
+                    <option value="Coach Single (\$15.000)">Coach Single (1 Pantalla - \$15.000)</option>
+                    <option value="Club Dúo (\$25.000)">Club Dúo (2 Pantallas - \$25.000)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Fecha de Vencimiento de Acceso</label>
+                  <input
+                    type="date"
+                    value={newCoachExpiry}
+                    onChange={(e) => setNewCoachExpiry(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl text-white shadow-lg transition mt-2"
+                >
+                  Generar Clave y Guardar
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 8. MENÚ FLOTANTE DE MATERIALES */}
+        {showTrainingMenu && (
+          <aside className="absolute right-2 top-2 bg-black/90 backdrop-blur-md border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 max-h-[82vh] overflow-y-auto w-44">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5 mb-1">
+              <span className="text-[11px] font-black text-amber-400 uppercase tracking-wider">Materiales</span>
+              <button onClick={() => setShowTrainingMenu(false)} className="text-zinc-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <button onClick={() => addElement('mini_goal')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-amber-400 font-bold">🥅</span> Mini Portería
+            </button>
+            <button onClick={() => addElement('ladder')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-amber-400 font-bold">🪜</span> Escalera
+            </button>
+            <button onClick={() => addElement('dummy')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-amber-400 font-bold">🧍</span> Maniquí Barrera
+            </button>
+            <button onClick={() => addElement('hurdle')} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-amber-400 font-bold">🚧</span> Valla de Salto
+            </button>
+            <button onClick={() => addElement('cone', { color: '#ea580c' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-orange-500 font-bold">▲</span> Cono Naranja
+            </button>
+            <button onClick={() => addElement('cone', { color: '#2563eb' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-blue-500 font-bold">▲</span> Cono Azul
+            </button>
+            <button onClick={() => addElement('cone', { color: '#eab308' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-yellow-400 font-bold">▲</span> Cono Amarillo
+            </button>
+            <button onClick={() => addElement('saucer', { color: '#facc15' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-yellow-300 font-bold">🟡</span> Plato Chino
+            </button>
+            <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="flex items-center gap-2 p-1.5 hover:bg-zinc-800 rounded-lg text-xs text-white">
+              <span className="text-sky-400 font-bold">⭕</span> Aro de Salto
+            </button>
+          </aside>
+        )}
+
+        {/* 9. MODAL DE SISTEMAS TÁCTICOS */}
+        {showSystemsMenu && (
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
+                <h3 className="font-black text-sm text-white">Sistemas Tácticos</h3>
+                <button onClick={() => setShowSystemsMenu(false)} className="text-zinc-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
+                {Object.keys(TACTICAL_SYSTEMS).map((sysKey) => (
+                  <button
+                    key={sysKey}
+                    onClick={() => applyTacticalSystem(sysKey)}
+                    className="flex items-center justify-between p-2.5 bg-zinc-900 hover:bg-red-600 rounded-xl text-xs font-bold text-white transition"
+                  >
+                    <span>Formación {sysKey}</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 10. MODAL DE TRAZOS */}
+        {showLineMenu && (
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
+                <h3 className="font-black text-sm text-white">Tipo de Línea</h3>
+                <button onClick={() => setShowLineMenu(false)} className="text-zinc-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <button
+                onClick={() => { setTool('draw'); setShowLineMenu(false); }}
+                className="w-full py-2 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase tracking-wider rounded-xl text-white mb-3 shadow"
+              >
+                Activar Trazo Seleccionado
+              </button>
+
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Estilo de Línea</label>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  onClick={() => setLineType('arrow')}
+                  className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
+                >
+                  <span className="font-black text-sm">→</span> Pase Directo
+                </button>
+                <button
+                  onClick={() => setLineType('dashed-arrow')}
+                  className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'dashed-arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
+                >
+                  <span className="font-black text-sm">⇢</span> Desmarque
+                </button>
+                <button
+                  onClick={() => setLineType('wavy-arrow')}
+                  className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'wavy-arrow' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
+                >
+                  <span className="font-black text-sm">∿></span> Conducción
+                </button>
+                <button
+                  onClick={() => setLineType('stop')}
+                  className={`p-2 rounded-xl text-xs font-bold border flex items-center gap-2 ${lineType === 'stop' ? 'border-amber-400 bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'}`}
+                >
+                  <span className="font-black text-sm">—|</span> Bloqueo
+                </button>
+              </div>
+
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Color</label>
+              <div className="flex items-center justify-between mb-3 bg-zinc-900 p-2 rounded-xl">
+                {['#ffffff', '#ef4444', '#3b82f6', '#facc15'].map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setLineColor(color)}
+                    style={{ backgroundColor: color }}
+                    className={`w-7 h-7 rounded-full border-2 transition ${lineColor === color ? 'border-white scale-110 shadow-lg' : 'border-transparent'}`}
+                  />
+                ))}
+              </div>
+
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Grosor</label>
+              <div className="flex items-center justify-between bg-zinc-900 p-2 rounded-xl">
+                {[0.8, 1.4, 2.0, 2.8].map((w) => (
+                  <button
+                    key={w}
+                    onClick={() => setLineWidth(w)}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg ${lineWidth === w ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'}`}
+                  >
+                    {w === 0.8 ? 'Fino' : w === 1.4 ? 'Medio' : w === 2.0 ? 'Grueso' : 'Extra'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* 6. PIE INFERIOR */}
+      <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 shadow-xl">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={undo}
+            disabled={historyIndex <= 0}
+            className="p-1.5 text-zinc-300 hover:text-white disabled:opacity-30 active:scale-95 transition"
+            title="Deshacer"
+          >
+            <Undo2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={redo}
+            disabled={historyIndex >= history.length - 1}
+            className="p-1.5 text-zinc-300 hover:text-white disabled:opacity-30 active:scale-95 transition"
+            title="Rehacer"
+          >
+            <Redo2 className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => addElement('player', { team: 'blue' })}
+            className="w-9 h-9 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center font-black text-white text-xs shadow-lg active:scale-95 transition"
+            title="Agregar Jugador Azul"
+          >
+            11
+          </button>
+
+          <button
+            onClick={() => addElement('player', { team: 'red' })}
+            className="w-9 h-9 rounded-full bg-red-600 border-2 border-white flex items-center justify-center font-black text-white text-xs shadow-lg active:scale-95 transition"
+            title="Agregar Jugador Rojo"
+          >
+            11
+          </button>
+
+          <button
+            onClick={() => addElement('ball')}
+            className="w-9 h-9 rounded-full bg-white border border-zinc-800 flex items-center justify-center text-sm shadow-lg active:scale-95 transition"
+            title="Agregar Balón"
+          >
+            ⚽
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')}
+            className={`p-1.5 rounded active:scale-95 transition ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400 hover:text-red-400'}`}
+            title="Goma de Borrar: Toca cualquier línea o material para eliminarlo"
+          >
+            <Eraser className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={removeLastLineOrAll}
+            onDoubleClick={() => setDrawings([])}
+            className="p-1.5 text-zinc-400 hover:text-amber-400 active:scale-95 transition"
+            title="Borrar última línea (Doble clic borra todas)"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => setShowLineMenu(true)}
+            className={`p-1.5 rounded active:scale-95 transition ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300 hover:text-white'}`}
+            title="Herramienta de Trazo"
+          >
+            <PenTool className="w-5 h-5" />
+          </button>
+        </div>
+      </footer>
+    </div>
+  );
+}
