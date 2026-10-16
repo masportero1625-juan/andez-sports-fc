@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// --- CONFIGURACIÓN SUPABASE NATIVA (REST API SIN DEPENDENCIAS EXTERNAS) ---
+// --- CONFIGURACIÓN REST NATIVA SUPABASE (SIN DEPENDENCIAS EXTERNAS) ---
 const SUPABASE_URL = "https://hzfvckmgycvvshckwypf.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6ZnZja21neWN2dnNoY2t3eXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0MDcxNzcsImV4cCI6MjA2MDAxMTE3N30.Z651c6c6b328a64ed41e3d489da924cf3832d2fe102874136427a1e050ff8156";
 
 const MASTER_PIN = "ANDEZ2026";
 const WHATSAPP_SOPORTE = "56932100183";
 
-// Métodos de Base de Datos Nativa REST
+// Métodos de Persistencia en la Nube
 const sbGet = async (key) => {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/app_data?key=eq.${encodeURIComponent(key)}&select=value`, {
@@ -40,7 +40,7 @@ const sbSet = async (key, value) => {
   }
 };
 
-// Paleta de 8 Colores Oficiales
+// Paleta Oficial de 8 Colores
 const PALETTE_COLORS = [
   { id: 'white', name: 'Blanco', hex: '#ffffff', text: '#000000' },
   { id: 'blue', name: 'Azul', hex: '#2563eb', text: '#ffffff' },
@@ -52,69 +52,61 @@ const PALETTE_COLORS = [
   { id: 'purple', name: 'Violeta', hex: '#9333ea', text: '#ffffff' }
 ];
 
-// Sistemas Tácticos Predefinidos
-const INITIAL_TACTICAL_SYSTEMS = [
-  { id: 's1', name: 'Formación 4-3-3', code: '1-4-3-3' },
-  { id: 's2', name: 'Formación 4-4-2', code: '1-4-4-2' },
-  { id: 's3', name: 'Formación 3-5-2', code: '1-3-5-2' },
-  { id: 's4', name: 'Formación 4-2-3-1', code: '1-4-2-3-1' },
-  { id: 's5', name: 'Fútbol 7 (1-2-3-1)', code: '1-2-3-1' }
-];
-
-// Catálogo Integral de Materiales de Entrenamiento
+// Catálogo Completo de Materiales de Entrenamiento
 const TRAINING_MATERIALS = [
   { id: 'cone_orange', name: 'Cono Naranja', icon: '🔺', color: '#f97316' },
   { id: 'cone_yellow', name: 'Cono Amarillo', icon: '⚠️', color: '#eab308' },
   { id: 'cone_blue', name: 'Cono Azul', icon: '🔹', color: '#2563eb' },
-  { id: 'saucer_orange', name: 'Plato Naranja', icon: '🟠', color: '#f97316' },
-  { id: 'saucer_yellow', name: 'Plato Amarillo', icon: '🟡', color: '#eab308' },
-  { id: 'saucer_blue', name: 'Plato Azul', icon: '🔵', color: '#2563eb' },
-  { id: 'slalom', name: 'Bastón Slalom', icon: '📍', color: '#eab308' },
-  { id: 'mannequin', name: 'Maniquí Barrera', icon: '🧍', color: '#eab308' },
-  { id: 'hurdle', name: 'Valla Salto', icon: '⛩️', color: '#ffffff' },
-  { id: 'ladder', name: 'Escalera Coord.', icon: '🪜', color: '#eab308' },
-  { id: 'hoop', name: 'Aro Agilidad', icon: '⭕', color: '#ef4444' }
+  { id: 'saucer_orange', name: 'Plato Chino Naranja', icon: '🟠', color: '#f97316' },
+  { id: 'saucer_yellow', name: 'Plato Chino Amarillo', icon: '🟡', color: '#eab308' },
+  { id: 'saucer_blue', name: 'Plato Chino Azul', icon: '🔵', color: '#2563eb' },
+  { id: 'slalom', name: 'Bastón de Slalom', icon: '📍', color: '#eab308' },
+  { id: 'mannequin', name: 'Maniquí de Barrera', icon: '🧍', color: '#eab308' },
+  { id: 'hurdle', name: 'Valla de Salto', icon: '⛩️', color: '#ffffff' },
+  { id: 'ladder', name: 'Escalera de Coordinación', icon: '🪜', color: '#eab308' },
+  { id: 'hoop', name: 'Aro de Agilidad', icon: '⭕', color: '#ef4444' }
 ];
 
 export default function App() {
   // --- AUTENTICACIÓN & SESIÓN ---
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState({ role: 'SUPER ADMIN', name: 'Director Deportivo' });
   const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // Perfil Institucional
+  // Identidad Institucional
   const [institution, setInstitution] = useState({ name: 'Andez Sports FC', logo: '' });
   const [directorProfile, setDirectorProfile] = useState({ name: 'Director Deportivo', rut: '', phone: WHATSAPP_SOPORTE });
 
-  // Vistas de Cancha Calibradas (Entera, Media, ABP)
+  // Vistas de Cancha (Entera, Media, ABP)
   const [pitchView, setPitchView] = useState('full');
 
-  // Modales y Paneles
+  // Modales
+  const [showAdminModal, setShowAdminModal] = useState(false);
   const [showTacticsModal, setShowTacticsModal] = useState(false);
   const [showMaterialsBar, setShowMaterialsBar] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [showAdminModal, setShowAdminModal] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
+  const [showSuperAdminModal, setShowSuperAdminModal] = useState(false);
   const [adminTab, setAdminTab] = useState('sessions');
 
-  // Elementos de la Pizarra
+  // Pizarra
   const [elements, setElements] = useState([]);
   const [drawings, setDrawings] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
 
-  // Barra de Trazos Compacta
+  // Barra de Dibujo
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [drawType, setDrawType] = useState('arrow'); // 'arrow', 'dash', 'straight', 'zigzag'
+  const [drawType, setDrawType] = useState('arrow');
   const [drawColor, setDrawColor] = useState('#ffffff');
   const [drawWidth, setDrawWidth] = useState(3);
   const [currentLine, setCurrentLine] = useState(null);
 
-  // Color de ficha activo
+  // Ficha y Portero
   const [activeTokenColor, setActiveTokenColor] = useState('#2563eb');
 
-  // Grabador de Video
+  // Grabador
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -123,9 +115,24 @@ export default function App() {
   const [sessionsList, setSessionsList] = useState([]);
   const [studentsList, setStudentsList] = useState([]);
   const [teachersList, setTeachersList] = useState([]);
-  const [tacticalSystems, setTacticalSystems] = useState(INITIAL_TACTICAL_SYSTEMS);
+  const [tacticalSystems, setTacticalSystems] = useState([
+    { id: 's1', name: 'Formación 4-3-3', code: '1-4-3-3' },
+    { id: 's2', name: 'Formación 4-4-2', code: '1-4-4-2' },
+    { id: 's3', name: 'Formación 3-5-2', code: '1-3-5-2' },
+    { id: 's4', name: 'Formación 4-2-3-1', code: '1-4-2-3-1' }
+  ]);
 
-  // Centro de Mando de Partido (Match Center)
+  // Planes de Pago y Licencias SaaS (Super Admin)
+  const [saasPlans, setSaasPlans] = useState([
+    { id: 'p1', name: 'Plan Básico Escuela', price: 29990, maxTeachers: 3, maxStudents: 50, status: 'Activo' },
+    { id: 'p2', name: 'Plan Profesional Club', price: 59990, maxTeachers: 10, maxStudents: 200, status: 'Activo' },
+    { id: 'p3', name: 'Plan Élite Ilimitado', price: 99990, maxTeachers: 999, maxStudents: 9999, status: 'Activo' }
+  ]);
+  const [assignedLicenses, setAssignedLicenses] = useState([
+    { id: 'lic_1', clubName: 'Andez Sports FC', pinCode: 'ANDEZ2026', plan: 'Plan Élite Ilimitado', expireDate: '2027-12-31', active: true }
+  ]);
+
+  // Centro de Partido (Match Center)
   const [matchData, setMatchData] = useState({
     rival: '',
     date: '',
@@ -139,7 +146,6 @@ export default function App() {
     timerRunning: false
   });
 
-  // Temporizador de Partido
   useEffect(() => {
     let interval = null;
     if (matchData.timerRunning) {
@@ -152,7 +158,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [matchData.timerRunning]);
 
-  // Sincronización Nube Supabase
+  // Carga Cloud
   const loadCloud = async () => {
     const inst = await sbGet('institution_profile');
     if (inst) setInstitution(inst);
@@ -166,6 +172,10 @@ export default function App() {
     if (sess) setSessionsList(sess);
     const tacts = await sbGet('tactical_systems');
     if (tacts) setTacticalSystems(tacts);
+    const plans = await sbGet('saas_plans');
+    if (plans) setSaasPlans(plans);
+    const lics = await sbGet('saas_licenses');
+    if (lics) setAssignedLicenses(lics);
   };
 
   useEffect(() => {
@@ -181,16 +191,22 @@ export default function App() {
       setAuthError('');
       return;
     }
+    const licFound = assignedLicenses.find(l => l.pinCode.trim().toUpperCase() === cleanPin && l.active);
+    if (licFound) {
+      setCurrentUser({ role: 'SUPER ADMIN', name: licFound.clubName });
+      setAuthError('');
+      return;
+    }
     const teacherFound = teachersList.find(t => t.code && t.code.trim().toUpperCase() === cleanPin);
     if (teacherFound) {
       setCurrentUser({ role: 'PROFESOR', ...teacherFound });
       setAuthError('');
       return;
     }
-    setAuthError('Clave incorrecta. Ingresa ANDEZ2026 o tu clave de profesor asignada.');
+    setAuthError('Clave incorrecta. Usa ANDEZ2026 o tu clave asignada.');
   };
 
-  // Subir Escudo Local (Base64)
+  // Subir Escudo Base64
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -204,7 +220,7 @@ export default function App() {
     }
   };
 
-  // Parser Inteligente de Prompt IA
+  // Parser IA
   const [aiPromptText, setAiPromptText] = useState('');
   const parseAndExecutePrompt = (text) => {
     if (!text.trim()) return;
@@ -273,7 +289,7 @@ export default function App() {
     setAiPromptText('');
   };
 
-  // Textos Libres Arrastrables y Rotables
+  // Textos Libres
   const [textInput, setTextInput] = useState('');
   const [textSize, setTextSize] = useState('medium');
   const addFloatingText = () => {
@@ -323,7 +339,7 @@ export default function App() {
     };
   };
 
-  // Trazos Suaves (Curvas Bézier para Zig-Zag de Conducción)
+  // Trazos Bézier
   const handlePointerDown = (e) => {
     if (!isDrawingMode) return;
     const coords = getSvgCoordinates(e);
@@ -370,7 +386,7 @@ export default function App() {
     return pts.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '');
   };
 
-  // Drag & Drop
+  // Arrastre
   const [dragItem, setDragItem] = useState(null);
   const handlePitchMouseMove = (e) => {
     if (!dragItem) return;
@@ -378,7 +394,7 @@ export default function App() {
     setElements(prev => prev.map(el => el.id === dragItem ? { ...el, x: coords.x, y: coords.y } : el));
   };
 
-  // Grabador de Video
+  // Grabador
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
@@ -415,7 +431,19 @@ export default function App() {
     window.open(`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  // --- PANTALLA DE ACCESO RESTRINGIDO (LOGIN) ---
+  // Dimensiones de Cancha
+  const pitchContainerStyle = pitchView === 'half'
+    ? { aspectRatio: '34 / 50', maxWidth: '420px' }
+    : pitchView === 'box'
+    ? { aspectRatio: '40 / 60', maxWidth: '450px' }
+    : { aspectRatio: '100 / 68', maxWidth: '980px' };
+
+  const currentViewBox = pitchView === 'half'
+    ? '0 0 50 100'
+    : pitchView === 'box'
+    ? '0 20 40 60'
+    : '0 0 100 100';
+
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-screen w-screen bg-neutral-950 font-sans text-white p-4">
@@ -459,19 +487,6 @@ export default function App() {
     );
   }
 
-  // --- CALIBRACIÓN GEOMÉTRICA DE LA CANCHA ---
-  const pitchContainerStyle = pitchView === 'half'
-    ? { aspectRatio: '34 / 50', maxWidth: '420px' }
-    : pitchView === 'box'
-    ? { aspectRatio: '40 / 60', maxWidth: '450px' }
-    : { aspectRatio: '100 / 68', maxWidth: '980px' };
-
-  const currentViewBox = pitchView === 'half'
-    ? '0 0 50 100'
-    : pitchView === 'box'
-    ? '0 20 40 60'
-    : '0 0 100 100';
-
   return (
     <div 
       className="flex flex-col h-screen w-screen bg-neutral-900 text-white select-none overflow-hidden font-sans"
@@ -480,7 +495,6 @@ export default function App() {
       onTouchMove={handlePitchMouseMove}
       onTouchEnd={() => setDragItem(null)}
     >
-      {/* Estilos para impresión limpia */}
       <style>{`
         @media print {
           body, html { margin: 0; padding: 0; background: white !important; }
@@ -490,7 +504,6 @@ export default function App() {
         }
       `}</style>
 
-      {/* Membrete Oficial Impresión */}
       <div className="hidden print-header bg-white">
         <div className="flex items-center gap-3">
           {institution.logo && <img src={institution.logo} alt="Logo" className="h-12 w-12 object-contain" />}
@@ -504,13 +517,13 @@ export default function App() {
           <p>Profesor / Director: {currentUser.name}</p>
         </div>
       </div>
+
       {/* HEADER SUPERIOR */}
       <header className="no-print h-14 bg-black/95 border-b border-neutral-800 flex items-center justify-between px-3 z-20">
         <div className="flex items-center gap-2">
           {institution.logo ? <img src={institution.logo} alt="Logo" className="h-8 w-8 object-contain" /> : <span className="font-extrabold text-amber-500 text-base">EZ</span>}
           <span className="font-bold text-xs uppercase tracking-wider text-neutral-300 hidden md:inline">{institution.name}</span>
 
-          {/* Selector de Canchas */}
           <div className="flex items-center bg-neutral-800 p-0.5 rounded ml-2">
             <button onClick={() => setPitchView('full')} className={`px-2 py-1 text-[11px] rounded transition ${pitchView === 'full' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Entera</button>
             <button onClick={() => setPitchView('half')} className={`px-2 py-1 text-[11px] rounded transition ${pitchView === 'half' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Media</button>
@@ -539,9 +552,13 @@ export default function App() {
           <button onClick={() => window.print()} className="p-1.5 hover:bg-neutral-800 rounded text-neutral-300">🖨️</button>
           <button onClick={() => setShowSaveModal(true)} className="p-1.5 hover:bg-neutral-800 rounded text-neutral-300">💾</button>
 
-          <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-            {currentUser.role}
-          </span>
+          <button 
+            onClick={() => setShowSuperAdminModal(true)}
+            className="text-[11px] px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-wider transition shadow cursor-pointer border border-amber-300"
+            title="Abrir Panel Maestro de Super Administrador (Planes y Licencias)"
+          >
+            👑 SUPER ADMIN
+          </button>
 
           <button onClick={() => setCurrentUser(null)} title="Cerrar Sesión" className="text-xs text-neutral-400 hover:text-white border-l border-neutral-800 pl-2">
             🔒 Salir
@@ -549,7 +566,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* CANCHA TÁCTICA PROPORCIONAL */}
+      {/* CANCHA TÁCTICA */}
       <main className="flex-1 relative flex items-center justify-center p-2 bg-neutral-950">
         <div 
           style={pitchContainerStyle}
@@ -567,23 +584,18 @@ export default function App() {
             onTouchMove={handlePointerMove}
             onTouchEnd={handlePointerUp}
           >
-            {/* Césped */}
             <rect width="100" height="100" fill="#15803d" />
-            
-            {/* Líneas Reglamentarias */}
             <rect x="5" y="5" width="90" height="90" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <line x1="50" y1="5" x2="50" y2="95" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="50" cy="50" r="10" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="50" cy="50" r="0.8" fill="#ffffff" />
 
-            {/* Áreas Izquierda */}
             <rect x="5" y="25" width="16" height="50" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <rect x="5" y="38" width="6" height="24" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="16" cy="50" r="0.8" fill="#ffffff" />
             <path d="M 21 42 A 10 10 0 0 1 21 58" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <rect x="1" y="44" width="4" height="12" fill="none" stroke="#eab308" strokeWidth="1.2" />
 
-            {/* Áreas Derecha */}
             <rect x="79" y="25" width="16" height="50" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <rect x="89" y="38" width="6" height="24" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="84" cy="50" r="0.8" fill="#ffffff" />
@@ -596,7 +608,6 @@ export default function App() {
               </marker>
             </defs>
 
-            {/* Trazos Dibujados */}
             {[...drawings, ...(currentLine ? [currentLine] : [])].map((l, idx) => (
               <path
                 key={idx}
@@ -609,7 +620,6 @@ export default function App() {
               />
             ))}
 
-            {/* Elementos Dinámicos */}
             {elements.map(el => {
               const isSelected = selectedId === el.id;
               const transform = `translate(${el.x}, ${el.y}) rotate(${el.rotation || 0})`;
@@ -681,7 +691,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* BARRA INFERIOR NO INVASIVA DE MATERIALES */}
+      {/* BARRA INFERIOR DE MATERIALES */}
       {showMaterialsBar && (
         <div className="no-print bg-neutral-900 border-t border-neutral-800 px-3 py-1.5 flex items-center gap-2 overflow-x-auto z-20">
           <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider shrink-0">Materiales:</span>
@@ -698,14 +708,14 @@ export default function App() {
         </div>
       )}
 
-      {/* FOOTER BARRA COMPACTA CON HERRAMIENTAS Y COLORES */}
+      {/* FOOTER BARRA COMPACTA */}
       <footer className="no-print bg-black/95 border-t border-neutral-800 p-2 z-20 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <button 
             onClick={() => setElements(p => [...p, { id: 'tk_' + Math.random(), type: 'token', color: activeTokenColor, number: 1, name: 'Portero', x: 20, y: 50, rotation: 0 }])}
             className="h-7 px-2.5 rounded font-black text-xs text-white shadow border border-neutral-700 flex items-center gap-1"
             style={{ backgroundColor: activeTokenColor }}
-            title="Añadir Portero con color seleccionado"
+            title="Añadir Portero con color activo"
           >
             🧤 1
           </button>
@@ -719,7 +729,7 @@ export default function App() {
               }}
               className={`h-6 w-6 rounded-full border flex items-center justify-center font-bold text-[10px] transition ${activeTokenColor === c.hex ? 'ring-2 ring-amber-400 scale-110' : 'border-neutral-600'}`}
               style={{ backgroundColor: c.hex, color: c.text }}
-              title={`Añadir Ficha ${c.name} (Click para seleccionar color)`}
+              title={`Ficha ${c.name}`}
             >
               10
             </button>
@@ -734,7 +744,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Trazos con Control de Grosor y Color */}
         <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded">
           <button onClick={() => setIsDrawingMode(!isDrawingMode)} className={`px-2 py-0.5 rounded text-xs font-bold transition ${isDrawingMode ? 'bg-amber-500 text-black' : 'bg-neutral-800 text-neutral-300'}`}>
             ✏️ Dibujo
@@ -773,43 +782,128 @@ export default function App() {
           <button 
             onClick={() => { if (selectedId) { setElements(p => p.filter(e => e.id !== selectedId)); setSelectedId(null); } }} 
             className="p-1.5 text-red-400 hover:bg-neutral-800 rounded text-xs" 
-            title="Borrar elemento seleccionado"
+            title="Borrar elemento"
           >
             🗑️
           </button>
           <button 
             onClick={() => { setElements([]); setDrawings([]); }} 
             className="p-1.5 text-neutral-400 hover:bg-neutral-800 rounded text-xs" 
-            title="Limpiar toda la pizarra"
+            title="Limpiar pizarra"
           >
             🧹 Limpiar
           </button>
         </div>
       </footer>
 
-      {/* MODAL TEXTO FLOTANTE */}
-      {showTextModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-sm rounded-xl p-4 shadow-2xl">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-sm text-white">Texto Táctico Flotante</h3>
-              <button onClick={() => setShowTextModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+      {/* MODAL MAESTRO: SUPER ADMINISTRADOR */}
+      {showSuperAdminModal && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50">
+          <div className="bg-neutral-900 border-2 border-amber-500 w-full max-w-4xl rounded-2xl p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-5 border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👑</span>
+                <div>
+                  <h2 className="text-lg font-black text-amber-400 uppercase tracking-wider">Centro de Control Super Administrador</h2>
+                  <p className="text-xs text-neutral-400">Gestión de Planes SaaS, Cobros, Licencias y Claves Maestras</p>
+                </div>
+              </div>
+              <button onClick={() => setShowSuperAdminModal(false)} className="text-neutral-400 hover:text-white text-base">✕</button>
             </div>
-            <input
-              type="text"
-              value={textInput}
-              onChange={e => setTextInput(e.target.value)}
-              placeholder="Consigna táctica..."
-              className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-xs text-white mb-3"
-            />
-            <div className="flex gap-1 mb-4">
-              <button onClick={() => setTextSize('small')} className={`px-2 py-1 text-xs rounded ${textSize === 'small' ? 'bg-amber-500 text-black font-bold' : 'bg-neutral-800'}`}>Pequeño</button>
-              <button onClick={() => setTextSize('medium')} className={`px-2 py-1 text-xs rounded ${textSize === 'medium' ? 'bg-amber-500 text-black font-bold' : 'bg-neutral-800'}`}>Mediano</button>
-              <button onClick={() => setTextSize('large')} className={`px-2 py-1 text-xs rounded ${textSize === 'large' ? 'bg-amber-500 text-black font-bold' : 'bg-neutral-800'}`}>Grande</button>
+
+            {/* PLANES SAAS */}
+            <div className="mb-6 bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+              <h3 className="text-xs font-bold text-amber-400 uppercase mb-3 tracking-wider">Configuración de Planes y Tarifas Comerciales</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {saasPlans.map(plan => (
+                  <div key={plan.id} className="p-3 bg-neutral-900 rounded-lg border border-neutral-800 relative">
+                    <p className="font-black text-white text-sm">{plan.name}</p>
+                    <p className="text-lg font-mono font-bold text-green-400 my-1">\${plan.price.toLocaleString('es-CL')} / mes</p>
+                    <p className="text-[11px] text-neutral-400">Máx. DTs: <strong>{plan.maxTeachers}</strong></p>
+                    <p className="text-[11px] text-neutral-400">Máx. Alumnos: <strong>{plan.maxStudents}</strong></p>
+                    <button 
+                      onClick={() => {
+                        const newPrice = prompt(`Nuevo precio para ${plan.name} (en CLP):`, plan.price);
+                        if (newPrice) {
+                          const updated = saasPlans.map(p => p.id === plan.id ? { ...p, price: parseInt(newPrice) || p.price } : p);
+                          setSaasPlans(updated);
+                          sbSet('saas_plans', updated);
+                        }
+                      }}
+                      className="mt-3 w-full py-1 bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-xs font-bold rounded"
+                    >
+                      ✏️ Modificar Precio
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setShowTextModal(false)} className="px-3 py-1 text-xs bg-neutral-800 rounded">Cancelar</button>
-              <button onClick={addFloatingText} className="px-3 py-1 text-xs bg-blue-600 font-bold rounded">Insertar</button>
+
+            {/* ASIGNACIÓN DE LICENCIAS */}
+            <div className="mb-6 bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+              <h3 className="text-xs font-bold text-amber-400 uppercase mb-3 tracking-wider">Emisión de Licencias y Asignación de Claves PIN</h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-3">
+                <input id="licClub" type="text" placeholder="Nombre Club / Escuela..." className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-xs text-white" />
+                <input id="licPin" type="text" placeholder="PIN Clave (ej: COLO2026)..." className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-xs text-white" />
+                <select id="licPlan" className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-xs text-white">
+                  {saasPlans.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                </select>
+                <button 
+                  onClick={() => {
+                    const club = document.getElementById('licClub')?.value;
+                    const pin = document.getElementById('licPin')?.value;
+                    const plan = document.getElementById('licPlan')?.value;
+                    if (!club || !pin) return alert("Completa Club y PIN");
+                    const newLic = {
+                      id: 'lic_' + Math.random(),
+                      clubName: club,
+                      pinCode: pin.toUpperCase(),
+                      plan,
+                      expireDate: '2027-12-31',
+                      active: true
+                    };
+                    const updated = [...assignedLicenses, newLic];
+                    setAssignedLicenses(updated);
+                    sbSet('saas_licenses', updated);
+                  }}
+                  className="bg-green-600 hover:bg-green-500 text-white font-bold text-xs rounded py-1.5"
+                >
+                  + Asignar Licencia
+                </button>
+              </div>
+
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {assignedLicenses.map(lic => (
+                  <div key={lic.id} className="flex items-center justify-between p-2.5 bg-neutral-900 rounded border border-neutral-800 text-xs">
+                    <div>
+                      <p className="font-bold text-white">{lic.clubName} — <span className="text-amber-400 font-mono">PIN: {lic.pinCode}</span></p>
+                      <p className="text-[11px] text-neutral-400">Plan: {lic.plan} • Vence: {lic.expireDate}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${lic.active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {lic.active ? 'ACTIVA' : 'SUSPENDIDA'}
+                      </span>
+                      <button 
+                        onClick={() => {
+                          const updated = assignedLicenses.map(l => l.id === lic.id ? { ...l, active: !l.active } : l);
+                          setAssignedLicenses(updated);
+                          sbSet('saas_licenses', updated);
+                        }}
+                        className="px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded text-[11px]"
+                      >
+                        {lic.active ? 'Suspender' : 'Activar'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-neutral-800 pt-3">
+              <button onClick={() => setShowSuperAdminModal(false)} className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-lg">
+                Cerrar Panel Maestro
+              </button>
             </div>
           </div>
         </div>
@@ -825,15 +919,11 @@ export default function App() {
                 <button onClick={() => setAdminTab('students')} className={`text-xs font-bold px-3 py-1.5 rounded ${adminTab === 'students' ? 'bg-amber-500 text-black' : 'text-neutral-400'}`}>📋 Alumnos</button>
                 <button onClick={() => setAdminTab('teachers')} className={`text-xs font-bold px-3 py-1.5 rounded ${adminTab === 'teachers' ? 'bg-amber-500 text-black' : 'text-neutral-400'}`}>👔 Profesores</button>
                 <button onClick={() => setAdminTab('settings')} className={`text-xs font-bold px-3 py-1.5 rounded ${adminTab === 'settings' ? 'bg-amber-500 text-black' : 'text-neutral-400'}`}>⚙️ Club</button>
-                {currentUser.role === 'SUPER ADMIN' && (
-                  <button onClick={() => setAdminTab('superadmin')} className={`text-xs font-bold px-3 py-1.5 rounded ${adminTab === 'superadmin' ? 'bg-red-600 text-white' : 'text-red-400 border border-red-500/40'}`}>👑 Super Admin</button>
-                )}
               </div>
               <button onClick={() => setShowAdminModal(false)} className="text-neutral-400 hover:text-white">✕</button>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1">
-              {/* TAB SESIONES */}
               {adminTab === 'sessions' && (
                 <div className="space-y-2">
                   {sessionsList.map(sess => (
@@ -870,7 +960,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* TAB ALUMNOS CON EDICIÓN */}
               {adminTab === 'students' && (
                 <div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 bg-neutral-950 p-3 rounded">
@@ -931,7 +1020,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* TAB PROFESORES */}
               {adminTab === 'teachers' && (
                 <div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 bg-neutral-950 p-3 rounded">
@@ -982,32 +1070,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* TAB SUPER ADMIN */}
-              {adminTab === 'superadmin' && (
-                <div className="space-y-4 bg-neutral-950 p-4 rounded text-xs">
-                  <h4 className="font-bold text-red-400 uppercase tracking-wider">Panel Maestro de Licencias & Escuelas</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-neutral-900 border border-neutral-800 rounded">
-                      <p className="text-neutral-400 mb-1">Clave Maestra Global:</p>
-                      <p className="font-mono font-bold text-amber-400 text-sm">ANDEZ2026</p>
-                    </div>
-                    <div className="p-3 bg-neutral-900 border border-neutral-800 rounded">
-                      <p className="text-neutral-400 mb-1">Estado de Licencia:</p>
-                      <p className="font-bold text-green-400 text-sm">PRO ILIMITADA (Activa)</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-neutral-400 mb-1">WhatsApp de Soporte Comercial:</label>
-                    <input 
-                      type="text" 
-                      defaultValue={WHATSAPP_SOPORTE}
-                      className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-white" 
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB CONFIGURACIÓN CLUB */}
               {adminTab === 'settings' && (
                 <div className="space-y-4 bg-neutral-950 p-4 rounded text-xs">
                   <h4 className="font-bold text-amber-400 uppercase">Identidad Oficial del Club</h4>
@@ -1025,7 +1087,7 @@ export default function App() {
                     />
                   </div>
                   <div>
-                    <label className="block text-neutral-400 mb-1">Subir Escudo / Logo desde tu Equipo:</label>
+                    <label className="block text-neutral-400 mb-1">Subir Escudo / Logo desde tu Computador:</label>
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -1035,12 +1097,80 @@ export default function App() {
                     {institution.logo && (
                       <div className="mt-2 flex items-center gap-3">
                         <img src={institution.logo} alt="Vista previa" className="h-12 w-12 object-contain rounded bg-neutral-900 border border-neutral-700 p-1" />
-                        <span className="text-[11px] text-green-400">Logo cargado y sincronizado con Supabase</span>
+                        <span className="text-[11px] text-green-400">Logo cargado y sincronizado en Supabase</span>
                       </div>
                     )}
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL TEXTO FLOTANTE */}
+      {showTextModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-sm rounded-xl p-4 shadow-2xl">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-sm text-white">Texto Táctico Flotante</h3>
+              <button onClick={() => setShowTextModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+            <input
+              type="text"
+              value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              placeholder="Consigna táctica..."
+              className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-xs text-white mb-3"
+            />
+            <div className="flex gap-1 mb-4">
+              <button onClick={() => setTextSize('small')} className={`px-2 py-1 text-xs rounded ${textSize === 'small' ? 'bg-amber-500 text-black font-bold' : 'bg-neutral-800'}`}>Pequeño</button>
+              <button onClick={() => setTextSize('medium')} className={`px-2 py-1 text-xs rounded ${textSize === 'medium' ? 'bg-amber-500 text-black font-bold' : 'bg-neutral-800'}`}>Mediano</button>
+              <button onClick={() => setTextSize('large')} className={`px-2 py-1 text-xs rounded ${textSize === 'large' ? 'bg-amber-500 text-black font-bold' : 'bg-neutral-800'}`}>Grande</button>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowTextModal(false)} className="px-3 py-1 text-xs bg-neutral-800 rounded">Cancelar</button>
+              <button onClick={addFloatingText} className="px-3 py-1 text-xs bg-blue-600 font-bold rounded">Insertar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL GUARDAR SESIÓN */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-sm rounded-xl p-4 shadow-2xl">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-sm text-white">Guardar Ejercicio</h3>
+              <button onClick={() => setShowSaveModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+            <input id="sessName" type="text" placeholder="Nombre del ejercicio..." className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-sm text-white mb-2" />
+            <input id="sessCategory" type="text" placeholder="Categoría (ej: Sub-12)..." className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-sm text-white mb-4" />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowSaveModal(false)} className="px-3 py-1.5 text-xs bg-neutral-800 rounded text-neutral-300">
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  const name = document.getElementById('sessName')?.value || 'Ejercicio Táctico';
+                  const cat = document.getElementById('sessCategory')?.value || 'General';
+                  const newSession = {
+                    id: 'sess_' + Math.random(),
+                    name,
+                    category: cat,
+                    date: new Date().toLocaleDateString('es-CL'),
+                    elements,
+                    drawings
+                  };
+                  const updated = [...sessionsList, newSession];
+                  setSessionsList(updated);
+                  sbSet('tactical_sessions', updated);
+                  setShowSaveModal(false);
+                }}
+                className="px-4 py-1.5 text-xs bg-red-600 hover:bg-red-500 font-bold rounded"
+              >
+                Confirmar Guardado
+              </button>
             </div>
           </div>
         </div>
@@ -1159,6 +1289,92 @@ export default function App() {
               </button>
               <button onClick={() => setShowMatchModal(false)} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-xs font-bold rounded">
                 Guardar y Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SISTEMAS TÁCTICOS */}
+      {showTacticsModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-md rounded-xl p-5 shadow-2xl">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-sm text-amber-400">Sistemas Tácticos Dinámicos</h3>
+              <button onClick={() => setShowTacticsModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+            <div className="space-y-2 mb-4 max-h-56 overflow-y-auto">
+              {tacticalSystems.map(sys => (
+                <div key={sys.id} className="flex items-center justify-between p-2 bg-neutral-800 rounded">
+                  <span className="text-sm font-semibold">{sys.name} <span className="text-xs text-neutral-400">({sys.code})</span></span>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => {
+                        const parts = sys.code.split('-').map(Number);
+                        const newItems = [{ id: 't_gk', type: 'token', color: activeTokenColor, number: 1, name: 'Portero', x: 12, y: 50, rotation: 0 }];
+                        const totalLines = parts.length - 1;
+                        const startX = 22;
+                        const endX = 70;
+                        const stepX = (endX - startX) / (totalLines || 1);
+                        let dorsalCounter = 2;
+                        for (let l = 1; l < parts.length; l++) {
+                          const lineCount = parts[l];
+                          const curX = startX + (l - 1) * stepX;
+                          const stepY = 80 / (lineCount + 1);
+                          for (let c = 0; c < lineCount; c++) {
+                            newItems.push({
+                              id: 't_' + dorsalCounter,
+                              type: 'token',
+                              color: '#2563eb',
+                              number: dorsalCounter,
+                              name: '',
+                              x: curX,
+                              y: 10 + (c + 1) * stepY,
+                              rotation: 0
+                            });
+                            dorsalCounter++;
+                          }
+                        }
+                        setElements(newItems);
+                        setShowTacticsModal(false);
+                      }} 
+                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-xs rounded font-bold"
+                    >
+                      Aplicar
+                    </button>
+                    <button onClick={() => setTacticalSystems(prev => prev.filter(s => s.id !== sys.id))} className="p-1 text-red-400 text-xs hover:bg-neutral-700 rounded">🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PROMPT IA */}
+      {showAiModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-md rounded-xl p-5 shadow-2xl">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-base text-amber-400">Generador Asistido por IA</h3>
+              <button onClick={() => setShowAiModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+            <p className="text-xs text-neutral-400 mb-3">
+              Escribe elementos y cantidades (ej: <em>"un portero, 4 maniquies, un balon, 3 fichas rojas con el dorsal 7"</em>).
+            </p>
+            <textarea
+              rows="3"
+              value={aiPromptText}
+              onChange={(e) => setAiPromptText(e.target.value)}
+              placeholder="Indica qué posicionar en el campo..."
+              className="w-full bg-neutral-800 border border-neutral-700 rounded p-2.5 text-sm text-white focus:outline-none focus:border-amber-500 mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowAiModal(false)} className="px-4 py-1.5 text-xs rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300">
+                Cancelar
+              </button>
+              <button onClick={() => parseAndExecutePrompt(aiPromptText)} className="px-4 py-1.5 text-xs rounded bg-amber-500 hover:bg-amber-600 text-black font-bold">
+                Aplicar a la Pizarra
               </button>
             </div>
           </div>
