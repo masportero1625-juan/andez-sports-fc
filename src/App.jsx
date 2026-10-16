@@ -3,7 +3,7 @@ import {
   Folder, Play, RotateCcw, Save, Undo2, Redo2, Trash2, PenTool, X,
   Eraser, Lock, Plus, AlertTriangle, RotateCw, LogOut, MessageCircle,
   Upload, Printer, Edit2, Video, Square, Download, Sparkles, Gift,
-  CheckCircle2, Clock, Users, DollarSign, Type, Shield
+ CheckCircle2, Clock, Users, DollarSign, Type, Shield, Image as ImageIcon
 } from 'lucide-react';
 
 // CREDENCIALES SUPABASE
@@ -371,14 +371,49 @@ export default function App() {
   const [drillCategory, setDrillCategory] = useState(categories[0]?.id || 'sub14');
   const [drillNotes, setDrillNotes] = useState('Transición rápida a 2 toques.');
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [savedDrills, setSavedDrills] = useState(() => {
+ const [savedDrills, setSavedDrills] = useState(() => {
     const d = localStorage.getItem('andez_saved_drills');
     return d ? JSON.parse(d) : [];
   });
+
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // 1. PRIMERO DESCARGA DESDE SUPABASE
   useEffect(() => {
+    async function hydrateFromCloud() {
+      try {
+        const [cloudPlans, cloudLics, cloudCats, cloudCoaches, cloudRosters, cloudAtt, cloudDrills] = await Promise.all([
+          sbGet('andez_custom_plans'),
+          sbGet('andez_licenses'),
+          sbGet('andez_dynamic_categories'),
+          sbGet('andez_coaches_staff'),
+          sbGet('andez_category_rosters'),
+          sbGet('andez_attendance_records'),
+          sbGet('andez_saved_drills')
+        ]);
+
+        if (cloudPlans && Array.isArray(cloudPlans)) setCustomPlans(cloudPlans);
+        if (cloudLics && Array.isArray(cloudLics)) setAdminLicenses(cloudLics);
+        if (cloudCats && Array.isArray(cloudCats)) setCategories(cloudCats);
+        if (cloudCoaches && Array.isArray(cloudCoaches)) setCoachesList(cloudCoaches);
+        if (cloudRosters && typeof cloudRosters === 'object') setRosters(cloudRosters);
+        if (cloudAtt && typeof cloudAtt === 'object') setAttendanceRecords(cloudAtt);
+        if (cloudDrills && Array.isArray(cloudDrills)) setSavedDrills(cloudDrills);
+      } catch (err) {
+        console.error('Error al sincronizar con Supabase:', err);
+      } finally {
+        setIsDataLoaded(true);
+      }
+    }
+    hydrateFromCloud();
+  }, []);
+
+  // 2. SOLO GUARDA EN LA NUBE SI YA SE CARGARON LOS DATOS PREVIOS
+  useEffect(() => {
+    if (!isDataLoaded) return;
     localStorage.setItem('andez_saved_drills', JSON.stringify(savedDrills));
     sbSet('andez_saved_drills', savedDrills);
-  }, [savedDrills]);
+  }, [savedDrills, isDataLoaded]);
 
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerCustomName, setPlayerCustomName] = useState('');
@@ -411,7 +446,34 @@ export default function App() {
   const svgRef = useRef(null);
   const isDraggingRef = useRef(false);
   const [selectedObj, setSelectedObj] = useState(null);
-
+// FUNCIÓN PARA DESCARGAR LA PIZARRA COMO FOTO PNG
+  const exportBoardAsImage = () => {
+    if (!svgRef.current) return;
+    const svgElement = svgRef.current;
+    const svgString = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const URLObject = window.URL || window.webkitURL || window;
+    const blobURL = URLObject.createObjectURL(svgBlob);
+    
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = isPC ? 1920 : 1080;
+      canvas.height = isPC ? 1080 : 1920;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      
+      const pngURL = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = pngURL;
+      downloadLink.download = `pizarra-${drillTitle.replace(/\s+/g, '_')}.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URLObject.revokeObjectURL(blobURL);
+    };
+    image.src = blobURL;
+  };
   // VIDEO & IA PROMPT
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
@@ -653,10 +715,9 @@ export default function App() {
           <button onClick={handleLogout} className="text-zinc-400 hover:text-red-400"><LogOut className="w-4 h-4" /></button>
         </div>
       </header>
-
-      {/* CANCHA CON ARCOS Y ÁREAS COMPLETAS */}
+{/* CANCHA CON SOPORTE TÁCTIL TOTAL */}
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
-        <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl" onPointerDown={handlePitchPointerDown}>
+        <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePitchPointerDown}>
           <defs>
             <marker id="arrow-white" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ffffff" /></marker>
             <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" /></marker>
@@ -668,7 +729,7 @@ export default function App() {
 
           <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
 
-          {/* DIBUJO PROFESIONAL DE CANCHA, ARCOS Y ÁREAS */}
+          {/* DIBUJO DE CANCHA, ARCOS Y ÁREAS */}
           {isPC ? (
             <g stroke="white" strokeWidth="0.8" fill="none">
               <rect x="2" y="2" width={pitchMode === 'half' ? 51 : 101} height="64" />
