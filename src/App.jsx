@@ -10,7 +10,7 @@ import {
 } from './data';
 
 export default function App() {
-  // --- AUTENTICACIÓN Y ROLES ---
+  // --- AUTENTICACIÓN & SESIÓN ---
   const [currentUser, setCurrentUser] = useState(null);
   const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -19,12 +19,12 @@ export default function App() {
   const [institution, setInstitution] = useState({ name: 'Andez Sports FC', logo: '' });
   const [directorProfile, setDirectorProfile] = useState({ name: 'Director Deportivo', rut: '', phone: WHATSAPP_SOPORTE });
 
-  // Configuración de Cancha (Completa, Media y Balón Parado)
+  // Vista de Cancha Proporcionada (Entera, Media, ABP)
   const [pitchView, setPitchView] = useState('full');
 
-  // Modales
+  // Modales y Paneles
   const [showTacticsModal, setShowTacticsModal] = useState(false);
-  const [showMaterialsModal, setShowMaterialsModal] = useState(false);
+  const [showMaterialsBar, setShowMaterialsBar] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -37,19 +37,22 @@ export default function App() {
   const [drawings, setDrawings] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
 
-  // Barra Compacta de Trazos
+  // Barra Compacta de Dibujo
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [drawType, setDrawType] = useState('arrow');
   const [drawColor, setDrawColor] = useState('#ffffff');
-  const [drawWidth] = useState(3);
+  const [drawWidth, setDrawWidth] = useState(3);
   const [currentLine, setCurrentLine] = useState(null);
+
+  // Color activo para insertar fichas
+  const [activeTokenColor, setActiveTokenColor] = useState('#2563eb');
 
   // Grabador de Video
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
 
-  // Base de Datos
+  // Base de Datos Central
   const [sessionsList, setSessionsList] = useState([]);
   const [studentsList, setStudentsList] = useState([]);
   const [teachersList, setTeachersList] = useState([]);
@@ -69,7 +72,7 @@ export default function App() {
     timerRunning: false
   });
 
-  // Temporizador de partido
+  // Temporizador de Partido
   useEffect(() => {
     let interval = null;
     if (matchData.timerRunning) {
@@ -82,7 +85,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [matchData.timerRunning]);
 
-  // Carga Cloud Supabase
+  // Cargar datos Supabase
   const loadCloud = async () => {
     const inst = await sbGet('institution_profile');
     if (inst) setInstitution(inst);
@@ -105,21 +108,22 @@ export default function App() {
   // Login por PIN
   const handleLogin = (e) => {
     e.preventDefault();
-    if (pinInput === MASTER_PIN) {
+    const cleanPin = pinInput.trim().toUpperCase();
+    if (cleanPin === MASTER_PIN) {
       setCurrentUser({ role: 'SUPER ADMIN', name: directorProfile.name });
       setAuthError('');
       return;
     }
-    const teacherFound = teachersList.find(t => t.code === pinInput);
+    const teacherFound = teachersList.find(t => t.code && t.code.trim().toUpperCase() === cleanPin);
     if (teacherFound) {
       setCurrentUser({ role: 'PROFESOR', ...teacherFound });
       setAuthError('');
       return;
     }
-    setAuthError('Clave incorrecta. Usa ANDEZ2026 o tu clave de profesor.');
+    setAuthError('Clave incorrecta. Ingresa ANDEZ2026 o tu clave de profesor.');
   };
 
-  // Subida de Logo Local (Base64)
+  // Subir Logo desde el PC (Base64)
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -153,7 +157,7 @@ export default function App() {
     };
 
     if (lower.includes('portero') || lower.includes('arquero')) {
-      newItems.push({ id: 'ai_' + Math.random(), type: 'token', color: '#f97316', number: 1, label: 'Portero', x: 14, y: 50, rotation: 0 });
+      newItems.push({ id: 'ai_' + Math.random(), type: 'token', color: '#f97316', number: 1, name: 'Portero', x: 14, y: 50, rotation: 0 });
     }
 
     const maniquiMatch = lower.match(/(\d+|un|una|dos|tres|cuatro|cinco)\s+maniqu/);
@@ -161,7 +165,7 @@ export default function App() {
     if (maniquiCount > 0) {
       const startY = 50 - ((maniquiCount - 1) * 6) / 2;
       for (let i = 0; i < maniquiCount; i++) {
-        newItems.push({ id: 'ai_m_' + Math.random(), type: 'mannequin', x: 32, y: startY + i * 6, rotation: 0 });
+        newItems.push({ id: 'ai_m_' + Math.random(), type: 'material', icon: '🧍', color: '#eab308', name: '', x: 32, y: startY + i * 6, rotation: 0 });
       }
     }
 
@@ -189,12 +193,12 @@ export default function App() {
       else if (colStr.includes('violet') || colStr.includes('mora')) hex = '#9333ea';
 
       for (let i = 0; i < count; i++) {
-        newItems.push({ id: 'ai_t_' + Math.random(), type: 'token', color: hex, number: numStr + i, label: '', x: 45 + i * 5, y: 45 + i * 5, rotation: 0 });
+        newItems.push({ id: 'ai_t_' + Math.random(), type: 'token', color: hex, number: numStr + i, name: '', x: 45 + i * 5, y: 45 + i * 5, rotation: 0 });
       }
     }
 
     if (!foundTokens && (lower.includes('jugador') || lower.includes('ficha'))) {
-      newItems.push({ id: 'ai_def_' + Math.random(), type: 'token', color: '#dc2626', number: 10, label: '', x: 46, y: 50, rotation: 0 });
+      newItems.push({ id: 'ai_def_' + Math.random(), type: 'token', color: '#dc2626', number: 10, name: '', x: 46, y: 50, rotation: 0 });
     }
 
     setElements(p => [...p, ...newItems]);
@@ -225,7 +229,7 @@ export default function App() {
     setElements(prev => prev.map(el => el.id === selectedId ? { ...el, rotation: ((el.rotation || 0) + 45) % 360 } : el));
   };
 
-  // Dibujo y Drag & Drop
+  // Coordenadas proporcionales SVG
   const pitchSvgRef = useRef(null);
   const getSvgCoordinates = (e) => {
     const svg = pitchSvgRef.current;
@@ -233,9 +237,26 @@ export default function App() {
     const rect = svg.getBoundingClientRect();
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: ((cx - rect.left) / rect.width) * 100, y: ((cy - rect.top) / rect.height) * 100 };
+
+    if (pitchView === 'half') {
+      return {
+        x: ((cx - rect.left) / rect.width) * 50,
+        y: ((cy - rect.top) / rect.height) * 100
+      };
+    }
+    if (pitchView === 'box') {
+      return {
+        x: ((cx - rect.left) / rect.width) * 40,
+        y: 20 + ((cy - rect.top) / rect.height) * 60
+      };
+    }
+    return {
+      x: ((cx - rect.left) / rect.width) * 100,
+      y: ((cy - rect.top) / rect.height) * 100
+    };
   };
 
+  // Trazos Suaves
   const handlePointerDown = (e) => {
     if (!isDrawingMode) return;
     const coords = getSvgCoordinates(e);
@@ -245,7 +266,11 @@ export default function App() {
   const handlePointerMove = (e) => {
     if (!isDrawingMode || !currentLine) return;
     const coords = getSvgCoordinates(e);
-    setCurrentLine(prev => ({ ...prev, points: [...prev.points, coords] }));
+    const lastPt = currentLine.points[currentLine.points.length - 1];
+    const dist = Math.hypot(coords.x - lastPt.x, coords.y - lastPt.y);
+    if (dist >= 1.5) {
+      setCurrentLine(prev => ({ ...prev, points: [...prev.points, coords] }));
+    }
   };
 
   const handlePointerUp = () => {
@@ -255,6 +280,30 @@ export default function App() {
     setCurrentLine(null);
   };
 
+  const renderPathD = (line) => {
+    const pts = line.points;
+    if (pts.length < 2) return '';
+    if (line.type === 'zigzag') {
+      let d = `M ${pts[0].x} ${pts[0].y}`;
+      for (let i = 1; i < pts.length; i++) {
+        const p1 = pts[i - 1];
+        const p2 = pts[i];
+        const mx = (p1.x + p2.x) / 2;
+        const my = (p1.y + p2.y) / 2;
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len;
+        const ny = dx / len;
+        const offset = (i % 2 === 0 ? 1.5 : -1.5) * (line.width * 0.35);
+        d += ` Q ${mx + nx * offset} ${my + ny * offset}, ${p2.x} ${p2.y}`;
+      }
+      return d;
+    }
+    return pts.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '');
+  };
+
+  // Drag & Drop
   const [dragItem, setDragItem] = useState(null);
   const handlePitchMouseMove = (e) => {
     if (!dragItem) return;
@@ -262,21 +311,7 @@ export default function App() {
     setElements(prev => prev.map(el => el.id === dragItem ? { ...el, x: coords.x, y: coords.y } : el));
   };
 
-  const renderPathD = (line) => {
-    const pts = line.points;
-    if (pts.length < 2) return '';
-    if (line.type === 'zigzag') {
-      let d = `M ${pts[0].x} ${pts[0].y}`;
-      for (let i = 1; i < pts.length; i++) {
-        const offset = (i % 2 === 0 ? 1 : -1) * (line.width * 0.4);
-        d += ` L ${pts[i].x + offset} ${pts[i].y + offset}`;
-      }
-      return d;
-    }
-    return pts.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '');
-  };
-
-  // Grabación
+  // Grabación de Video
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
@@ -309,11 +344,11 @@ export default function App() {
       alert("El alumno no tiene registrado teléfono WhatsApp.");
       return;
     }
-    const msg = `Estimado(a) apoderado(a) de ${student.name}, le informamos desde ${institution.name} que ha sido CITADO (${role.toUpperCase()}) para el partido frente a ${matchData.rival || 'el equipo rival'}. Fecha: ${matchData.date} a las ${matchData.matchTime} hrs en ${matchData.pitchPlace}. Presentarse puntualmente a las ${matchData.meetTime} hrs con indumentaria oficial.`;
+    const msg = `Estimado(a) apoderado(a) de ${student.name}, le informamos desde ${institution.name} que ha sido CITADO (${role.toUpperCase()}) para el partido frente a ${matchData.rival || 'el rival'}. Fecha: ${matchData.date} a las ${matchData.matchTime} hrs en ${matchData.pitchPlace}. Presentarse puntualmente a las ${matchData.meetTime} hrs con indumentaria oficial.`;
     window.open(`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  // --- PANTALLA DE ACCESO RESTRINGIDO (LOGIN) ---
+  // --- PANTALLA DE LOGIN CON BOTÓN WHATSAPP ---
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-screen w-screen bg-neutral-950 font-sans text-white p-4">
@@ -341,14 +376,34 @@ export default function App() {
               Ingresar al Sistema
             </button>
           </form>
-          <p className="text-[11px] text-neutral-500 mt-6">Soporte Técnico: +{WHATSAPP_SOPORTE}</p>
+
+          <div className="mt-6 border-t border-neutral-800 pt-4">
+            <a 
+              href={`https://wa.me/${WHATSAPP_SOPORTE}?text=${encodeURIComponent('Hola, necesito asistencia o clave de acceso para Andez Sports FC')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600/20 text-green-400 hover:bg-green-600/30 border border-green-500/40 rounded-lg text-xs font-bold transition"
+            >
+              💬 Contactar Soporte WhatsApp
+            </a>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Vista de Cancha
-  const viewBoxSetting = pitchView === 'half' ? '0 0 50 100' : pitchView === 'box' ? '0 20 40 60' : '0 0 100 100';
+  // Dimensionamiento visual de la Cancha
+  const pitchContainerStyle = pitchView === 'half'
+    ? { aspectRatio: '34 / 50', maxWidth: '420px' }
+    : pitchView === 'box'
+    ? { aspectRatio: '40 / 60', maxWidth: '450px' }
+    : { aspectRatio: '100 / 68', maxWidth: '980px' };
+
+  const currentViewBox = pitchView === 'half'
+    ? '0 0 50 100'
+    : pitchView === 'box'
+    ? '0 20 40 60'
+    : '0 0 100 100';
 
   return (
     <div 
@@ -358,7 +413,7 @@ export default function App() {
       onTouchMove={handlePitchMouseMove}
       onTouchEnd={() => setDragItem(null)}
     >
-      {/* Impresión limpia */}
+      {/* Estilos para impresión limpia */}
       <style>{`
         @media print {
           body, html { margin: 0; padding: 0; background: white !important; }
@@ -379,7 +434,7 @@ export default function App() {
         </div>
         <div className="text-right text-xs text-gray-800">
           <p>Fecha: {new Date().toLocaleDateString('es-CL')}</p>
-          <p>Usuario: {currentUser.name}</p>
+          <p>Profesor / Director: {currentUser.name}</p>
         </div>
       </div>
 
@@ -391,14 +446,14 @@ export default function App() {
 
           {/* Selector de Canchas */}
           <div className="flex items-center bg-neutral-800 p-0.5 rounded ml-2">
-            <button onClick={() => setPitchView('full')} className={`px-2 py-1 text-[11px] rounded ${pitchView === 'full' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Entera</button>
-            <button onClick={() => setPitchView('half')} className={`px-2 py-1 text-[11px] rounded ${pitchView === 'half' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Media</button>
-            <button onClick={() => setPitchView('box')} className={`px-2 py-1 text-[11px] rounded ${pitchView === 'box' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Área ABP</button>
+            <button onClick={() => setPitchView('full')} className={`px-2 py-1 text-[11px] rounded transition ${pitchView === 'full' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Entera</button>
+            <button onClick={() => setPitchView('half')} className={`px-2 py-1 text-[11px] rounded transition ${pitchView === 'half' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Media</button>
+            <button onClick={() => setPitchView('box')} className={`px-2 py-1 text-[11px] rounded transition ${pitchView === 'box' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Área ABP</button>
           </div>
 
           <button onClick={() => setShowAdminModal(true)} className="p-2 hover:bg-neutral-800 rounded text-xs text-neutral-300">📁 Gestión</button>
           <button onClick={() => setShowTacticsModal(true)} className="p-2 hover:bg-neutral-800 rounded text-xs text-neutral-300">📋 Sistemas</button>
-          <button onClick={() => setShowMaterialsModal(true)} className="p-2 hover:bg-neutral-800 rounded text-xs text-neutral-300">🚧 Materiales</button>
+          <button onClick={() => setShowMaterialsBar(!showMaterialsBar)} className={`p-2 rounded text-xs transition ${showMaterialsBar ? 'bg-amber-500 text-black font-bold' : 'hover:bg-neutral-800 text-neutral-300'}`}>🚧 Materiales</button>
           <button onClick={() => setShowTextModal(true)} className="p-2 hover:bg-neutral-800 rounded text-xs text-neutral-300">🔤 Texto</button>
           <button onClick={() => setShowAiModal(true)} className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/40 text-amber-400 hover:bg-amber-500/20 rounded font-bold text-xs">✨ IA</button>
         </div>
@@ -418,20 +473,27 @@ export default function App() {
           <button onClick={() => window.print()} className="p-1.5 hover:bg-neutral-800 rounded text-neutral-300">🖨️</button>
           <button onClick={() => setShowSaveModal(true)} className="p-1.5 hover:bg-neutral-800 rounded text-neutral-300">💾</button>
 
+          <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+            {currentUser.role}
+          </span>
+
           <button onClick={() => setCurrentUser(null)} title="Cerrar Sesión" className="text-xs text-neutral-400 hover:text-white border-l border-neutral-800 pl-2">
             🔒 Salir
           </button>
         </div>
       </header>
 
-      {/* CANCHA TÁCTICA */}
+      {/* CANCHA TÁCTICA PROPORCIONAL */}
       <main className="flex-1 relative flex items-center justify-center p-2 bg-neutral-950">
-        <div className="relative w-full h-full max-w-5xl max-h-[85vh] bg-green-700 rounded-lg shadow-2xl border-4 border-neutral-800 overflow-hidden flex items-center justify-center">
+        <div 
+          style={pitchContainerStyle}
+          className="relative w-full h-full max-h-[85vh] bg-green-700 rounded-lg shadow-2xl border-4 border-neutral-800 overflow-hidden flex items-center justify-center transition-all duration-300"
+        >
           <svg
             ref={pitchSvgRef}
             className="w-full h-full cursor-crosshair"
-            viewBox={viewBoxSetting}
-            preserveAspectRatio="none"
+            viewBox={currentViewBox}
+            preserveAspectRatio="xMidYMid meet"
             onMouseDown={handlePointerDown}
             onMouseMove={handlePointerMove}
             onMouseUp={handlePointerUp}
@@ -439,20 +501,27 @@ export default function App() {
             onTouchMove={handlePointerMove}
             onTouchEnd={handlePointerUp}
           >
+            {/* Césped */}
             <rect width="100" height="100" fill="#15803d" />
+            
+            {/* Líneas Reglamentarias */}
             <rect x="5" y="5" width="90" height="90" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <line x1="50" y1="5" x2="50" y2="95" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="50" cy="50" r="10" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="50" cy="50" r="0.8" fill="#ffffff" />
 
+            {/* Áreas Izquierda */}
             <rect x="5" y="25" width="16" height="50" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <rect x="5" y="38" width="6" height="24" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="16" cy="50" r="0.8" fill="#ffffff" />
+            <path d="M 21 42 A 10 10 0 0 1 21 58" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <rect x="1" y="44" width="4" height="12" fill="none" stroke="#eab308" strokeWidth="1.2" />
 
+            {/* Áreas Derecha */}
             <rect x="79" y="25" width="16" height="50" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <rect x="89" y="38" width="6" height="24" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="84" cy="50" r="0.8" fill="#ffffff" />
+            <path d="M 79 42 A 10 10 0 0 0 79 58" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <rect x="95" y="44" width="4" height="12" fill="none" stroke="#eab308" strokeWidth="1.2" />
 
             <defs>
@@ -461,6 +530,7 @@ export default function App() {
               </marker>
             </defs>
 
+            {/* Trazos Dibujados */}
             {[...drawings, ...(currentLine ? [currentLine] : [])].map((l, idx) => (
               <path
                 key={idx}
@@ -473,15 +543,33 @@ export default function App() {
               />
             ))}
 
+            {/* Elementos Dinámicos */}
             {elements.map(el => {
               const isSelected = selectedId === el.id;
               const transform = `translate(${el.x}, ${el.y}) rotate(${el.rotation || 0})`;
 
               if (el.type === 'token') {
                 return (
-                  <g key={el.id} transform={transform} onMouseDown={(e) => { e.stopPropagation(); setSelectedId(el.id); setDragItem(el.id); }} className="cursor-move">
+                  <g 
+                    key={el.id} 
+                    transform={transform} 
+                    onMouseDown={(e) => { e.stopPropagation(); setSelectedId(el.id); setDragItem(el.id); }} 
+                    onDoubleClick={() => {
+                      const newNum = prompt("Modificar Dorsal:", el.number);
+                      const newName = prompt("Modificar Nombre Jugador:", el.name || '');
+                      setElements(prev => prev.map(item => item.id === el.id ? { ...item, number: newNum !== null ? newNum : item.number, name: newName !== null ? newName : item.name } : item));
+                    }}
+                    className="cursor-move"
+                  >
                     <circle cx="0" cy="0" r="3.2" fill={el.color} stroke={isSelected ? '#eab308' : '#ffffff'} strokeWidth={isSelected ? '0.8' : '0.4'} />
-                    <text x="0" y="1.1" textAnchor="middle" fill={el.color === '#ffffff' ? '#000000' : '#ffffff'} fontSize="3.2" fontWeight="bold">{el.number}</text>
+                    <text x="0" y="1.1" textAnchor="middle" fill={el.color === '#ffffff' ? '#000000' : '#ffffff'} fontSize="3.2" fontWeight="bold">
+                      {el.number}
+                    </text>
+                    {el.name && (
+                      <text x="0" y="5.8" textAnchor="middle" fill="#ffffff" fontSize="2" fontWeight="bold" stroke="#000000" strokeWidth="0.3">
+                        {el.name}
+                      </text>
+                    )}
                   </g>
                 );
               }
@@ -490,6 +578,7 @@ export default function App() {
                 return (
                   <g key={el.id} transform={transform} onMouseDown={(e) => { e.stopPropagation(); setSelectedId(el.id); setDragItem(el.id); }} className="cursor-move">
                     <circle cx="0" cy="0" r="1.8" fill="#ffffff" stroke="#000000" strokeWidth="0.4" />
+                    <polygon points="0,-1 0.95,-0.31 0.59,0.81 -0.59,0.81 -0.95,-0.31" fill="#000000" />
                   </g>
                 );
               }
@@ -497,18 +586,18 @@ export default function App() {
               if (el.type === 'text') {
                 const fs = el.size === 'small' ? '2.4' : el.size === 'large' ? '4.8' : '3.4';
                 return (
-                  <g key={el.id} transform={transform} onMouseDown={(e) => { e.stopPropagation(); setSelectedId(el.id); setDragItem(el.id); }} className="cursor-move">
-                    <text 
-                      x="0" 
-                      y="0" 
-                      textAnchor="middle" 
-                      fill="#ffffff" 
-                      fontSize={fs} 
-                      fontWeight="bold" 
-                      stroke="#000000" 
-                      strokeWidth="0.4"
-                      className="font-sans"
-                    >
+                  <g 
+                    key={el.id} 
+                    transform={transform} 
+                    onMouseDown={(e) => { e.stopPropagation(); setSelectedId(el.id); setDragItem(el.id); }} 
+                    onDoubleClick={() => {
+                      const newTxt = prompt("Editar texto:", el.content);
+                      if (newTxt) setElements(prev => prev.map(item => item.id === el.id ? { ...item, content: newTxt } : item));
+                    }}
+                    className="cursor-move"
+                  >
+                    <rect x="-12" y="-3.2" width="24" height="6.4" rx="1.2" fill="rgba(0,0,0,0.65)" stroke={isSelected ? '#eab308' : '#ffffff'} strokeWidth="0.3" />
+                    <text x="0" y="1.2" textAnchor="middle" fill="#ffffff" fontSize={fs} fontWeight="bold" className="font-sans">
                       {el.content}
                     </text>
                   </g>
@@ -517,7 +606,7 @@ export default function App() {
 
               return (
                 <g key={el.id} transform={transform} onMouseDown={(e) => { e.stopPropagation(); setSelectedId(el.id); setDragItem(el.id); }} className="cursor-move">
-                  <circle cx="0" cy="0" r="2" fill={el.color || '#eab308'} stroke={isSelected ? '#ffffff' : '#000000'} strokeWidth="0.4" />
+                  <circle cx="0" cy="0" r="2.2" fill={el.color || '#eab308'} stroke={isSelected ? '#ffffff' : '#000000'} strokeWidth="0.4" />
                   <text x="0" y="0.8" textAnchor="middle" fontSize="2.2">{el.icon || '📍'}</text>
                 </g>
               );
@@ -526,79 +615,113 @@ export default function App() {
         </div>
       </main>
 
-      {/* FOOTER BARRA COMPACTA */}
+      {/* BARRA INFERIOR NO INVASIVA DE MATERIALES */}
+      {showMaterialsBar && (
+        <div className="no-print bg-neutral-900 border-t border-neutral-800 px-3 py-1.5 flex items-center gap-2 overflow-x-auto z-20">
+          <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider shrink-0">Materiales:</span>
+          {TRAINING_MATERIALS.map(mat => (
+            <button
+              key={mat.id}
+              onClick={() => setElements(p => [...p, { id: 'mat_' + Math.random(), type: 'material', icon: mat.icon, color: mat.color, x: 50, y: 50, rotation: 0 }])}
+              className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 rounded flex items-center gap-1.5 text-xs shrink-0 border border-neutral-700"
+            >
+              <span>{mat.icon}</span> <span>{mat.name}</span>
+            </button>
+          ))}
+          <button onClick={() => setShowMaterialsBar(false)} className="ml-auto text-xs text-neutral-400 hover:text-white px-2">✕</button>
+        </div>
+      )}
+
+      {/* FOOTER BARRA COMPACTA CON HERRAMIENTAS Y COLORES */}
       <footer className="no-print bg-black/95 border-t border-neutral-800 p-2 z-20 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button 
-            onClick={() => setElements(p => [...p, { id: 'tk_' + Math.random(), type: 'token', color: '#f97316', number: 1, label: 'Portero', x: 20, y: 50, rotation: 0 }])}
-            className="h-7 px-2 bg-amber-600 rounded text-xs font-black text-white"
+            onClick={() => setElements(p => [...p, { id: 'tk_' + Math.random(), type: 'token', color: activeTokenColor, number: 1, name: 'Portero', x: 20, y: 50, rotation: 0 }])}
+            className="h-7 px-2.5 rounded font-black text-xs text-white shadow border border-neutral-700 flex items-center gap-1"
+            style={{ backgroundColor: activeTokenColor }}
+            title="Añadir Portero con color seleccionado"
           >
             🧤 1
           </button>
+
           {PALETTE_COLORS.map(c => (
             <button
               key={c.id}
-              onClick={() => setElements(p => [...p, { id: 'tk_' + Math.random(), type: 'token', color: c.hex, number: 10, x: 50, y: 50, rotation: 0 }])}
-              className="h-6 w-6 rounded-full border border-neutral-600 font-bold text-[10px]"
+              onClick={() => {
+                setActiveTokenColor(c.hex);
+                setElements(p => [...p, { id: 'tk_' + Math.random(), type: 'token', color: c.hex, number: 10, name: '', x: 50, y: 50, rotation: 0 }]);
+              }}
+              className={`h-6 w-6 rounded-full border flex items-center justify-center font-bold text-[10px] transition ${activeTokenColor === c.hex ? 'ring-2 ring-amber-400 scale-110' : 'border-neutral-600'}`}
               style={{ backgroundColor: c.hex, color: c.text }}
+              title={`Añadir Ficha ${c.name} (Click para seleccionar color)`}
             >
               10
             </button>
           ))}
+
           <button 
             onClick={() => setElements(p => [...p, { id: 'ball_' + Math.random(), type: 'ball', x: 50, y: 50, rotation: 0 }])}
             className="h-6 w-6 rounded-full bg-white text-black flex items-center justify-center text-xs"
+            title="Añadir Balón"
           >
             ⚽
           </button>
         </div>
 
+        {/* Trazos con Control de Grosor y Color */}
         <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded">
-          <button onClick={() => setIsDrawingMode(!isDrawingMode)} className={`px-2 py-0.5 rounded text-xs font-bold ${isDrawingMode ? 'bg-amber-500 text-black' : 'bg-neutral-800 text-neutral-300'}`}>
+          <button onClick={() => setIsDrawingMode(!isDrawingMode)} className={`px-2 py-0.5 rounded text-xs font-bold transition ${isDrawingMode ? 'bg-amber-500 text-black' : 'bg-neutral-800 text-neutral-300'}`}>
             ✏️ Dibujo
           </button>
+
           {isDrawingMode && (
-            <div className="flex items-center gap-1 border-l border-neutral-700 pl-2">
-              <button onClick={() => setDrawType('arrow')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'arrow' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>➔ Pase</button>
-              <button onClick={() => setDrawType('dash')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'dash' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>⇢ Carrera</button>
-              <button onClick={() => setDrawType('zigzag')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'zigzag' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>〰 Conducción</button>
-            </div>
+            <>
+              <div className="flex items-center gap-1 border-l border-neutral-700 pl-2">
+                <button onClick={() => setDrawType('arrow')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'arrow' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>➔ Pase</button>
+                <button onClick={() => setDrawType('dash')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'dash' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>⇢ Carrera</button>
+                <button onClick={() => setDrawType('straight')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'straight' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>— Línea</button>
+                <button onClick={() => setDrawType('zigzag')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'zigzag' ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>〰 Conducción</button>
+              </div>
+
+              <div className="flex items-center gap-1 border-l border-neutral-700 pl-2">
+                {['#ffffff', '#dc2626', '#2563eb', '#eab308'].map(hex => (
+                  <button 
+                    key={hex} 
+                    onClick={() => setDrawColor(hex)} 
+                    className={`h-4 w-4 rounded-full border ${drawColor === hex ? 'ring-2 ring-white scale-110' : 'border-neutral-600'}`} 
+                    style={{ backgroundColor: hex }} 
+                  />
+                ))}
+              </div>
+
+              <div className="flex items-center gap-1 border-l border-neutral-700 pl-2">
+                <button onClick={() => setDrawWidth(2)} className={`px-1 py-0.5 text-[10px] rounded ${drawWidth === 2 ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Fino</button>
+                <button onClick={() => setDrawWidth(4)} className={`px-1 py-0.5 text-[10px] rounded ${drawWidth === 4 ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Medio</button>
+                <button onClick={() => setDrawWidth(6)} className={`px-1 py-0.5 text-[10px] rounded ${drawWidth === 6 ? 'bg-amber-500 text-black font-bold' : 'text-neutral-400'}`}>Grueso</button>
+              </div>
+            </>
           )}
         </div>
 
         <div className="flex items-center gap-1">
-          <button onClick={() => { if (selectedId) { setElements(p => p.filter(e => e.id !== selectedId)); setSelectedId(null); } }} className="p-1 text-red-400 text-xs">🗑️</button>
-          <button onClick={() => { setElements([]); setDrawings([]); }} className="p-1 text-neutral-400 text-xs">🧹 Limpiar</button>
+          <button 
+            onClick={() => { if (selectedId) { setElements(p => p.filter(e => e.id !== selectedId)); setSelectedId(null); } }} 
+            className="p-1.5 text-red-400 hover:bg-neutral-800 rounded text-xs" 
+            title="Borrar elemento seleccionado"
+          >
+            🗑️
+          </button>
+          <button 
+            onClick={() => { setElements([]); setDrawings([]); }} 
+            className="p-1.5 text-neutral-400 hover:bg-neutral-800 rounded text-xs" 
+            title="Limpiar toda la pizarra"
+          >
+            🧹 Limpiar
+          </button>
         </div>
       </footer>
 
-      {/* MODAL MATERIALES COMPLETO */}
-      {showMaterialsModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-md rounded-xl p-4 shadow-2xl">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-sm text-white">Materiales de Entrenamiento</h3>
-              <button onClick={() => setShowMaterialsModal(false)} className="text-neutral-400 hover:text-white">✕</button>
-            </div>
-            <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto">
-              {TRAINING_MATERIALS.map(mat => (
-                <button
-                  key={mat.id}
-                  onClick={() => {
-                    setElements(p => [...p, { id: 'mat_' + Math.random(), type: 'material', icon: mat.icon, color: mat.color, x: 50, y: 50, rotation: 0 }]);
-                    setShowMaterialsModal(false);
-                  }}
-                  className="p-2.5 bg-neutral-800 hover:bg-neutral-700 rounded flex items-center gap-2 text-xs font-bold"
-                >
-                  <span className="text-base">{mat.icon}</span> {mat.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL TEXTO LIMPIO */}
+      {/* MODAL TEXTO FLOTANTE */}
       {showTextModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-neutral-900 border border-neutral-700 w-full max-w-sm rounded-xl p-4 shadow-2xl">
@@ -626,168 +749,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL GUARDAR SESIÓN */}
-      {showSaveModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-sm rounded-xl p-5 shadow-2xl">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-sm text-white">Guardar Ejercicio</h3>
-              <button onClick={() => setShowSaveModal(false)} className="text-neutral-400 hover:text-white">✕</button>
-            </div>
-            <input id="sessName" type="text" placeholder="Nombre del ejercicio..." className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-sm text-white mb-2" />
-            <input id="sessCategory" type="text" placeholder="Categoría (ej: Sub-12)..." className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-sm text-white mb-4" />
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setShowSaveModal(false)} className="px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300">
-                Cancelar
-              </button>
-              <button 
-                onClick={() => {
-                  const name = document.getElementById('sessName')?.value || 'Ejercicio Táctico';
-                  const cat = document.getElementById('sessCategory')?.value || 'General';
-                  const newSession = {
-                    id: 'sess_' + Math.random(),
-                    name,
-                    category: cat,
-                    date: new Date().toLocaleDateString('es-CL'),
-                    elements,
-                    drawings
-                  };
-                  const updated = [...sessionsList, newSession];
-                  setSessionsList(updated);
-                  sbSet('tactical_sessions', updated);
-                  setShowSaveModal(false);
-                }}
-                className="px-4 py-1.5 text-xs bg-red-600 hover:bg-red-500 font-bold rounded"
-              >
-                Confirmar Guardado
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL MATCH CENTER (PARTIDO) */}
-      {showMatchModal && (
-        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-2xl rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 border-b border-neutral-800 pb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">⚽</span>
-                <h2 className="font-black text-base text-white uppercase tracking-wider">Centro de Mando de Partido</h2>
-              </div>
-              <button onClick={() => setShowMatchModal(false)} className="text-neutral-400 hover:text-white">✕</button>
-            </div>
-
-            {/* Marcador y Cronómetro */}
-            <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 flex items-center justify-between mb-4">
-              <div className="text-center w-1/3">
-                <p className="text-xs text-neutral-400 uppercase font-bold">{institution.name}</p>
-                <div className="text-4xl font-black text-green-400">{matchData.goalsOwn}</div>
-                <div className="flex justify-center gap-1 mt-1">
-                  <button onClick={() => setMatchData(p => ({ ...p, goalsOwn: p.goalsOwn + 1 }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">+</button>
-                  <button onClick={() => setMatchData(p => ({ ...p, goalsOwn: Math.max(0, p.goalsOwn - 1) }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">-</button>
-                </div>
-              </div>
-
-              <div className="text-center w-1/3 border-x border-neutral-800">
-                <p className="text-xs text-amber-400 font-mono tracking-widest">
-                  {String(Math.floor(matchData.timerSeconds / 60)).padStart(2, '0')}:{String(matchData.timerSeconds % 60).padStart(2, '0')}
-                </p>
-                <button 
-                  onClick={() => setMatchData(p => ({ ...p, timerRunning: !p.timerRunning }))}
-                  className={`mt-2 px-3 py-1 rounded text-xs font-bold ${matchData.timerRunning ? 'bg-red-600' : 'bg-green-600'}`}
-                >
-                  {matchData.timerRunning ? 'Pausar' : 'Iniciar'}
-                </button>
-              </div>
-
-              <div className="text-center w-1/3">
-                <p className="text-xs text-neutral-400 uppercase font-bold">{matchData.rival || 'Rival'}</p>
-                <div className="text-4xl font-black text-red-400">{matchData.goalsRival}</div>
-                <div className="flex justify-center gap-1 mt-1">
-                  <button onClick={() => setMatchData(p => ({ ...p, goalsRival: p.goalsRival + 1 }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">+</button>
-                  <button onClick={() => setMatchData(p => ({ ...p, goalsRival: Math.max(0, p.goalsRival - 1) }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">-</button>
-                </div>
-              </div>
-            </div>
-
-            {/* Datos Oficiales del Partido */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 text-xs">
-              <input 
-                type="text" 
-                placeholder="Nombre del Rival..." 
-                value={matchData.rival} 
-                onChange={e => setMatchData({ ...matchData, rival: e.target.value })} 
-                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
-              />
-              <input 
-                type="date" 
-                value={matchData.date} 
-                onChange={e => setMatchData({ ...matchData, date: e.target.value })} 
-                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
-              />
-              <input 
-                type="text" 
-                placeholder="Cancha / Lugar..." 
-                value={matchData.pitchPlace} 
-                onChange={e => setMatchData({ ...matchData, pitchPlace: e.target.value })} 
-                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
-              />
-              <input 
-                type="text" 
-                placeholder="Hora Partido (ej: 11:00)..." 
-                value={matchData.matchTime} 
-                onChange={e => setMatchData({ ...matchData, matchTime: e.target.value })} 
-                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
-              />
-              <input 
-                type="text" 
-                placeholder="Hora Llegada (ej: 09:45)..." 
-                value={matchData.meetTime} 
-                onChange={e => setMatchData({ ...matchData, meetTime: e.target.value })} 
-                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
-              />
-              <input 
-                type="text" 
-                placeholder="Árbitro Principal..." 
-                value={matchData.referee} 
-                onChange={e => setMatchData({ ...matchData, referee: e.target.value })} 
-                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
-              />
-            </div>
-
-            {/* Citaciones por WhatsApp */}
-            <div className="border-t border-neutral-800 pt-3 mb-4">
-              <h4 className="text-xs font-bold text-amber-400 mb-2 uppercase">Citación Individual vía WhatsApp</h4>
-              <div className="max-h-40 overflow-y-auto space-y-1.5">
-                {studentsList.map(st => (
-                  <div key={st.id} className="flex items-center justify-between p-2 bg-neutral-800/60 rounded text-xs">
-                    <span>{st.name} <strong className="text-neutral-400">({st.position || 'Jugador'})</strong></span>
-                    <div className="flex gap-1.5">
-                      <button onClick={() => sendWhatsAppCitation(st, 'Titular')} className="px-2 py-0.5 bg-green-600 hover:bg-green-500 rounded text-[11px] font-bold">
-                        💬 Titular
-                      </button>
-                      <button onClick={() => sendWhatsAppCitation(st, 'Suplente')} className="px-2 py-0.5 bg-neutral-700 hover:bg-neutral-600 rounded text-[11px]">
-                        💬 Suplente
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-neutral-800 pt-3">
-              <button onClick={() => window.print()} className="px-4 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs rounded font-bold">
-                🖨️ Imprimir Ficha Oficial
-              </button>
-              <button onClick={() => setShowMatchModal(false)} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-xs font-bold rounded">
-                Guardar y Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MODAL GESTIÓN COMPLETA */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
@@ -798,12 +759,52 @@ export default function App() {
                 <button onClick={() => setAdminTab('students')} className={`text-xs font-bold px-3 py-1.5 rounded ${adminTab === 'students' ? 'bg-amber-500 text-black' : 'text-neutral-400'}`}>📋 Alumnos</button>
                 <button onClick={() => setAdminTab('teachers')} className={`text-xs font-bold px-3 py-1.5 rounded ${adminTab === 'teachers' ? 'bg-amber-500 text-black' : 'text-neutral-400'}`}>👔 Profesores</button>
                 <button onClick={() => setAdminTab('settings')} className={`text-xs font-bold px-3 py-1.5 rounded ${adminTab === 'settings' ? 'bg-amber-500 text-black' : 'text-neutral-400'}`}>⚙️ Club</button>
+                {currentUser.role === 'SUPER ADMIN' && (
+                  <button onClick={() => setAdminTab('superadmin')} className={`text-xs font-bold px-3 py-1.5 rounded ${adminTab === 'superadmin' ? 'bg-red-600 text-white' : 'text-red-400 border border-red-500/40'}`}>👑 Super Admin</button>
+                )}
               </div>
               <button onClick={() => setShowAdminModal(false)} className="text-neutral-400 hover:text-white">✕</button>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1">
-              {/* ALUMNOS CON EDICIÓN */}
+              {/* TAB SESIONES */}
+              {adminTab === 'sessions' && (
+                <div className="space-y-2">
+                  {sessionsList.map(sess => (
+                    <div key={sess.id} className="flex items-center justify-between p-3 bg-neutral-800 rounded">
+                      <div>
+                        <h4 className="font-bold text-sm text-white">{sess.name}</h4>
+                        <p className="text-xs text-neutral-400">{sess.category} • {sess.date}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => {
+                            setElements(sess.elements || []);
+                            setDrawings(sess.drawings || []);
+                            setShowAdminModal(false);
+                          }}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-xs font-bold rounded"
+                        >
+                          Cargar
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const updated = sessionsList.filter(s => s.id !== sess.id);
+                            setSessionsList(updated);
+                            sbSet('tactical_sessions', updated);
+                          }}
+                          className="p-1 text-red-400 text-xs hover:bg-neutral-700 rounded"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {sessionsList.length === 0 && <p className="text-xs text-neutral-500 text-center py-8">No hay ejercicios guardados aún.</p>}
+                </div>
+              )}
+
+              {/* TAB ALUMNOS CON EDICIÓN */}
               {adminTab === 'students' && (
                 <div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 bg-neutral-950 p-3 rounded">
@@ -864,7 +865,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* PROFESORES CON INGRESO Y EDICIÓN */}
+              {/* TAB PROFESORES */}
               {adminTab === 'teachers' && (
                 <div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 bg-neutral-950 p-3 rounded">
@@ -915,7 +916,32 @@ export default function App() {
                 </div>
               )}
 
-              {/* CONFIGURACIÓN CLUB CON SUBIDA DIRECTA DE ARCHIVO LOGO */}
+              {/* TAB SUPER ADMIN */}
+              {adminTab === 'superadmin' && (
+                <div className="space-y-4 bg-neutral-950 p-4 rounded text-xs">
+                  <h4 className="font-bold text-red-400 uppercase tracking-wider">Panel Maestro de Licencias & Escuelas</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-neutral-900 border border-neutral-800 rounded">
+                      <p className="text-neutral-400 mb-1">Clave Maestra Global:</p>
+                      <p className="font-mono font-bold text-amber-400 text-sm">ANDEZ2026</p>
+                    </div>
+                    <div className="p-3 bg-neutral-900 border border-neutral-800 rounded">
+                      <p className="text-neutral-400 mb-1">Estado de Licencia:</p>
+                      <p className="font-bold text-green-400 text-sm">PRO ILIMITADA (Activa)</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 mb-1">WhatsApp de Soporte Comercial:</label>
+                    <input 
+                      type="text" 
+                      defaultValue={WHATSAPP_SOPORTE}
+                      className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-white" 
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB CONFIGURACIÓN CLUB */}
               {adminTab === 'settings' && (
                 <div className="space-y-4 bg-neutral-950 p-4 rounded text-xs">
                   <h4 className="font-bold text-amber-400 uppercase">Identidad Oficial del Club</h4>
@@ -949,6 +975,125 @@ export default function App() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MATCH CENTER */}
+      {showMatchModal && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
+          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-2xl rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b border-neutral-800 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚽</span>
+                <h2 className="font-black text-base text-white uppercase tracking-wider">Centro de Mando de Partido</h2>
+              </div>
+              <button onClick={() => setShowMatchModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 flex items-center justify-between mb-4">
+              <div className="text-center w-1/3">
+                <p className="text-xs text-neutral-400 uppercase font-bold">{institution.name}</p>
+                <div className="text-4xl font-black text-green-400">{matchData.goalsOwn}</div>
+                <div className="flex justify-center gap-1 mt-1">
+                  <button onClick={() => setMatchData(p => ({ ...p, goalsOwn: p.goalsOwn + 1 }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">+</button>
+                  <button onClick={() => setMatchData(p => ({ ...p, goalsOwn: Math.max(0, p.goalsOwn - 1) }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">-</button>
+                </div>
+              </div>
+
+              <div className="text-center w-1/3 border-x border-neutral-800">
+                <p className="text-xs text-amber-400 font-mono tracking-widest">
+                  {String(Math.floor(matchData.timerSeconds / 60)).padStart(2, '0')}:{String(matchData.timerSeconds % 60).padStart(2, '0')}
+                </p>
+                <button 
+                  onClick={() => setMatchData(p => ({ ...p, timerRunning: !p.timerRunning }))}
+                  className={`mt-2 px-3 py-1 rounded text-xs font-bold ${matchData.timerRunning ? 'bg-red-600' : 'bg-green-600'}`}
+                >
+                  {matchData.timerRunning ? 'Pausar' : 'Iniciar'}
+                </button>
+              </div>
+
+              <div className="text-center w-1/3">
+                <p className="text-xs text-neutral-400 uppercase font-bold">{matchData.rival || 'Rival'}</p>
+                <div className="text-4xl font-black text-red-400">{matchData.goalsRival}</div>
+                <div className="flex justify-center gap-1 mt-1">
+                  <button onClick={() => setMatchData(p => ({ ...p, goalsRival: p.goalsRival + 1 }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">+</button>
+                  <button onClick={() => setMatchData(p => ({ ...p, goalsRival: Math.max(0, p.goalsRival - 1) }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">-</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 text-xs">
+              <input 
+                type="text" 
+                placeholder="Nombre del Rival..." 
+                value={matchData.rival} 
+                onChange={e => setMatchData({ ...matchData, rival: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="date" 
+                value={matchData.date} 
+                onChange={e => setMatchData({ ...matchData, date: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="text" 
+                placeholder="Cancha / Lugar..." 
+                value={matchData.pitchPlace} 
+                onChange={e => setMatchData({ ...matchData, pitchPlace: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="text" 
+                placeholder="Hora Partido (ej: 11:00)..." 
+                value={matchData.matchTime} 
+                onChange={e => setMatchData({ ...matchData, matchTime: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="text" 
+                placeholder="Hora Llegada (ej: 09:45)..." 
+                value={matchData.meetTime} 
+                onChange={e => setMatchData({ ...matchData, meetTime: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="text" 
+                placeholder="Árbitro Principal..." 
+                value={matchData.referee} 
+                onChange={e => setMatchData({ ...matchData, referee: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+            </div>
+
+            <div className="border-t border-neutral-800 pt-3 mb-4">
+              <h4 className="text-xs font-bold text-amber-400 mb-2 uppercase">Citación Individual vía WhatsApp</h4>
+              <div className="max-h-40 overflow-y-auto space-y-1.5">
+                {studentsList.map(st => (
+                  <div key={st.id} className="flex items-center justify-between p-2 bg-neutral-800/60 rounded text-xs">
+                    <span>{st.name} <strong className="text-neutral-400">({st.position || 'Jugador'})</strong></span>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => sendWhatsAppCitation(st, 'Titular')} className="px-2 py-0.5 bg-green-600 hover:bg-green-500 rounded text-[11px] font-bold">
+                        💬 Titular
+                      </button>
+                      <button onClick={() => sendWhatsAppCitation(st, 'Suplente')} className="px-2 py-0.5 bg-neutral-700 hover:bg-neutral-600 rounded text-[11px]">
+                        💬 Suplente
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-neutral-800 pt-3">
+              <button onClick={() => window.print()} className="px-4 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs rounded font-bold">
+                🖨️ Imprimir Ficha Oficial
+              </button>
+              <button onClick={() => setShowMatchModal(false)} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-xs font-bold rounded">
+                Guardar y Cerrar
+              </button>
             </div>
           </div>
         </div>
