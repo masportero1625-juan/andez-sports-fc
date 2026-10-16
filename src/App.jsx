@@ -245,7 +245,7 @@ export default function App() {
   }, [attendanceRecords]);
 
   const [billingDay, setBillingDay] = useState(() => localStorage.getItem('andez_billing_day') || '5');
-  const [billingMessageTemplate, setBillingMessageTemplate] = useState(() => localStorage.getItem('andez_billing_template') || 'Estimado(a) apoderado(a) de {ALUMNO}, le recordamos desde Andez Sports FC que la mensualidad correspondiente al mes en curso se encuentra pendiente. Agradecemos regularizar el pago.');
+  const [billingMessageTemplate] = useState('Estimado(a) apoderado(a) de {ALUMNO}, le recordamos desde Andez Sports FC que la mensualidad correspondiente al mes en curso se encuentra pendiente. Agradecemos regularizar el pago.');
 
   const [inputLicenseCode, setInputLicenseCode] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -323,7 +323,7 @@ export default function App() {
   const [showSystemsMenu, setShowSystemsMenu] = useState(false);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [activeTabLibrary, setActiveTabLibrary] = useState('sessions');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+  const [selectedCategoryFilter] = useState('all');
 
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showNewUserModal, setShowNewUserModal] = useState(false);
@@ -361,7 +361,7 @@ export default function App() {
   const [newRosterName, setNewRosterName] = useState('');
   const [newRosterRut, setNewRosterRut] = useState('');
   const [newRosterBirth, setNewRosterBirth] = useState('');
-  const [newRosterRole, setNewRosterRole] = useState('Delantero');
+  const [newRosterRole] = useState('Delantero');
   const [newRosterPhone, setNewRosterPhone] = useState('+569');
 
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -447,6 +447,7 @@ export default function App() {
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [promptText, setPromptText] = useState('');
 
+  // ANALIZADOR INTELIGENTE DE PROMPTS TÁCTICOS
   const handleGenerateTacticalPrompt = (e) => {
     e.preventDefault();
     if (!promptText.trim()) return;
@@ -455,29 +456,82 @@ export default function App() {
     const midX = isPC ? (pitchMode === 'half' ? 27.5 : 52.5) : 34;
     const midY = isPC ? 34 : (pitchMode === 'half' ? 42.5 : 52.5);
 
-    if (txt.includes('rondo') || txt.includes('posesion')) {
+    // 1. TIRO LIBRE / BARRERA / MANIQUÍES / FALTA
+    if (txt.includes('tiro libre') || txt.includes('barrera') || txt.includes('falta') || txt.includes('maniqui') || txt.includes('maniquí')) {
+      if (isPC) {
+        newObjs = [
+          { id: 'gk-tl', type: 'player', number: '1', role: 'GK', name: 'Portero', x: 8, y: 34, team: 'blue' },
+          { id: 'm-1', type: 'dummy', x: 26, y: 30, rotation: 0 },
+          { id: 'm-2', type: 'dummy', x: 26, y: 33, rotation: 0 },
+          { id: 'm-3', type: 'dummy', x: 26, y: 36, rotation: 0 },
+          { id: 'm-4', type: 'dummy', x: 26, y: 39, rotation: 0 },
+          { id: 'b-tl', type: 'ball', x: 36, y: 34 },
+          { id: 'p-ej', type: 'player', number: '10', role: 'CAM', name: 'Ejecutante', x: 39, y: 36, team: 'blue' },
+          { id: 'p-ap', type: 'player', number: '8', role: 'CM', name: 'Apoyo', x: 38, y: 29, team: 'blue' },
+          { id: 'def-1', type: 'player', number: '4', role: 'CB', name: 'Marca', x: 18, y: 27, team: 'red' },
+          { id: 'at-1', type: 'player', number: '9', role: 'ST', name: 'Rebote', x: 19, y: 25, team: 'blue' }
+        ];
+      } else {
+        newObjs = [
+          { id: 'gk-tl', type: 'player', number: '1', role: 'GK', name: 'Portero', x: 34, y: 96, team: 'blue' },
+          { id: 'm-1', type: 'dummy', x: 28, y: 80, rotation: 0 },
+          { id: 'm-2', type: 'dummy', x: 32, y: 80, rotation: 0 },
+          { id: 'm-3', type: 'dummy', x: 36, y: 80, rotation: 0 },
+          { id: 'm-4', type: 'dummy', x: 40, y: 80, rotation: 0 },
+          { id: 'b-tl', type: 'ball', x: 34, y: 68 },
+          { id: 'p-ej', type: 'player', number: '10', role: 'CAM', name: 'Ejecutante', x: 36, y: 64, team: 'blue' },
+          { id: 'p-ap', type: 'player', number: '8', role: 'CM', name: 'Apoyo', x: 29, y: 65, team: 'blue' }
+        ];
+      }
+    } 
+    // 2. RONDOS Y POSESIÓN
+    else if (txt.includes('rondo') || txt.includes('posesion') || txt.includes('posesión') || txt.includes('circulacion') || txt.includes('circulación')) {
       newObjs = [
-        { id: 'p-r1', type: 'player', number: '1', name: 'Apoyo', x: midX - 10, y: midY, team: 'blue' },
-        { id: 'p-r2', type: 'player', number: '2', name: 'Apoyo', x: midX + 10, y: midY, team: 'blue' },
-        { id: 'p-r3', type: 'player', number: '3', name: 'Apoyo', x: midX, y: midY - 10, team: 'blue' },
-        { id: 'p-r4', type: 'player', number: '4', name: 'Apoyo', x: midX, y: midY + 10, team: 'blue' },
-        { id: 'p-r5', type: 'player', number: '5', name: 'Presión', x: midX - 3, y: midY, team: 'red' },
-        { id: 'p-r6', type: 'player', number: '6', name: 'Presión', x: midX + 3, y: midY, team: 'red' },
-        { id: 'b-r1', type: 'ball', x: midX - 7, y: midY },
-        { id: 'c-1', type: 'cone', color: '#ea580c', x: midX - 14, y: midY - 14, rotation: 0 },
-        { id: 'c-2', type: 'cone', color: '#ea580c', x: midX + 14, y: midY - 14, rotation: 0 },
-        { id: 'c-3', type: 'cone', color: '#ea580c', x: midX - 14, y: midY + 14, rotation: 0 },
-        { id: 'c-4', type: 'cone', color: '#ea580c', x: midX + 14, y: midY + 14, rotation: 0 },
-      ];
-    } else {
-      newObjs = [
-        { id: 'gen-1', type: 'player', number: '1', name: 'Portero', x: isPC ? 12 : 34, y: isPC ? 34 : 90, team: 'blue' },
-        { id: 'gen-2', type: 'player', number: '4', name: 'Central', x: midX - 8, y: midY, team: 'blue' },
-        { id: 'gen-3', type: 'player', number: '9', name: 'Delantero', x: midX + 8, y: midY, team: 'red' },
-        { id: 'b-gen', type: 'ball', x: midX - 5, y: midY },
-        { id: 'mg-1', type: 'mini_goal', x: isPC ? 90 : 34, y: isPC ? 34 : 20, rotation: 0 }
+        { id: 'p-r1', type: 'player', number: '1', name: 'Apoyo', x: midX - 9, y: midY, team: 'blue' },
+        { id: 'p-r2', type: 'player', number: '2', name: 'Apoyo', x: midX + 9, y: midY, team: 'blue' },
+        { id: 'p-r3', type: 'player', number: '3', name: 'Apoyo', x: midX, y: midY - 9, team: 'blue' },
+        { id: 'p-r4', type: 'player', number: '4', name: 'Apoyo', x: midX, y: midY + 9, team: 'blue' },
+        { id: 'p-r5', type: 'player', number: '5', name: 'Presión', x: midX - 2.5, y: midY, team: 'red' },
+        { id: 'p-r6', type: 'player', number: '6', name: 'Presión', x: midX + 2.5, y: midY, team: 'red' },
+        { id: 'b-r1', type: 'ball', x: midX - 6, y: midY },
+        { id: 'c-1', type: 'cone', color: '#ea580c', x: midX - 12, y: midY - 12, rotation: 0 },
+        { id: 'c-2', type: 'cone', color: '#ea580c', x: midX + 12, y: midY - 12, rotation: 0 },
+        { id: 'c-3', type: 'cone', color: '#ea580c', x: midX - 12, y: midY + 12, rotation: 0 },
+        { id: 'c-4', type: 'cone', color: '#ea580c', x: midX + 12, y: midY + 12, rotation: 0 },
       ];
     }
+    // 3. FÍSICO / COORDINACIÓN / ESCALERA / VALLAS
+    else if (txt.includes('circuito') || txt.includes('coordinacion') || txt.includes('coordinación') || txt.includes('escalera') || txt.includes('valla')) {
+      newObjs = [
+        { id: 'lad-1', type: 'ladder', x: midX - 10, y: midY, rotation: 0 },
+        { id: 'hur-1', type: 'hurdle', x: midX, y: midY - 6, rotation: 90 },
+        { id: 'hur-2', type: 'hurdle', x: midX, y: midY + 6, rotation: 90 },
+        { id: 'p-c1', type: 'player', number: '7', name: 'Velocidad', x: midX - 18, y: midY, team: 'blue' },
+        { id: 'b-c1', type: 'ball', x: midX + 8, y: midY },
+        { id: 'mg-c1', type: 'mini_goal', x: midX + 16, y: midY, rotation: 0 }
+      ];
+    }
+    // 4. CENTROS Y REMATE / DEFINICIÓN
+    else if (txt.includes('centro') || txt.includes('remate') || txt.includes('definicion') || txt.includes('definición')) {
+      newObjs = [
+        { id: 'gk-cr', type: 'player', number: '1', role: 'GK', name: 'Portero', x: isPC ? 8 : 34, y: isPC ? 34 : 96, team: 'blue' },
+        { id: 'ext-1', type: 'player', number: '7', role: 'RW', name: 'Centrador', x: isPC ? 30 : 58, y: isPC ? 12 : 75, team: 'blue' },
+        { id: 'del-1', type: 'player', number: '9', role: 'ST', name: 'Rematador', x: isPC ? 18 : 30, y: isPC ? 32 : 82, team: 'blue' },
+        { id: 'def-c', type: 'player', number: '4', role: 'CB', name: 'Defensa', x: isPC ? 15 : 36, y: isPC ? 35 : 84, team: 'red' },
+        { id: 'b-cr', type: 'ball', x: isPC ? 32 : 56, y: isPC ? 14 : 73 }
+      ];
+    }
+    // 5. POR DEFECTO (DUELO 1V1 CON PORTERO)
+    else {
+      newObjs = [
+        { id: 'gen-1', type: 'player', number: '1', role: 'GK', name: 'Portero', x: isPC ? 8 : 34, y: isPC ? 34 : 96, team: 'blue' },
+        { id: 'gen-2', type: 'player', number: '4', role: 'CB', name: 'Defensa', x: midX - 6, y: midY, team: 'red' },
+        { id: 'gen-3', type: 'player', number: '9', role: 'ST', name: 'Atacante', x: midX + 8, y: midY, team: 'blue' },
+        { id: 'b-gen', type: 'ball', x: midX + 4, y: midY },
+        { id: 'dum-def', type: 'dummy', x: midX, y: midY - 8, rotation: 0 }
+      ];
+    }
+
     setObjects(newObjs);
     recordHistory(newObjs);
     setShowPromptModal(false);
@@ -574,7 +628,7 @@ export default function App() {
   const currentDisplayLogo = customLogo || '/logo-andez.png';
   const totalRevenue = adminLicenses.filter(l => l.status === 'active').reduce((sum, l) => sum + (l.price || 0), 0);
 
-  // PANTALLA DE INGRESO
+  // INGRESO AL SISTEMA
   if (!authenticatedUser) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-[#070b12] text-white p-4 font-sans select-none relative">
@@ -596,7 +650,7 @@ export default function App() {
   }
 
   const isTeacherRestricted = authenticatedUser.role === 'coach';
-  const currentCategoryContext = isTeacherRestricted ? authenticatedUser.categoryId : (selectedCategoryFilter === 'all' ? (categories[0]?.id || 'sub10') : selectedCategoryFilter);
+  const currentCategoryContext = isTeacherRestricted ? authenticatedUser.categoryId : (categories[0]?.id || 'sub10');
 
   return (
     <div className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black">
@@ -668,7 +722,7 @@ export default function App() {
 
           <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
 
-          {/* DIBUJO PROFESIONAL DE CANCHA, ARCOS Y ÁREAS */}
+          {/* DIBUJO GEOMÉTRICO DE CANCHA Y ARCOS */}
           {isPC ? (
             <g stroke="white" strokeWidth="0.8" fill="none">
               <rect x="2" y="2" width={pitchMode === 'half' ? 51 : 101} height="64" />
@@ -758,7 +812,7 @@ export default function App() {
           })}
         </svg>
 
-        {/* MODAL AGREGAR TEXTO LIBRE */}
+        {/* MODAL TEXTO LIBRE */}
         {textModalOpen && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-[#121214] border border-zinc-800 rounded-3xl w-full max-w-xs p-5 shadow-2xl">
@@ -778,7 +832,7 @@ export default function App() {
           </div>
         )}
 
-        {/* MODAL PALETA DE TRAZOS Y LÍNEAS AVANZADA */}
+        {/* MODAL SELECTOR DE TRAZOS */}
         {showLinePalette && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl">
@@ -829,7 +883,7 @@ export default function App() {
           </div>
         )}
 
-        {/* MODAL FICHA JUGADOR */}
+        {/* MODAL EDITAR JUGADOR */}
         {editingPlayer && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-[#121214] border border-zinc-800 rounded-3xl w-full max-w-xs p-6 shadow-2xl">
@@ -871,7 +925,7 @@ export default function App() {
                 <button onClick={() => setShowPromptModal(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
               <form onSubmit={handleGenerateTacticalPrompt} className="space-y-3">
-                <textarea rows={3} value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Ej: Rondo 4v2 con conos y balón..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400 resize-none" autoFocus />
+                <textarea rows={3} value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Ej: Tiro libre con barrera y portero / Rondo 4v2..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400 resize-none" autoFocus />
                 <button type="submit" className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase rounded-xl shadow">Crear en la Pizarra</button>
               </form>
             </div>
@@ -1044,9 +1098,9 @@ export default function App() {
                   <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 flex items-center justify-between">
                     <div>
                       <span className="text-xs font-bold text-white block">Día de Cobro Mensual:</span>
-                      <span className="text-[10px] text-zinc-400">Los alumnos no pagados a este día aparecerán en rojo.</span>
+                      <span className="text-[10px] text-zinc-400">Alumnos no pagados a este día aparecerán en rojo.</span>
                     </div>
-                    <input type="number" min="1" max="31" value={billingDay} onChange={e => { setBillingDay(e.target.value); localStorage.setItem('巧ndez_billing_day', e.target.value); }} className="w-16 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white" />
+                    <input type="number" min="1" max="31" value={billingDay} onChange={e => { setBillingDay(e.target.value); localStorage.setItem('andez_billing_day', e.target.value); }} className="w-16 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white" />
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-2">
                     {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => {
