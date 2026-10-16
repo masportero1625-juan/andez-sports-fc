@@ -11,7 +11,7 @@ import {
 
 export default function App() {
   // --- AUTENTICACIÓN Y ROLES ---
-  const [currentUser, setCurrentUser] = useState(null); // null = pantalla de bloqueo
+  const [currentUser, setCurrentUser] = useState(null);
   const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState('');
 
@@ -20,7 +20,7 @@ export default function App() {
   const [directorProfile, setDirectorProfile] = useState({ name: 'Director Deportivo', rut: '', phone: WHATSAPP_SOPORTE });
 
   // Configuración de Cancha (Completa, Media y Balón Parado)
-  const [pitchView, setPitchView] = useState('full'); // 'full', 'half', 'box'
+  const [pitchView, setPitchView] = useState('full');
 
   // Modales
   const [showTacticsModal, setShowTacticsModal] = useState(false);
@@ -39,9 +39,9 @@ export default function App() {
 
   // Barra Compacta de Trazos
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [drawType, setDrawType] = useState('arrow'); // 'arrow', 'dash', 'straight', 'zigzag'
+  const [drawType, setDrawType] = useState('arrow');
   const [drawColor, setDrawColor] = useState('#ffffff');
-  const [drawWidth, setDrawWidth] = useState(3);
+  const [drawWidth] = useState(3);
   const [currentLine, setCurrentLine] = useState(null);
 
   // Grabador de Video
@@ -303,6 +303,16 @@ export default function App() {
     if (mediaRecorderRef.current && isRecording) mediaRecorderRef.current.stop();
   };
 
+  // Citación WhatsApp
+  const sendWhatsAppCitation = (student, role) => {
+    if (!student.phone) {
+      alert("El alumno no tiene registrado teléfono WhatsApp.");
+      return;
+    }
+    const msg = `Estimado(a) apoderado(a) de ${student.name}, le informamos desde ${institution.name} que ha sido CITADO (${role.toUpperCase()}) para el partido frente a ${matchData.rival || 'el equipo rival'}. Fecha: ${matchData.date} a las ${matchData.matchTime} hrs en ${matchData.pitchPlace}. Presentarse puntualmente a las ${matchData.meetTime} hrs con indumentaria oficial.`;
+    window.open(`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
   // --- PANTALLA DE ACCESO RESTRINGIDO (LOGIN) ---
   if (!currentUser) {
     return (
@@ -337,7 +347,7 @@ export default function App() {
     );
   }
 
-  // --- VISTA DE CANCHA AJUSTABLE ---
+  // Vista de Cancha
   const viewBoxSetting = pitchView === 'half' ? '0 0 50 100' : pitchView === 'box' ? '0 20 40 60' : '0 0 100 100';
 
   return (
@@ -348,7 +358,7 @@ export default function App() {
       onTouchMove={handlePitchMouseMove}
       onTouchEnd={() => setDragItem(null)}
     >
-      {/* Estilos para impresión limpia */}
+      {/* Impresión limpia */}
       <style>{`
         @media print {
           body, html { margin: 0; padding: 0; background: white !important; }
@@ -358,7 +368,7 @@ export default function App() {
         }
       `}</style>
 
-      {/* Membrete Oficial */}
+      {/* Membrete Oficial Impresión */}
       <div className="hidden print-header bg-white">
         <div className="flex items-center gap-3">
           {institution.logo && <img src={institution.logo} alt="Logo" className="h-12 w-12 object-contain" />}
@@ -505,7 +515,6 @@ export default function App() {
                 );
               }
 
-              // Materiales
               return (
                 <g key={el.id} transform={transform} onMouseDown={(e) => { e.stopPropagation(); setSelectedId(el.id); setDragItem(el.id); }} className="cursor-move">
                   <circle cx="0" cy="0" r="2" fill={el.color || '#eab308'} stroke={isSelected ? '#ffffff' : '#000000'} strokeWidth="0.4" />
@@ -617,6 +626,168 @@ export default function App() {
         </div>
       )}
 
+      {/* MODAL GUARDAR SESIÓN */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-sm rounded-xl p-5 shadow-2xl">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-sm text-white">Guardar Ejercicio</h3>
+              <button onClick={() => setShowSaveModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+            <input id="sessName" type="text" placeholder="Nombre del ejercicio..." className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-sm text-white mb-2" />
+            <input id="sessCategory" type="text" placeholder="Categoría (ej: Sub-12)..." className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-sm text-white mb-4" />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowSaveModal(false)} className="px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300">
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  const name = document.getElementById('sessName')?.value || 'Ejercicio Táctico';
+                  const cat = document.getElementById('sessCategory')?.value || 'General';
+                  const newSession = {
+                    id: 'sess_' + Math.random(),
+                    name,
+                    category: cat,
+                    date: new Date().toLocaleDateString('es-CL'),
+                    elements,
+                    drawings
+                  };
+                  const updated = [...sessionsList, newSession];
+                  setSessionsList(updated);
+                  sbSet('tactical_sessions', updated);
+                  setShowSaveModal(false);
+                }}
+                className="px-4 py-1.5 text-xs bg-red-600 hover:bg-red-500 font-bold rounded"
+              >
+                Confirmar Guardado
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MATCH CENTER (PARTIDO) */}
+      {showMatchModal && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
+          <div className="bg-neutral-900 border border-neutral-700 w-full max-w-2xl rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 border-b border-neutral-800 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚽</span>
+                <h2 className="font-black text-base text-white uppercase tracking-wider">Centro de Mando de Partido</h2>
+              </div>
+              <button onClick={() => setShowMatchModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+
+            {/* Marcador y Cronómetro */}
+            <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 flex items-center justify-between mb-4">
+              <div className="text-center w-1/3">
+                <p className="text-xs text-neutral-400 uppercase font-bold">{institution.name}</p>
+                <div className="text-4xl font-black text-green-400">{matchData.goalsOwn}</div>
+                <div className="flex justify-center gap-1 mt-1">
+                  <button onClick={() => setMatchData(p => ({ ...p, goalsOwn: p.goalsOwn + 1 }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">+</button>
+                  <button onClick={() => setMatchData(p => ({ ...p, goalsOwn: Math.max(0, p.goalsOwn - 1) }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">-</button>
+                </div>
+              </div>
+
+              <div className="text-center w-1/3 border-x border-neutral-800">
+                <p className="text-xs text-amber-400 font-mono tracking-widest">
+                  {String(Math.floor(matchData.timerSeconds / 60)).padStart(2, '0')}:{String(matchData.timerSeconds % 60).padStart(2, '0')}
+                </p>
+                <button 
+                  onClick={() => setMatchData(p => ({ ...p, timerRunning: !p.timerRunning }))}
+                  className={`mt-2 px-3 py-1 rounded text-xs font-bold ${matchData.timerRunning ? 'bg-red-600' : 'bg-green-600'}`}
+                >
+                  {matchData.timerRunning ? 'Pausar' : 'Iniciar'}
+                </button>
+              </div>
+
+              <div className="text-center w-1/3">
+                <p className="text-xs text-neutral-400 uppercase font-bold">{matchData.rival || 'Rival'}</p>
+                <div className="text-4xl font-black text-red-400">{matchData.goalsRival}</div>
+                <div className="flex justify-center gap-1 mt-1">
+                  <button onClick={() => setMatchData(p => ({ ...p, goalsRival: p.goalsRival + 1 }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">+</button>
+                  <button onClick={() => setMatchData(p => ({ ...p, goalsRival: Math.max(0, p.goalsRival - 1) }))} className="px-2 py-0.5 bg-neutral-800 text-xs rounded">-</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Datos Oficiales del Partido */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 text-xs">
+              <input 
+                type="text" 
+                placeholder="Nombre del Rival..." 
+                value={matchData.rival} 
+                onChange={e => setMatchData({ ...matchData, rival: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="date" 
+                value={matchData.date} 
+                onChange={e => setMatchData({ ...matchData, date: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="text" 
+                placeholder="Cancha / Lugar..." 
+                value={matchData.pitchPlace} 
+                onChange={e => setMatchData({ ...matchData, pitchPlace: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="text" 
+                placeholder="Hora Partido (ej: 11:00)..." 
+                value={matchData.matchTime} 
+                onChange={e => setMatchData({ ...matchData, matchTime: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="text" 
+                placeholder="Hora Llegada (ej: 09:45)..." 
+                value={matchData.meetTime} 
+                onChange={e => setMatchData({ ...matchData, meetTime: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+              <input 
+                type="text" 
+                placeholder="Árbitro Principal..." 
+                value={matchData.referee} 
+                onChange={e => setMatchData({ ...matchData, referee: e.target.value })} 
+                className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-white" 
+              />
+            </div>
+
+            {/* Citaciones por WhatsApp */}
+            <div className="border-t border-neutral-800 pt-3 mb-4">
+              <h4 className="text-xs font-bold text-amber-400 mb-2 uppercase">Citación Individual vía WhatsApp</h4>
+              <div className="max-h-40 overflow-y-auto space-y-1.5">
+                {studentsList.map(st => (
+                  <div key={st.id} className="flex items-center justify-between p-2 bg-neutral-800/60 rounded text-xs">
+                    <span>{st.name} <strong className="text-neutral-400">({st.position || 'Jugador'})</strong></span>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => sendWhatsAppCitation(st, 'Titular')} className="px-2 py-0.5 bg-green-600 hover:bg-green-500 rounded text-[11px] font-bold">
+                        💬 Titular
+                      </button>
+                      <button onClick={() => sendWhatsAppCitation(st, 'Suplente')} className="px-2 py-0.5 bg-neutral-700 hover:bg-neutral-600 rounded text-[11px]">
+                        💬 Suplente
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-neutral-800 pt-3">
+              <button onClick={() => window.print()} className="px-4 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs rounded font-bold">
+                🖨️ Imprimir Ficha Oficial
+              </button>
+              <button onClick={() => setShowMatchModal(false)} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-xs font-bold rounded">
+                Guardar y Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL GESTIÓN COMPLETA */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
@@ -704,4 +875,84 @@ export default function App() {
                     <input id="tcCode" type="text" placeholder="Clave Acceso (DT-101)..." className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-xs text-white" />
                     <button 
                       onClick={() => {
-                        const name = document
+                        const name = document.getElementById('tcName')?.value;
+                        const code = document.getElementById('tcCode')?.value;
+                        if (!name || !code) return alert("Ingresa al menos Nombre y Clave");
+                        const newTc = {
+                          id: 'tc_' + Math.random(),
+                          name,
+                          role: document.getElementById('tcRole')?.value || 'DT',
+                          category: document.getElementById('tcCat')?.value || 'General',
+                          phone: document.getElementById('tcPhone')?.value || '',
+                          code
+                        };
+                        const updated = [...teachersList, newTc];
+                        setTeachersList(updated);
+                        sbSet('teachers_list', updated);
+                      }}
+                      className="bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold rounded py-1.5"
+                    >
+                      + Guardar Profesor
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {teachersList.map(tc => (
+                      <div key={tc.id} className="flex items-center justify-between p-2.5 bg-neutral-800 rounded text-xs">
+                        <div>
+                          <p className="font-bold text-white">{tc.name} <span className="text-amber-400">({tc.role})</span></p>
+                          <p className="text-[11px] text-neutral-400">Cat: {tc.category} • Clave: <strong>{tc.code}</strong></p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {tc.phone && (
+                            <a href={`https://wa.me/${tc.phone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" className="px-2 py-0.5 bg-green-600 rounded text-[11px]">WhatsApp</a>
+                          )}
+                          <button onClick={() => { const up = teachersList.filter(t => t.id !== tc.id); setTeachersList(up); sbSet('teachers_list', up); }} className="p-1 text-red-400 hover:bg-neutral-700 rounded">🗑️</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CONFIGURACIÓN CLUB CON SUBIDA DIRECTA DE ARCHIVO LOGO */}
+              {adminTab === 'settings' && (
+                <div className="space-y-4 bg-neutral-950 p-4 rounded text-xs">
+                  <h4 className="font-bold text-amber-400 uppercase">Identidad Oficial del Club</h4>
+                  <div>
+                    <label className="block text-neutral-400 mb-1">Nombre Oficial de la Escuela:</label>
+                    <input 
+                      type="text" 
+                      value={institution.name} 
+                      onChange={e => {
+                        const up = { ...institution, name: e.target.value };
+                        setInstitution(up);
+                        sbSet('institution_profile', up);
+                      }} 
+                      className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-white" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-neutral-400 mb-1">Subir Escudo / Logo desde tu Equipo:</label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleLogoUpload}
+                      className="w-full bg-neutral-800 border border-neutral-700 rounded p-2 text-white" 
+                    />
+                    {institution.logo && (
+                      <div className="mt-2 flex items-center gap-3">
+                        <img src={institution.logo} alt="Vista previa" className="h-12 w-12 object-contain rounded bg-neutral-900 border border-neutral-700 p-1" />
+                        <span className="text-[11px] text-green-400">Logo cargado y sincronizado con Supabase</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
