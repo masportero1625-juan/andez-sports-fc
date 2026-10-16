@@ -1,13 +1,80 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  sbGet,
-  sbSet,
-  MASTER_PIN,
-  WHATSAPP_SOPORTE,
-  PALETTE_COLORS,
-  INITIAL_TACTICAL_SYSTEMS,
-  TRAINING_MATERIALS
-} from './data';
+
+// --- CONFIGURACIÓN SUPABASE NATIVA (REST API SIN DEPENDENCIAS EXTERNAS) ---
+const SUPABASE_URL = "https://hzfvckmgycvvshckwypf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6ZnZja21neWN2dnNoY2t3eXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0MDcxNzcsImV4cCI6MjA2MDAxMTE3N30.Z651c6c6b328a64ed41e3d489da924cf3832d2fe102874136427a1e050ff8156";
+
+const MASTER_PIN = "ANDEZ2026";
+const WHATSAPP_SOPORTE = "56932100183";
+
+// Métodos de Base de Datos Nativa REST
+const sbGet = async (key) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_data?key=eq.${encodeURIComponent(key)}&select=value`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    const data = await res.json();
+    return data && data.length > 0 ? data[0].value : null;
+  } catch {
+    return null;
+  }
+};
+
+const sbSet = async (key, value) => {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_data`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key, value })
+    });
+  } catch (e) {
+    console.warn("Error Supabase:", e);
+  }
+};
+
+// Paleta de 8 Colores Oficiales
+const PALETTE_COLORS = [
+  { id: 'white', name: 'Blanco', hex: '#ffffff', text: '#000000' },
+  { id: 'blue', name: 'Azul', hex: '#2563eb', text: '#ffffff' },
+  { id: 'red', name: 'Rojo', hex: '#dc2626', text: '#ffffff' },
+  { id: 'orange', name: 'Naranjo', hex: '#f97316', text: '#ffffff' },
+  { id: 'yellow', name: 'Amarillo', hex: '#eab308', text: '#000000' },
+  { id: 'green', name: 'Verde', hex: '#16a34a', text: '#ffffff' },
+  { id: 'black', name: 'Negro', hex: '#111827', text: '#ffffff' },
+  { id: 'purple', name: 'Violeta', hex: '#9333ea', text: '#ffffff' }
+];
+
+// Sistemas Tácticos Predefinidos
+const INITIAL_TACTICAL_SYSTEMS = [
+  { id: 's1', name: 'Formación 4-3-3', code: '1-4-3-3' },
+  { id: 's2', name: 'Formación 4-4-2', code: '1-4-4-2' },
+  { id: 's3', name: 'Formación 3-5-2', code: '1-3-5-2' },
+  { id: 's4', name: 'Formación 4-2-3-1', code: '1-4-2-3-1' },
+  { id: 's5', name: 'Fútbol 7 (1-2-3-1)', code: '1-2-3-1' }
+];
+
+// Catálogo Integral de Materiales de Entrenamiento
+const TRAINING_MATERIALS = [
+  { id: 'cone_orange', name: 'Cono Naranja', icon: '🔺', color: '#f97316' },
+  { id: 'cone_yellow', name: 'Cono Amarillo', icon: '⚠️', color: '#eab308' },
+  { id: 'cone_blue', name: 'Cono Azul', icon: '🔹', color: '#2563eb' },
+  { id: 'saucer_orange', name: 'Plato Naranja', icon: '🟠', color: '#f97316' },
+  { id: 'saucer_yellow', name: 'Plato Amarillo', icon: '🟡', color: '#eab308' },
+  { id: 'saucer_blue', name: 'Plato Azul', icon: '🔵', color: '#2563eb' },
+  { id: 'slalom', name: 'Bastón Slalom', icon: '📍', color: '#eab308' },
+  { id: 'mannequin', name: 'Maniquí Barrera', icon: '🧍', color: '#eab308' },
+  { id: 'hurdle', name: 'Valla Salto', icon: '⛩️', color: '#ffffff' },
+  { id: 'ladder', name: 'Escalera Coord.', icon: '🪜', color: '#eab308' },
+  { id: 'hoop', name: 'Aro Agilidad', icon: '⭕', color: '#ef4444' }
+];
 
 export default function App() {
   // --- AUTENTICACIÓN & SESIÓN ---
@@ -19,7 +86,7 @@ export default function App() {
   const [institution, setInstitution] = useState({ name: 'Andez Sports FC', logo: '' });
   const [directorProfile, setDirectorProfile] = useState({ name: 'Director Deportivo', rut: '', phone: WHATSAPP_SOPORTE });
 
-  // Vista de Cancha Proporcionada (Entera, Media, ABP)
+  // Vistas de Cancha Calibradas (Entera, Media, ABP)
   const [pitchView, setPitchView] = useState('full');
 
   // Modales y Paneles
@@ -37,14 +104,14 @@ export default function App() {
   const [drawings, setDrawings] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
 
-  // Barra Compacta de Dibujo
+  // Barra de Trazos Compacta
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [drawType, setDrawType] = useState('arrow');
+  const [drawType, setDrawType] = useState('arrow'); // 'arrow', 'dash', 'straight', 'zigzag'
   const [drawColor, setDrawColor] = useState('#ffffff');
   const [drawWidth, setDrawWidth] = useState(3);
   const [currentLine, setCurrentLine] = useState(null);
 
-  // Color activo para insertar fichas
+  // Color de ficha activo
   const [activeTokenColor, setActiveTokenColor] = useState('#2563eb');
 
   // Grabador de Video
@@ -52,13 +119,13 @@ export default function App() {
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
 
-  // Base de Datos Central
+  // Base de Datos
   const [sessionsList, setSessionsList] = useState([]);
   const [studentsList, setStudentsList] = useState([]);
   const [teachersList, setTeachersList] = useState([]);
   const [tacticalSystems, setTacticalSystems] = useState(INITIAL_TACTICAL_SYSTEMS);
 
-  // Match Center (Centro de Mando de Partido)
+  // Centro de Mando de Partido (Match Center)
   const [matchData, setMatchData] = useState({
     rival: '',
     date: '',
@@ -85,7 +152,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [matchData.timerRunning]);
 
-  // Cargar datos Supabase
+  // Sincronización Nube Supabase
   const loadCloud = async () => {
     const inst = await sbGet('institution_profile');
     if (inst) setInstitution(inst);
@@ -120,10 +187,10 @@ export default function App() {
       setAuthError('');
       return;
     }
-    setAuthError('Clave incorrecta. Ingresa ANDEZ2026 o tu clave de profesor.');
+    setAuthError('Clave incorrecta. Ingresa ANDEZ2026 o tu clave de profesor asignada.');
   };
 
-  // Subir Logo desde el PC (Base64)
+  // Subir Escudo Local (Base64)
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -137,7 +204,7 @@ export default function App() {
     }
   };
 
-  // Parser IA
+  // Parser Inteligente de Prompt IA
   const [aiPromptText, setAiPromptText] = useState('');
   const parseAndExecutePrompt = (text) => {
     if (!text.trim()) return;
@@ -206,7 +273,7 @@ export default function App() {
     setAiPromptText('');
   };
 
-  // Textos Libres
+  // Textos Libres Arrastrables y Rotables
   const [textInput, setTextInput] = useState('');
   const [textSize, setTextSize] = useState('medium');
   const addFloatingText = () => {
@@ -229,7 +296,7 @@ export default function App() {
     setElements(prev => prev.map(el => el.id === selectedId ? { ...el, rotation: ((el.rotation || 0) + 45) % 360 } : el));
   };
 
-  // Coordenadas proporcionales SVG
+  // Coordenadas SVG Proporcionales
   const pitchSvgRef = useRef(null);
   const getSvgCoordinates = (e) => {
     const svg = pitchSvgRef.current;
@@ -256,7 +323,7 @@ export default function App() {
     };
   };
 
-  // Trazos Suaves
+  // Trazos Suaves (Curvas Bézier para Zig-Zag de Conducción)
   const handlePointerDown = (e) => {
     if (!isDrawingMode) return;
     const coords = getSvgCoordinates(e);
@@ -311,7 +378,7 @@ export default function App() {
     setElements(prev => prev.map(el => el.id === dragItem ? { ...el, x: coords.x, y: coords.y } : el));
   };
 
-  // Grabación de Video
+  // Grabador de Video
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
@@ -348,7 +415,7 @@ export default function App() {
     window.open(`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
-  // --- PANTALLA DE LOGIN CON BOTÓN WHATSAPP ---
+  // --- PANTALLA DE ACCESO RESTRINGIDO (LOGIN) ---
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-screen w-screen bg-neutral-950 font-sans text-white p-4">
@@ -392,7 +459,7 @@ export default function App() {
     );
   }
 
-  // Dimensionamiento visual de la Cancha
+  // --- CALIBRACIÓN GEOMÉTRICA DE LA CANCHA ---
   const pitchContainerStyle = pitchView === 'half'
     ? { aspectRatio: '34 / 50', maxWidth: '420px' }
     : pitchView === 'box'
@@ -437,7 +504,6 @@ export default function App() {
           <p>Profesor / Director: {currentUser.name}</p>
         </div>
       </div>
-
       {/* HEADER SUPERIOR */}
       <header className="no-print h-14 bg-black/95 border-b border-neutral-800 flex items-center justify-between px-3 z-20">
         <div className="flex items-center gap-2">
