@@ -1,10 +1,41 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
-// --- CONFIGURACIÓN SUPABASE & CONSTANTES ---
+// --- CONFIGURACIÓN SUPABASE NATIVA (SIN DEPENDENCIAS EXTERNAS) ---
 const SUPABASE_URL = "https://hzfvckmgycvvshckwypf.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6ZnZja21neWN2dnNoY2t3eXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0MDcxNzcsImV4cCI6MjA2MDAxMTE3N30.Z651c6c6b328a64ed41e3d489da924cf3832d2fe102874136427a1e050ff8156";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Funciones nativas de base de datos vía REST
+const sbGet = async (key) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_data?key=eq.${encodeURIComponent(key)}&select=value`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    const data = await res.json();
+    return data && data.length > 0 ? data[0].value : null;
+  } catch {
+    return null;
+  }
+};
+
+const sbSet = async (key, value) => {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/app_data`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key, value })
+    });
+  } catch (e) {
+    console.warn("Error Supabase:", e);
+  }
+};
 
 const MASTER_PIN = "ANDEZ2026";
 const WHATSAPP_SOPORTE = "56932100183";
@@ -23,13 +54,12 @@ const PALETTE_COLORS = [
 
 export default function App() {
   // --- ESTADOS GENERALES Y SESIÓN ---
-  const [currentUser, setCurrentUser] = useState(null); // 'DIRECTOR' o profesor objeto
-  const [authInput, setAuthInput] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
   const [institution, setInstitution] = useState({ name: 'Andez Sports FC', logo: '' });
   const [directorProfile, setDirectorProfile] = useState({ name: 'Director Deportivo', rut: '', phone: WHATSAPP_SOPORTE });
 
   // Configuración de Cancha
-  const [pitchView, setPitchView] = useState('full'); // 'full', 'half', 'box'
+  const [pitchView, setPitchView] = useState('full');
   const [showTacticsModal, setShowTacticsModal] = useState(false);
   const [showMaterialsModal, setShowMaterialsModal] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);
@@ -37,17 +67,16 @@ export default function App() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
-  const [adminTab, setAdminTab] = useState('sessions'); // 'sessions', 'students', 'teachers', 'finance'
+  const [adminTab, setAdminTab] = useState('sessions');
 
   // Elementos de la Pizarra
   const [elements, setElements] = useState([]);
   const [drawings, setDrawings] = useState([]);
-  const [history, setHistory] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
 
   // Herramientas de Dibujo (Barra Compacta)
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [drawType, setDrawType] = useState('arrow'); // 'arrow', 'straight', 'dash', 'tblock', 'zigzag'
+  const [drawType, setDrawType] = useState('arrow');
   const [drawColor, setDrawColor] = useState('#ffffff');
   const [drawWidth, setDrawWidth] = useState(3);
   const [currentLine, setCurrentLine] = useState(null);
@@ -108,24 +137,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [matchData.timerRunning]);
 
-  // --- SINCRONIZACIÓN AUTOMÁTICA SUPABASE ---
-  const sbGet = async (key) => {
-    try {
-      const { data } = await supabase.from('app_data').select('value').eq('key', key).maybeSingle();
-      return data ? data.value : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const sbSet = async (key, value) => {
-    try {
-      await supabase.from('app_data').upsert({ key, value });
-    } catch (e) {
-      console.warn("Error Supabase:", e);
-    }
-  };
-
+  // Carga inicial desde Supabase
   const loadAllCloudData = async () => {
     const inst = await sbGet('institution_profile');
     if (inst) setInstitution(inst);
@@ -152,7 +164,6 @@ export default function App() {
     const lower = text.toLowerCase();
     const newItems = [];
 
-    // Cantidades numéricas
     const extractCount = (regex, defaultVal = 1) => {
       const m = lower.match(regex);
       if (!m) return 0;
@@ -180,7 +191,7 @@ export default function App() {
       });
     }
 
-    // 2. Maniquíes (Separación reglamentaria de barrera)
+    // 2. Maniquíes en barrera
     const maniquiMatch = lower.match(/(\d+|un|una|dos|tres|cuatro|cinco)\s+maniqu/);
     const maniquiCount = maniquiMatch ? extractCount(/(\d+|un|una|dos|tres|cuatro|cinco)\s+maniqu/) : (lower.includes('maniqu') ? 1 : 0);
     if (maniquiCount > 0) {
@@ -209,7 +220,7 @@ export default function App() {
       });
     }
 
-    // 4. Fichas específicas con color y número
+    // 4. Fichas con color y número
     const tokenRegex = /(?:(\d+|un|una|dos|tres)\s+)?ficha[s]?\s+([a-z]+)(?:\s+(?:con\s+el\s+número|con\s+el\s+dorsal|dorsal|número|numero)\s+(\d+))?/g;
     let match;
     let foundTokens = false;
@@ -243,7 +254,6 @@ export default function App() {
       }
     }
 
-    // Si no especificó color pero pidió jugador
     if (!foundTokens && (lower.includes('jugador') || lower.includes('ficha'))) {
       newItems.push({
         id: 'ai_def_' + Math.random(),
@@ -262,7 +272,7 @@ export default function App() {
     setAiPromptText('');
   };
 
-  // --- GESTIÓN DE SISTEMAS TÁCTICOS DINÁMICOS ---
+  // --- SISTEMAS TÁCTICOS DINÁMICOS ---
   const applyTacticalSystem = (code) => {
     const parts = code.split('-').map(Number);
     const newItems = [];
@@ -296,9 +306,9 @@ export default function App() {
     setShowTacticsModal(false);
   };
 
-  // --- TEXTOS FLOTANTES CON ROTACIÓN 45° Y JERARQUÍA ---
+  // --- TEXTOS FLOTANTES ---
   const [textInput, setTextInput] = useState('');
-  const [textSize, setTextSize] = useState('medium'); // 'small', 'medium', 'large'
+  const [textSize, setTextSize] = useState('medium');
   const addFloatingText = () => {
     if (!textInput.trim()) return;
     const newText = {
@@ -325,7 +335,7 @@ export default function App() {
     }));
   };
 
-  // --- GRABADOR DE PANTALLA PROFESIONAL ---
+  // --- GRABADOR DE PANTALLA ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -346,7 +356,7 @@ export default function App() {
       mediaRecorder.start();
       setIsRecording(true);
     } catch {
-      alert("No se pudo iniciar la grabación de pantalla.");
+      alert("No se pudo iniciar la grabación.");
     }
   };
 
@@ -356,7 +366,7 @@ export default function App() {
     }
   };
 
-  // --- DIBUJO Y TRAZOS (ZIG-ZAG, FLECHAS Y LÍNEAS) ---
+  // --- DIBUJO Y TRAZOS ---
   const pitchSvgRef = useRef(null);
 
   const getSvgCoordinates = (e) => {
@@ -399,7 +409,6 @@ export default function App() {
     setCurrentLine(null);
   };
 
-  // Generador de trayectoria sinuosa (Zig-Zag)
   const renderPathD = (line) => {
     const pts = line.points;
     if (pts.length < 2) return '';
@@ -432,7 +441,7 @@ export default function App() {
     setDragItem(null);
   };
 
-  // --- CITACIÓN WHATSAPP Y MATCHDAY CARD ---
+  // --- CITACIÓN WHATSAPP ---
   const sendWhatsAppCitation = (student, role) => {
     if (!student.phone) {
       alert("El alumno no tiene registrado teléfono WhatsApp.");
@@ -512,7 +521,6 @@ export default function App() {
             </button>
           )}
 
-          {/* Grabador de Pantalla */}
           {!isRecording ? (
             <button onClick={startRecording} className="flex items-center gap-1 px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded text-xs border border-neutral-700 transition">
               📹 Grabar
@@ -523,7 +531,6 @@ export default function App() {
             </button>
           )}
 
-          {/* Centro de Mando de Partido */}
           <button onClick={() => setShowMatchModal(true)} className="px-3 py-1 bg-blue-600/30 border border-blue-500 text-blue-300 hover:bg-blue-600/50 rounded text-xs font-bold transition">
             ⚽ Partido
           </button>
@@ -536,7 +543,6 @@ export default function App() {
             💾
           </button>
 
-          {/* Perfil / Roles */}
           <div className="flex items-center gap-2 border-l border-neutral-800 pl-3">
             <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
               {currentUser?.role || 'SUPER ADMIN'}
@@ -561,7 +567,6 @@ export default function App() {
             onTouchMove={handlePointerMove}
             onTouchEnd={handlePointerUp}
           >
-            {/* Césped con patrón y líneas oficiales */}
             <rect width="100" height="100" fill="#15803d" />
             
             {/* Líneas Reglamentarias */}
@@ -575,7 +580,6 @@ export default function App() {
             <rect x="5" y="38" width="6" height="24" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="16" cy="50" r="0.8" fill="#ffffff" />
             <path d="M 21 42 A 10 10 0 0 1 21 58" fill="none" stroke="#ffffff" strokeWidth="0.8" />
-            {/* Arco Izquierdo */}
             <rect x="1" y="44" width="4" height="12" fill="none" stroke="#eab308" strokeWidth="1.2" />
 
             {/* Áreas Derecha */}
@@ -583,10 +587,9 @@ export default function App() {
             <rect x="89" y="38" width="6" height="24" fill="none" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx="84" cy="50" r="0.8" fill="#ffffff" />
             <path d="M 79 42 A 10 10 0 0 0 79 58" fill="none" stroke="#ffffff" strokeWidth="0.8" />
-            {/* Arco Derecho */}
             <rect x="95" y="44" width="4" height="12" fill="none" stroke="#eab308" strokeWidth="1.2" />
 
-            {/* Marcadores de Flechas Calibradas */}
+            {/* Marcadores de Flechas */}
             <defs>
               <marker id="arrowhead" markerWidth="3" markerHeight="3" refX="2" refY="1.5" orient="auto">
                 <polygon points="0 0, 3 1.5, 0 3" fill={drawColor} />
@@ -606,7 +609,7 @@ export default function App() {
               />
             ))}
 
-            {/* Elementos Dinámicos (Fichas, Materiales, Balones y Textos) */}
+            {/* Elementos Dinámicos */}
             {elements.map((el) => {
               const isSelected = selectedId === el.id;
               const transform = `translate(${el.x}, ${el.y}) rotate(${el.rotation || 0})`;
@@ -624,7 +627,7 @@ export default function App() {
                       {el.number}
                     </text>
                     {el.label && (
-                      <text x="0" y="5.5" textAnchor="middle" fill="#ffffff" fontSize="2" fontWeight="bold" className="bg-black/80 px-1">
+                      <text x="0" y="5.5" textAnchor="middle" fill="#ffffff" fontSize="2" fontWeight="bold">
                         {el.label}
                       </text>
                     )}
@@ -678,9 +681,8 @@ export default function App() {
         </div>
       </main>
 
-      {/* --- BARRA INFERIOR COMPACTA (HERRAMIENTAS DE TRAZOS Y CONTROL) --- */}
+      {/* --- BARRA INFERIOR COMPACTA --- */}
       <footer className="no-print bg-black/95 border-t border-neutral-800 p-2 z-20 flex flex-wrap items-center justify-between gap-2">
-        {/* Selector Rápido de Fichas y Acceso a Portero 1 */}
         <div className="flex items-center gap-1.5">
           <button 
             onClick={() => setElements(prev => [...prev, { id: 'tk_' + Math.random(), type: 'token', color: '#f97316', number: 1, label: 'Portero', x: 20, y: 50, rotation: 0 }])}
@@ -711,7 +713,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* Barra de Trazos Compacta No Invasiva */}
+        {/* Trazos Compactos */}
         <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 px-3 py-1 rounded">
           <button 
             onClick={() => setIsDrawingMode(!isDrawingMode)} 
@@ -722,7 +724,6 @@ export default function App() {
 
           {isDrawingMode && (
             <>
-              {/* Estilos de Trazo (5 Opciones con Zig-Zag) */}
               <div className="flex items-center gap-1 border-l border-neutral-700 pl-2">
                 <button onClick={() => setDrawType('arrow')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'arrow' ? 'bg-amber-500/20 text-amber-300 border border-amber-500' : 'text-neutral-400'}`}>➔ Pase</button>
                 <button onClick={() => setDrawType('dash')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'dash' ? 'bg-amber-500/20 text-amber-300 border border-amber-500' : 'text-neutral-400'}`}>⇢ Carrera</button>
@@ -730,7 +731,6 @@ export default function App() {
                 <button onClick={() => setDrawType('zigzag')} className={`px-1.5 py-0.5 text-xs rounded ${drawType === 'zigzag' ? 'bg-amber-500/20 text-amber-300 border border-amber-500' : 'text-neutral-400'}`}>〰 Conducción</button>
               </div>
 
-              {/* Colores de Trazo */}
               <div className="flex items-center gap-1 border-l border-neutral-700 pl-2">
                 {['#ffffff', '#dc2626', '#2563eb', '#eab308'].map(hex => (
                   <button key={hex} onClick={() => setDrawColor(hex)} className="h-4 w-4 rounded-full border border-neutral-600" style={{ backgroundColor: hex }} />
@@ -740,7 +740,7 @@ export default function App() {
           )}
         </div>
 
-        {/* Acciones de Limpieza y Borrado */}
+        {/* Acciones */}
         <div className="flex items-center gap-1">
           <button 
             onClick={() => {
@@ -750,14 +750,14 @@ export default function App() {
               }
             }}
             className="p-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-red-400 rounded"
-            title="Borrar elemento seleccionado"
+            title="Borrar elemento"
           >
             🗑️
           </button>
           <button 
             onClick={() => { setElements([]); setDrawings([]); }}
             className="p-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-400 rounded"
-            title="Limpiar toda la pizarra"
+            title="Limpiar pizarra"
           >
             🧹 Limpiar
           </button>
@@ -769,7 +769,7 @@ export default function App() {
         {institution.name} • Andez Sports FC PRO • Software de Planificación & Táctica Deportiva
       </div>
 
-      {/* --- MODAL 1: PROMPT IA (PARSER INTELIGENTE) --- */}
+      {/* --- MODAL 1: PROMPT IA --- */}
       {showAiModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-neutral-900 border border-neutral-700 w-full max-w-md rounded-xl p-5 shadow-2xl">
@@ -847,7 +847,6 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {/* Creador de sistema rápido */}
             <div className="pt-2 border-t border-neutral-800">
               <label className="text-xs text-neutral-400 block mb-1">Crear esquema propio (ej. 1-3-3-3):</label>
               <div className="flex gap-2">
@@ -872,7 +871,7 @@ export default function App() {
         </div>
       )}
 
-      {/* --- MODAL 4: MATERIALES DE ENTRENAMIENTO (CON BASTONES DE SLALOM) --- */}
+      {/* --- MODAL 4: MATERIALES DE ENTRENAMIENTO --- */}
       {showMaterialsModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-neutral-900 border border-neutral-700 w-full max-w-sm rounded-xl p-5 shadow-2xl">
@@ -898,7 +897,7 @@ export default function App() {
         </div>
       )}
 
-      {/* --- MODAL 5: GUARDAR SESIÓN (CON BOTÓN CANCELAR Y 'X') --- */}
+      {/* --- MODAL 5: GUARDAR SESIÓN --- */}
       {showSaveModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-neutral-900 border border-neutral-700 w-full max-w-sm rounded-xl p-5 shadow-2xl">
@@ -1028,7 +1027,7 @@ export default function App() {
               />
             </div>
 
-            {/* Citaciones Automatizadas vía WhatsApp */}
+            {/* Citaciones Automatizadas */}
             <div className="border-t border-neutral-800 pt-3 mb-4">
               <h4 className="text-xs font-bold text-amber-400 mb-2 uppercase">Citación Individual vía WhatsApp</h4>
               <div className="max-h-40 overflow-y-auto space-y-1.5">
@@ -1060,7 +1059,7 @@ export default function App() {
         </div>
       )}
 
-      {/* --- MODAL 7: GESTIÓN INTEGRAL (ALUMNOS, PROFESORES, NÓMINAS, SESIONES) --- */}
+      {/* --- MODAL 7: GESTIÓN INTEGRAL --- */}
       {showAdminModal && (
         <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
           <div className="bg-neutral-900 border border-neutral-700 w-full max-w-3xl rounded-xl p-5 shadow-2xl max-h-[90vh] flex flex-col">
@@ -1112,10 +1111,9 @@ export default function App() {
                 </div>
               )}
 
-              {/* TAB ALUMNOS (CON EDICIÓN INDIVIDUAL SIN BORRADO) */}
+              {/* TAB ALUMNOS */}
               {adminTab === 'students' && (
                 <div>
-                  {/* Registro de Alumno */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 bg-neutral-950 p-3 rounded">
                     <input id="stName" type="text" placeholder="Nombre Alumno..." className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-xs text-white" />
                     <input id="stRut" type="text" placeholder="RUT / ID..." className="bg-neutral-800 border border-neutral-700 rounded p-1.5 text-xs text-white" />
@@ -1149,7 +1147,6 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Listado con Lápiz para Modificar */}
                   <div className="space-y-1.5">
                     {studentsList.map(st => (
                       <div key={st.id} className="flex items-center justify-between p-2.5 bg-neutral-800 rounded text-xs">
@@ -1198,7 +1195,6 @@ export default function App() {
               {/* TAB PROFESORES */}
               {adminTab === 'teachers' && (
                 <div className="space-y-3">
-                  {/* Tarjeta del Director Deportivo sincronizada */}
                   <div className="bg-neutral-950 p-3 rounded border border-amber-500/40">
                     <p className="text-xs font-bold text-amber-400 uppercase">Contacto Directo Dirección</p>
                     <p className="text-sm font-black">{directorProfile.name}</p>
