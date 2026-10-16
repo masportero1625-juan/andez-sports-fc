@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 
 // CREDENCIALES SUPABASE
-const SB_URL = 'https://btpzlnatmnmtmzdygcge.supabase.co';
-const SB_KEY = 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
+const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
+const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
 
 async function sbGet(key) {
   try {
@@ -1046,7 +1046,7 @@ export default function App() {
                       <span className="text-xs font-bold text-white block">Día de Cobro Mensual:</span>
                       <span className="text-[10px] text-zinc-400">Los alumnos no pagados a este día aparecerán en rojo.</span>
                     </div>
-                    <input type="number" min="1" max="31" value={billingDay} onChange={e => { setBillingDay(e.target.value); localStorage.setItem('巧ndez_billing_day', e.target.value); }} className="w-16 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white" />
+                    <input type="number" min="1" max="31" value={billingDay} onChange={e => { setBillingDay(e.target.value); localStorage.setItem('andez_billing_day', e.target.value); }} className="w-16 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white" />
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-2">
                     {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => {
