@@ -1069,18 +1069,19 @@ export default function App() {
               {/* Lista completa de sistemas */}
               <div className="flex-1 overflow-y-auto space-y-1.5">
                 {Object.keys({ ...(GET_TACTICAL_SYSTEMS(isPC)), ...(customSystems || {}) }).map(sysKey => (
-                  <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:border-amber-500/50 transition">
+                  <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl hover:border-amber-500/50 transition overflow-hidden">
                     <button 
                       type="button"
                       onClick={() => applyDynamicSystem(sysKey)} 
-                      className="text-left font-bold text-xs text-white flex-1 hover:text-amber-400 py-1"
+                      className="w-full text-left font-bold text-xs text-white hover:text-amber-400 p-2.5 flex-1 cursor-pointer"
                     >
                       Formación {sysKey}
                     </button>
                     {customSystems && customSystems[sysKey] && (
                       <button 
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (confirm(`¿Eliminar el sistema "${sysKey}"?`)) {
                             const copy = { ...customSystems };
                             delete copy[sysKey];
@@ -1088,12 +1089,15 @@ export default function App() {
                             localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(copy));
                           }
                         }} 
-                        className="p-1.5 text-zinc-500 hover:text-red-400"
+                        className="p-2.5 text-zinc-500 hover:text-red-400 cursor-pointer shrink-0"
                         title="Eliminar Sistema"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}
+                  </div>
+                ))}
+              </div>
                   </div>
                 ))}
               </div>
