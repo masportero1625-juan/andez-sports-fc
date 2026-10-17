@@ -371,7 +371,11 @@ export default function App() {
   const [newRosterBirth, setNewRosterBirth] = useState('');
   const [newRosterRole, setNewRosterRole] = useState('Delantero');
   const [newRosterPhone, setNewRosterPhone] = useState('+569');
-
+  const [newRosterBlood, setNewRosterBlood] = useState('O+');
+  const [newRosterAllergies, setNewRosterAllergies] = useState('');
+  const [newRosterEmergencyPhone, setNewRosterEmergencyPhone] = useState('+569');
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [schoolMonthlyFee, setSchoolMonthlyFee] = useState(() => localStorage.getItem('andez_monthly_fee') || '25000');
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // SESIONES
@@ -1046,33 +1050,130 @@ export default function App() {
                   <form onSubmit={(e) => {
                     e.preventDefault();
                     if (!newRosterName.trim()) return;
-                    const newP = { id: 'ros-' + Date.now(), name: newRosterName.trim(), rut: newRosterRut || 'Sin RUT', birth: newRosterBirth || '2012-01-01', role: newRosterRole, phone: newRosterPhone.trim() || '+56932100183', paid: false };
-                    setRosters({ ...rosters, [currentCategoryContext]: [...(rosters[currentCategoryContext] || []), newP] });
-                    setNewRosterName(''); setNewRosterRut(''); setNewRosterPhone('+569');
-                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-5 gap-2">
-                    <input type="text" placeholder="Nombre Alumno" value={newRosterName} onChange={e => setNewRosterName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" required />
-                    <input type="text" placeholder="RUT / ID" value={newRosterRut} onChange={e => setNewRosterRut(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" />
-                    <input type="date" value={newRosterBirth} onChange={e => setNewRosterBirth(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" />
-                    <input type="tel" placeholder="WhatsApp" value={newRosterPhone} onChange={e => setNewRosterPhone(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-amber-400" required />
-                    <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg py-1 shadow flex items-center justify-center gap-1"><Plus className="w-3.5 h-3.5" /> Agregar</button>
-                  </form>
-                  <div className="flex-1 overflow-y-auto space-y-2">
-                    {(rosters[currentCategoryContext] || []).map(p => (
-                      <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
-                        <div>
-                          <div className="font-bold text-xs text-white">{p.name} <span className="text-[10px] text-zinc-400 font-normal">({p.role})</span></div>
-                          <div className="text-[10px] text-zinc-400">RUT: {p.rut} • Nac: {p.birth}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <WhatsAppButton phone={p.phone} name={p.name} label="WhatsApp" />
-                          <button onClick={() => setRosters({ ...rosters, [currentCategoryContext]: rosters[currentCategoryContext].filter(x => x.id !== p.id) })} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
+                    if (editingStudent) {
+                      const updated = (rosters[currentCategoryContext] || []).map(p => 
+                        p.id === editingStudent.id 
+                          ? { ...p, name: newRosterName.trim(), rut: newRosterRut || 'Sin RUT', birth: newRosterBirth || '2012-01-01', role: newRosterRole, phone: newRosterPhone.trim(), blood: newRosterBlood, allergies: newRosterAllergies.trim(), emergencyPhone: newRosterEmergencyPhone.trim() } 
+                          : p
+                      );
+                      setRosters({ ...rosters, [currentCategoryContext]: updated });
+                      setEditingStudent(null);
+                    } else {
+                      const newP = { 
+                        id: 'ros-' + Date.now(), 
+                        name: newRosterName.trim(), 
+                        rut: newRosterRut || 'Sin RUT', 
+                        birth: newRosterBirth || '2012-01-01', 
+                        role: newRosterRole, 
+                        phone: newRosterPhone.trim() || '+56932100183', 
+                        blood: newRosterBlood,
+                        allergies: newRosterAllergies.trim(),
+                        emergencyPhone: newRosterEmergencyPhone.trim(),
+                        paid: false 
+                      };
+                      setRosters({ ...rosters, [currentCategoryContext]: [...(rosters[currentCategoryContext] || []), newP] });
+                    }
+                    setNewRosterName(''); setNewRosterRut(''); setNewRosterBirth(''); setNewRosterPhone('+569'); setNewRosterAllergies(''); setNewRosterEmergencyPhone('+569');
+                  }} className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl mb-3 shrink-0 space-y-2">
+                    <div className="flex justify-between items-center pb-1 border-b border-zinc-800">
+                      <span className="text-[11px] font-bold text-amber-400">{editingStudent ? '✏️ Editando Ficha de Alumno' : '➕ Ficha Integral de Alumno (Técnica y Médica)'}</span>
+                      {editingStudent && (
+                        <button type="button" onClick={() => { setEditingStudent(null); setNewRosterName(''); setNewRosterRut(''); setNewRosterBirth(''); setNewRosterPhone('+569'); setNewRosterAllergies(''); setNewRosterEmergencyPhone('+569'); }} className="text-[10px] text-zinc-400 hover:text-white">Cancelar Edición</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <input type="text" placeholder="Nombre Completo" value={newRosterName} onChange={e => setNewRosterName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
+                      <input type="text" placeholder="RUT / Pasaporte" value={newRosterRut} onChange={e => setNewRosterRut(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                      <input type="date" value={newRosterBirth} onChange={e => setNewRosterBirth(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                      <select value={newRosterRole} onChange={e => setNewRosterRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none">
+                        <option value="Portero">Portero (GK)</option>
+                        <option value="Defensa Central">Defensa Central</option>
+                        <option value="Lateral">Lateral</option>
+                        <option value="Mediocampista">Mediocampista</option>
+                        <option value="Extremo">Extremo</option>
+                        <option value="Delantero">Delantero</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <input type="tel" placeholder="WhatsApp Alumno/Apoderado" value={newRosterPhone} onChange={e => setNewRosterPhone(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
+                      <select value={newRosterBlood} onChange={e => setNewRosterBlood(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none">
+                        <option value="O+">Grupo Sanguíneo: O+</option>
+                        <option value="O-">Grupo Sanguíneo: O-</option>
+                        <option value="A+">Grupo Sanguíneo: A+</option>
+                        <option value="A-">Grupo Sanguíneo: A-</option>
+                        <option value="B+">Grupo Sanguíneo: B+</option>
+                        <option value="B-">Grupo Sanguíneo: B-</option>
+                        <option value="AB+">Grupo Sanguíneo: AB+</option>
+                        <option value="AB-">Grupo Sanguíneo: AB-</option>
+                      </select>
+                      <input type="text" placeholder="Alergias / Ficha Médica" value={newRosterAllergies} onChange={e => setNewRosterAllergies(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                      <div className="flex gap-1.5">
+                        <input type="tel" placeholder="Urgencias SOS" value={newRosterEmergencyPhone} onChange={e => setNewRosterEmergencyPhone(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                        <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl px-3 py-1.5 shadow flex items-center justify-center gap-1 shrink-0">
+                          {editingStudent ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                          <span>{editingStudent ? 'Actualizar' : 'Guardar'}</span>
+                        </button>
                       </div>
-                    ))}
+                    </div>
+                  </form>
+
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {(rosters[currentCategoryContext] || []).length === 0 ? (
+                      <p className="text-xs text-zinc-500 text-center py-8">No hay alumnos registrados en esta categoría.</p>
+                    ) : (
+                      (rosters[currentCategoryContext] || []).map(p => (
+                        <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-white">{p.name}</span>
+                              <span className="text-[10px] bg-zinc-800 text-amber-400 px-2 py-0.5 rounded-full font-semibold">{p.role}</span>
+                              {p.blood && <span className="text-[9px] bg-red-950/80 border border-red-800 text-red-300 px-1.5 py-0.2 rounded font-mono font-bold">🩸 {p.blood}</span>}
+                            </div>
+                            <div className="text-[10px] text-zinc-400 mt-0.5">
+                              RUT: {p.rut} • Nac: {p.birth} {p.allergies ? `• ⚠️ ${p.allergies}` : ''}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 self-end sm:self-center">
+                            <WhatsAppButton phone={p.phone} name={p.name} label="WhatsApp" />
+                            {p.emergencyPhone && p.emergencyPhone !== '+569' && (
+                              <WhatsAppButton phone={p.emergencyPhone} name={p.name} label="SOS" customMessage={`URGENCIA: Nos comunicamos desde Andez Sports FC respecto al alumno ${p.name}.`} />
+                            )}
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setEditingStudent(p);
+                                setNewRosterName(p.name);
+                                setNewRosterRut(p.rut || '');
+                                setNewRosterBirth(p.birth || '');
+                                setNewRosterRole(p.role || 'Delantero');
+                                setNewRosterPhone(p.phone || '+569');
+                                setNewRosterBlood(p.blood || 'O+');
+                                setNewRosterAllergies(p.allergies || '');
+                                setNewRosterEmergencyPhone(p.emergencyPhone || '+569');
+                              }}
+                              className="p-1.5 bg-zinc-800 hover:bg-amber-500 hover:text-black text-zinc-300 rounded-lg transition"
+                              title="Editar Ficha Alumno"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if (confirm(`¿Eliminar a ${p.name}?`)) {
+                                  setRosters({ ...rosters, [currentCategoryContext]: rosters[currentCategoryContext].filter(x => x.id !== p.id) });
+                                }
+                              }} 
+                              className="p-1.5 text-zinc-500 hover:text-red-400"
+                              title="Eliminar Alumno"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
-
               {/* ASISTENCIA */}
               {activeTabLibrary === 'attendance' && (
                 <div className="flex-1 flex flex-col min-h-0">
@@ -1111,13 +1212,66 @@ export default function App() {
               {/* COBRANZA Y MENSUALIDADES (DIRECTOR) */}
               {activeTabLibrary === 'billing' && !isTeacherRestricted && (
                 <div className="flex-1 flex flex-col min-h-0">
-                  <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-white block">Día de Cobro Mensual:</span>
-                      <span className="text-[10px] text-zinc-400">Los alumnos no pagados a este día aparecerán en rojo.</span>
-                    </div>
-                    <input type="number" min="1" max="31" value={billingDay} onChange={e => { setBillingDay(e.target.value); localStorage.setItem('andez_billing_day', e.target.value); }} className="w-16 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white" />
-                  </div>
+                 {/* CONFIGURACIÓN Y BALANCE FINANCIERO */}
+                  {(() => {
+                    const allStudents = Object.values(rosters).flat();
+                    const totalStudents = allStudents.length;
+                    const paidCount = allStudents.filter(s => s.paid).length;
+                    const fee = Number(schoolMonthlyFee) || 0;
+                    const totalCollected = paidCount * fee;
+                    const totalPending = (totalStudents - paidCount) * fee;
+
+                    return (
+                      <div className="space-y-2 mb-3 shrink-0">
+                        <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs font-bold text-white block">Cuota Mensual Escuela:</span>
+                              <span className="text-[10px] text-zinc-400">Valor CLP por alumno</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-zinc-400 font-bold">$</span>
+                              <input 
+                                type="number" 
+                                value={schoolMonthlyFee} 
+                                onChange={e => { setSchoolMonthlyFee(e.target.value); localStorage.setItem('andez_monthly_fee', e.target.value); }} 
+                                className="w-24 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-right text-emerald-400 font-bold outline-none" 
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs font-bold text-white block">Día de Cobro:</span>
+                              <span className="text-[10px] text-zinc-400">Día límite del mes</span>
+                            </div>
+                            <input 
+                              type="number" 
+                              min="1" 
+                              max="31" 
+                              value={billingDay} 
+                              onChange={e => { setBillingDay(e.target.value); localStorage.setItem('andez_billing_day', e.target.value); }} 
+                              className="w-14 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white font-bold outline-none" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl">
+                            <span className="text-[10px] text-zinc-400 block font-bold">Total Recaudado</span>
+                            <span className="text-sm sm:text-base font-black text-emerald-400">${totalCollected.toLocaleString('es-CL')} CLP</span>
+                          </div>
+                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl">
+                            <span className="text-[10px] text-zinc-400 block font-bold">Por Recaudar</span>
+                            <span className="text-sm sm:text-base font-black text-amber-400">${totalPending.toLocaleString('es-CL')} CLP</span>
+                          </div>
+                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl col-span-2 sm:col-span-1">
+                            <span className="text-[10px] text-zinc-400 block font-bold">Estado General</span>
+                            <span className="text-xs font-bold text-white">{paidCount} al día / {totalStudents - paidCount} morosos</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="flex-1 overflow-y-auto space-y-2">
                     {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => {
                       const msg = billingMessageTemplate.replace('{ALUMNO}', p.name);
