@@ -1034,25 +1034,26 @@ export default function App() {
                   <button 
                     type="button"
                     onClick={() => {
-                      if (!newSystemNameInput.trim()) return;
+                      const name = newSystemNameInput.trim();
+                      if (!name) return;
                       const playersOnly = objects.filter(o => o.type === 'player').map(p => ({ 
-                        n: p.number, 
+                        n: p.number || '1', 
                         r: p.role || 'JUG', 
-                        x: p.x, 
-                        y: p.y, 
-                        team: p.team, 
+                        x: parseFloat(p.x) || 50, 
+                        y: parseFloat(p.y) || 50, 
+                        team: p.team || 'blue', 
                         name: p.name || '' 
                       }));
                       if (playersOnly.length === 0) { 
                         alert('Ubica primero jugadores en la cancha.'); 
                         return; 
                       }
-                      const updated = { ...(customSystems || {}), [newSystemNameInput.trim()]: playersOnly };
+                      const updated = { ...(customSystems || {}), [name]: playersOnly };
                       setCustomSystems(updated);
                       localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(updated));
                       setNewSystemNameInput('');
                     }} 
-                    className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3 py-1 rounded-xl shadow flex items-center gap-1 shrink-0"
+                    className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3 py-1 rounded-xl shadow flex items-center gap-1 shrink-0 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" /> Guardar
                   </button>
