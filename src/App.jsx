@@ -1036,14 +1036,14 @@ export default function App() {
                     onClick={() => {
                       const name = newSystemNameInput.trim();
                       if (!name) return;
-                      const playersOnly = objects.filter(o => o.type === 'player').map(p => ({ 
-                        n: p.number || '1', 
-                        r: p.role || 'JUG', 
-                        x: parseFloat(p.x) || 50, 
-                        y: parseFloat(p.y) || 50, 
-                        team: p.team || 'blue', 
-                        name: p.name || '' 
-                      }));
+                      const playersOnly = objects.filter(o => o.type === 'player' || o.number !== undefined || o.role !== undefined).map((p, i) => ({ 
+                      n: p.number || p.n || (i === 0 ? '1' : String(i + 1)), 
+                      r: p.role || p.r || (i === 0 ? 'POR' : 'JUG'), 
+                      x: typeof p.x === 'number' ? p.x : parseFloat(p.x) || 50, 
+                      y: typeof p.y === 'number' ? p.y : parseFloat(p.y) || 50, 
+                      team: p.team || (i === 0 ? 'gk' : 'blue'), 
+                      name: p.name || '' 
+                     }));
                       if (playersOnly.length === 0) { 
                         alert('Ubica primero jugadores en la cancha.'); 
                         return; 
