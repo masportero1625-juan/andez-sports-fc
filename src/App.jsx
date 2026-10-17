@@ -652,7 +652,26 @@ export default function App() {
     const u = [...players, ...nonPlayers];
     setObjects(u); recordHistory(u); setShowSystemsMenu(false);
   };
-
+ const applyDynamicSystem = (sysKey) => {
+    const all = { ...(GET_TACTICAL_SYSTEMS(isPC)), ...(customSystems || {}) };
+    const sys = all[sysKey];
+    if (!sys || !Array.isArray(sys)) return;
+    const newPlayers = sys.map((p, idx) => ({
+      id: 'p-sys-' + Date.now() + '-' + idx,
+      type: 'player',
+      number: String(p.n || p.number || (idx + 1)),
+      role: p.r || p.role || 'JUG',
+      x: Number(p.x),
+      y: Number(p.y),
+      team: p.team || (idx === 0 ? 'gk' : 'blue'),
+      name: p.name || ''
+    }));
+    const otherObjs = objects.filter(o => o.type !== 'player');
+    const combined = [...newPlayers, ...otherObjs];
+    setObjects(combined);
+    recordHistory(combined);
+    setShowSystemsMenu(false);
+  };
   const currentDisplayLogo = customLogo || '/logo-andez.png';
   const totalRevenue = adminLicenses.filter(l => l.status === 'active').reduce((sum, l) => sum + (l.price || 0), 0);
 
@@ -1012,18 +1031,28 @@ export default function App() {
                 <div className="flex gap-1.5">
                   <input 
                     type="text" 
-                    placeholder="Nombre (ej: 4-2-3-1 Presión)" 
+                    placeholder="Nombre (ej: 3-4-3 Ofensivo)" 
                     value={newSystemNameInput} 
                     onChange={e => setNewSystemNameInput(e.target.value)} 
                     className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" 
                   />
                   <button 
+                    type="button"
                     onClick={() => {
                       if (!newSystemNameInput.trim()) return;
-                      const playersOnly = objects.filter(o => o.type === 'player').map(p => ({ n: p.number, r: p.role || 'JUG', x: p.x, y: p.y, team: p.team, name: p.name || '' }));
-                      if (playersOnly.length === 0) { alert('Ubica primero jugadores en la cancha.'); return; }
-                      const base = customSystems || GET_TACTICAL_SYSTEMS(isPC);
-                      const updated = { ...base, [newSystemNameInput.trim()]: playersOnly };
+                      const playersOnly = objects.filter(o => o.type === 'player').map(p => ({ 
+                        n: p.number, 
+                        r: p.role || 'JUG', 
+                        x: p.x, 
+                        y: p.y, 
+                        team: p.team, 
+                        name: p.name || '' 
+                      }));
+                      if (playersOnly.length === 0) { 
+                        alert('Ubica primero jugadores en la cancha.'); 
+                        return; 
+                      }
+                      const updated = { ...(customSystems || {}), [newSystemNameInput.trim()]: playersOnly };
                       setCustomSystems(updated);
                       localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(updated));
                       setNewSystemNameInput('');
@@ -1035,38 +1064,32 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Lista de sistemas para desplegar o borrar */}
+              {/* Lista completa de sistemas */}
               <div className="flex-1 overflow-y-auto space-y-1.5">
-                {Object.keys(customSystems || GET_TACTICAL_SYSTEMS(isPC)).map(sysKey => (
-                  <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 p-2 rounded-xl hover:border-zinc-700">
+                {Object.keys({ ...(GET_TACTICAL_SYSTEMS(isPC)), ...(customSystems || {}) }).map(sysKey => (
+                  <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:border-amber-500/50 transition">
                     <button 
-                      onClick={() => {
-                        const allSystems = customSystems || GET_TACTICAL_SYSTEMS(isPC);
-                        const sys = allSystems[sysKey];
-                        if (!sys) return;
-                        const players = sys.map((p, idx) => ({ id: 'sys-p-' + idx, type: 'player', number: p.n, role: p.r, x: p.x, y: p.y, team: p.team || 'blue', name: p.name || '' }));
-                        const nonPlayers = objects.filter(o => o.type !== 'player');
-                        const u = [...players, ...nonPlayers];
-                        setObjects(u); recordHistory(u); setShowSystemsMenu(false);
-                      }} 
-                      className="text-left font-bold text-xs text-white flex-1 hover:text-amber-400"
+                      type="button"
+                      onClick={() => applyDynamicSystem(sysKey)} 
+                      className="text-left font-bold text-xs text-white flex-1 hover:text-amber-400 py-1"
                     >
                       Formación {sysKey}
                     </button>
                     {customSystems && customSystems[sysKey] && (
                       <button 
+                        type="button"
                         onClick={() => {
-                          if (confirm(`¿Eliminar el sistema ${sysKey}?`)) {
+                          if (confirm(`¿Eliminar el sistema "${sysKey}"?`)) {
                             const copy = { ...customSystems };
                             delete copy[sysKey];
                             setCustomSystems(copy);
                             localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(copy));
                           }
                         }} 
-                        className="p-1 text-zinc-500 hover:text-red-400"
+                        className="p-1.5 text-zinc-500 hover:text-red-400"
                         title="Eliminar Sistema"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -1075,7 +1098,6 @@ export default function App() {
             </div>
           </div>
         )}
-
         {/* MODAL GESTIÓN: SESIONES, ALUMNOS, ASISTENCIA, PAGOS Y PROFESORES */}
         {showLibraryModal && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-4 z-50 no-print">
