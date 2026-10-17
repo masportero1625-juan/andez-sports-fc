@@ -129,6 +129,14 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
     );
   } else if (obj.type === 'ring') {
     body = <circle cx="0" cy="0" r="3.0" fill="none" stroke={obj.color || '#38bdf8'} strokeWidth="0.7" />;
+  }  else if (obj.type === 'pole') {
+    body = (
+      <>
+        <ellipse cx="0" cy="4.2" rx="1.8" ry="0.6" fill="rgba(0,0,0,0.35)" />
+        <rect x="-0.4" y="-7.5" width="0.8" height="11.5" rx="0.3" fill={obj.color || '#facc15'} stroke="#ca8a04" strokeWidth="0.2" />
+        <circle cx="0" cy="-7.5" r="0.8" fill="#ef4444" />
+      </>
+    );
   }
 
   return (
@@ -972,8 +980,9 @@ export default function App() {
             <button onClick={() => addElement('cone', { color: '#2563eb' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-blue-500">▲</span> Cono Azul</button>
             <button onClick={() => addElement('cone', { color: '#eab308' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-yellow-400">▲</span> Cono Amarillo</button>
             <button onClick={() => addElement('saucer', { color: '#facc15' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🟡 Plato Chino</button>
-            <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">⭕ Aro de Salto</button>
-          </aside>
+            <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">⭕ Aro de Salto</button> 
+            <button onClick={() => addElement('pole', { color: '#facc15' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🦯 Bastón / Estaca Slalom</button>
+          </aside>  
         )}
 
         {/* MENÚ SISTEMAS */}
@@ -1344,11 +1353,12 @@ export default function App() {
           <button onClick={() => { if (historyIndex < history.length - 1) { setHistoryIndex(historyIndex + 1); setObjects(history[historyIndex + 1]); } }} disabled={historyIndex >= history.length - 1} className="p-1.5 text-zinc-300 disabled:opacity-30"><Redo2 className="w-5 h-5" /></button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button onClick={() => addElement('player', { team: 'blue' })} className="w-9 h-9 rounded-full bg-blue-600 border-2 border-white text-white font-bold text-xs shadow">11</button>
-          <button onClick={() => addElement('player', { team: 'red' })} className="w-9 h-9 rounded-full bg-red-600 border-2 border-white text-white font-bold text-xs shadow">11</button>
-          <button onClick={() => addElement('ball')} className="w-9 h-9 rounded-full bg-white text-sm shadow">⚽</button>
-        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
+            <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk' })} className="w-9 h-9 rounded-full bg-amber-500 border-2 border-white text-white font-black text-xs shadow flex items-center justify-center gap-0.5" title="Añadir Portero">🧤1</button>
+            <button onClick={() => addElement('player', { team: 'blue' })} className="w-9 h-9 rounded-full bg-blue-600 border-2 border-white text-white font-bold text-xs shadow">11</button>
+            <button onClick={() => addElement('player', { team: 'red' })} className="w-9 h-9 rounded-full bg-red-600 border-2 border-white text-white font-bold text-xs shadow">11</button>
+            <button onClick={() => addElement('ball')} className="w-9 h-9 rounded-full bg-white text-sm shadow">⚽</button>
+          </div>
 
         <div className="flex items-center gap-2">
           <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`} title="Texto Explicativo"><Type className="w-5 h-5" /></button>
