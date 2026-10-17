@@ -384,6 +384,11 @@ export default function App() {
   const [drillCategory, setDrillCategory] = useState(categories[0]?.id || 'sub14');
   const [drillNotes, setDrillNotes] = useState('Transición rápida a 2 toques.');
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [customSystems, setCustomSystems] = useState(() => {
+    const s = localStorage.getItem('andez_custom_tactical_systems');
+    return s ? JSON.parse(s) : null;
+  });
+  const [newSystemNameInput, setNewSystemNameInput] = useState('');
  const [savedDrills, setSavedDrills] = useState(() => {
     const d = localStorage.getItem('andez_saved_drills');
     return d ? JSON.parse(d) : [];
@@ -992,19 +997,81 @@ export default function App() {
           </aside>  
         )}
 
-        {/* MENÚ SISTEMAS */}
+        {/* MENÚ SISTEMAS TÁCTICOS DINÁMICOS */}
         {showSystemsMenu && (
-          <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-4 shadow-2xl">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white">Sistemas Tácticos</h3>
-                <button onClick={() => setShowSystemsMenu(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl flex flex-col max-h-[85vh]">
+              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
+                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Play className="w-4 h-4 text-amber-400" /> Sistemas Tácticos</h3>
+                <button onClick={() => setShowSystemsMenu(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
-              {['4-3-3', '4-4-2', '3-5-2'].map(sys => (
-                <button key={sys} onClick={() => applyTacticalSystem(sys)} className="w-full text-left p-2.5 hover:bg-red-600 rounded-xl text-xs font-bold text-white mb-1 transition">
-                  Formación {sys}
-                </button>
-              ))}
+
+              {/* Guardar formación actual de la cancha */}
+              <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-2xl mb-3 space-y-2">
+                <span className="text-[10px] font-bold text-amber-400 block">GUARDAR POSICIONES ACTUALES</span>
+                <div className="flex gap-1.5">
+                  <input 
+                    type="text" 
+                    placeholder="Nombre (ej: 4-2-3-1 Presión)" 
+                    value={newSystemNameInput} 
+                    onChange={e => setNewSystemNameInput(e.target.value)} 
+                    className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" 
+                  />
+                  <button 
+                    onClick={() => {
+                      if (!newSystemNameInput.trim()) return;
+                      const playersOnly = objects.filter(o => o.type === 'player').map(p => ({ n: p.number, r: p.role || 'JUG', x: p.x, y: p.y, team: p.team, name: p.name || '' }));
+                      if (playersOnly.length === 0) { alert('Ubica primero jugadores en la cancha.'); return; }
+                      const base = customSystems || GET_TACTICAL_SYSTEMS(isPC);
+                      const updated = { ...base, [newSystemNameInput.trim()]: playersOnly };
+                      setCustomSystems(updated);
+                      localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(updated));
+                      setNewSystemNameInput('');
+                    }} 
+                    className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3 py-1 rounded-xl shadow flex items-center gap-1 shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Guardar
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista de sistemas para desplegar o borrar */}
+              <div className="flex-1 overflow-y-auto space-y-1.5">
+                {Object.keys(customSystems || GET_TACTICAL_SYSTEMS(isPC)).map(sysKey => (
+                  <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 p-2 rounded-xl hover:border-zinc-700">
+                    <button 
+                      onClick={() => {
+                        const allSystems = customSystems || GET_TACTICAL_SYSTEMS(isPC);
+                        const sys = allSystems[sysKey];
+                        if (!sys) return;
+                        const players = sys.map((p, idx) => ({ id: 'sys-p-' + idx, type: 'player', number: p.n, role: p.r, x: p.x, y: p.y, team: p.team || 'blue', name: p.name || '' }));
+                        const nonPlayers = objects.filter(o => o.type !== 'player');
+                        const u = [...players, ...nonPlayers];
+                        setObjects(u); recordHistory(u); setShowSystemsMenu(false);
+                      }} 
+                      className="text-left font-bold text-xs text-white flex-1 hover:text-amber-400"
+                    >
+                      Formación {sysKey}
+                    </button>
+                    {customSystems && customSystems[sysKey] && (
+                      <button 
+                        onClick={() => {
+                          if (confirm(`¿Eliminar el sistema ${sysKey}?`)) {
+                            const copy = { ...customSystems };
+                            delete copy[sysKey];
+                            setCustomSystems(copy);
+                            localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(copy));
+                          }
+                        }} 
+                        className="p-1 text-zinc-500 hover:text-red-400"
+                        title="Eliminar Sistema"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1561,7 +1628,8 @@ export default function App() {
         <div className="flex items-center gap-2">
           <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`} title="Texto Explicativo"><Type className="w-5 h-5" /></button>
           <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400'}`} title="Goma de Borrar"><Eraser className="w-5 h-5" /></button>
-          <button onClick={() => { setDrawings([]); setTextBlocks([]); }} className="p-1.5 text-zinc-400 hover:text-amber-400" title="Limpiar Dibujos"><Trash2 className="w-5 h-5" /></button>
+          <button onClick={() => { setDrawings([]); setTextBlocks([]); }} className="p-1.5 text-zinc-400 hover:text-amber-400" title="Borrar Solo Trazos y Textos"><Eraser className="w-5 h-5" /></button>
+          <button onClick={() => { if (confirm('¿Vaciar toda la pizarra (jugadores, balones y materiales)?')) { setObjects([]); setDrawings([]); setTextBlocks([]); recordHistory([]); } }} className="p-1.5 text-red-400 hover:text-red-300" title="Vaciar Cancha Completa"><Trash2 className="w-5 h-5" /></button>
           <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300'}`} title="Trazados y Flechas"><PenTool className="w-5 h-5" /></button>
         </div>
       </footer>
