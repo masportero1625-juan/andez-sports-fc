@@ -350,6 +350,7 @@ export default function App() {
       reader.onload = (ev) => {
         setCustomLogo(ev.target.result);
         localStorage.setItem('andez_custom_club_logo', ev.target.result);
+        sbSet('andez_custom_club_logo', ev.target.result);
       };
       reader.readAsDataURL(file);
     }
@@ -365,7 +366,7 @@ export default function App() {
   const [newCoachStaffCategory, setNewCoachStaffCategory] = useState(categories[0]?.id || 'sub10');
   const [newCoachStaffPhone, setNewCoachStaffPhone] = useState('+569');
   const [newCoachStaffCode, setNewCoachStaffCode] = useState('');
-
+  const [editingCoach, setEditingCoach] = useState(null);
   const [newRosterName, setNewRosterName] = useState('');
   const [newRosterRut, setNewRosterRut] = useState('');
   const [newRosterBirth, setNewRosterBirth] = useState('');
@@ -394,14 +395,15 @@ export default function App() {
   useEffect(() => {
     async function hydrateFromCloud() {
       try {
-        const [cloudPlans, cloudLics, cloudCats, cloudCoaches, cloudRosters, cloudAtt, cloudDrills] = await Promise.all([
+        const [cloudPlans, cloudLics, cloudCats, cloudCoaches, cloudRosters, cloudAtt, cloudDrills, cloudLogo] = await Promise.all([
           sbGet('andez_custom_plans'),
           sbGet('andez_licenses'),
           sbGet('andez_dynamic_categories'),
           sbGet('andez_coaches_staff'),
           sbGet('andez_category_rosters'),
           sbGet('andez_attendance_records'),
-          sbGet('andez_saved_drills')
+          sbGet('andez_saved_drills'),
+          sbGet('andez_custom_club_logo')
         ]);
 
         if (cloudPlans && Array.isArray(cloudPlans)) setCustomPlans(cloudPlans);
@@ -411,6 +413,7 @@ export default function App() {
         if (cloudRosters && typeof cloudRosters === 'object') setRosters(cloudRosters);
         if (cloudAtt && typeof cloudAtt === 'object') setAttendanceRecords(cloudAtt);
         if (cloudDrills && Array.isArray(cloudDrills)) setSavedDrills(cloudDrills);
+        if (cloudLogo) { setCustomLogo(cloudLogo); localStorage.setItem('andez_custom_club_logo', cloudLogo); }
       } catch (err) {
         console.error('Error al sincronizar con Supabase:', err);
       } finally {
@@ -1306,27 +1309,68 @@ export default function App() {
                     e.preventDefault();
                     if (!newCoachStaffName.trim()) return;
                     const code = newCoachStaffCode.trim() || 'DT-' + Math.floor(100 + Math.random() * 900);
-                    setCoachesList([...coachesList, { id: 'c-' + Date.now(), name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim(), code }]);
-                    setNewCoachStaffName(''); setNewCoachStaffCode('');
-                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 grid grid-cols-1 sm:grid-cols-5 gap-2">
-                    <input type="text" placeholder="Nombre Profesor" value={newCoachStaffName} onChange={e => setNewCoachStaffName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" required />
-                    <input type="text" placeholder="Cargo (DT, PF)" value={newCoachStaffRole} onChange={e => setNewCoachStaffRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" />
-                    <select value={newCoachStaffCategory} onChange={e => setNewCoachStaffCategory(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none">
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    <input type="text" placeholder="Clave Acceso DT" value={newCoachStaffCode} onChange={e => setNewCoachStaffCode(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none uppercase font-mono" />
-                    <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg py-1 shadow flex items-center justify-center gap-1"><Plus className="w-3.5 h-3.5" /> Agregar</button>
+                    if (editingCoach) {
+                      const updated = coachesList.map(c => 
+                        c.id === editingCoach.id 
+                          ? { ...c, name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim(), code } 
+                          : c
+                      );
+                      setCoachesList(updated);
+                      setEditingCoach(null);
+                    } else {
+                      setCoachesList([...coachesList, { id: 'c-' + Date.now(), name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim(), code }]);
+                    }
+                    setNewCoachStaffName(''); setNewCoachStaffRole('Director Técnico'); setNewCoachStaffPhone('+569'); setNewCoachStaffCode('');
+                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-2xl mb-3 shrink-0 space-y-2">
+                    <div className="flex justify-between items-center pb-1 border-b border-zinc-800">
+                      <span className="text-[11px] font-bold text-amber-400">{editingCoach ? '✏️ Editando Profesor / DT' : '➕ Registrar Nuevo Profesor / DT'}</span>
+                      {editingCoach && (
+                        <button type="button" onClick={() => { setEditingCoach(null); setNewCoachStaffName(''); setNewCoachStaffRole('Director Técnico'); setNewCoachStaffPhone('+569'); setNewCoachStaffCode(''); }} className="text-[10px] text-zinc-400 hover:text-white">Cancelar Edición</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                      <input type="text" placeholder="Nombre Profesor" value={newCoachStaffName} onChange={e => setNewCoachStaffName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" required />
+                      <input type="text" placeholder="Cargo (DT, PF)" value={newCoachStaffRole} onChange={e => setNewCoachStaffRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" />
+                      <select value={newCoachStaffCategory} onChange={e => setNewCoachStaffCategory(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none">
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                      <input type="tel" placeholder="WhatsApp" value={newCoachStaffPhone} onChange={e => setNewCoachStaffPhone(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" />
+                      <div className="flex gap-1.5">
+                        <input type="text" placeholder="Clave DT" value={newCoachStaffCode} onChange={e => setNewCoachStaffCode(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none uppercase font-mono focus:border-amber-400" />
+                        <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl px-3 py-1 shadow flex items-center justify-center gap-1 shrink-0">
+                          {editingCoach ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                          <span>{editingCoach ? 'Actualizar' : 'Agregar'}</span>
+                        </button>
+                      </div>
+                    </div>
                   </form>
                   <div className="flex-1 overflow-y-auto space-y-2">
                     {coachesList.map(c => (
-                      <div key={c.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                      <div key={c.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-2xl flex justify-between items-center">
                         <div>
                           <div className="font-bold text-xs text-white">{c.name} <span className="text-amber-400 font-semibold text-[10px]">({c.role})</span></div>
                           <div className="text-[10px] text-zinc-400">Categoría: {categories.find(x => x.id === c.categoryId)?.name || 'Sin asignar'} • Clave: <span className="font-mono text-white font-bold">{c.code}</span></div>
                         </div>
                         <div className="flex items-center gap-2">
                           <WhatsAppButton phone={c.phone} name={c.name} label="WhatsApp DT" />
-                          <button onClick={() => setCoachesList(coachesList.filter(x => x.id !== c.id))} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setEditingCoach(c);
+                              setNewCoachStaffName(c.name);
+                              setNewCoachStaffRole(c.role || 'Director Técnico');
+                              setNewCoachStaffCategory(c.categoryId || categories[0]?.id || 'sub10');
+                              setNewCoachStaffPhone(c.phone || '+569');
+                              setNewCoachStaffCode(c.code || '');
+                            }}
+                            className="p-1.5 bg-zinc-800 hover:bg-amber-500 hover:text-black text-zinc-300 rounded-lg transition"
+                            title="Editar Datos Profesor"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => { if (confirm(`¿Eliminar al profesor ${c.name}?`)) setCoachesList(coachesList.filter(x => x.id !== c.id)); }} className="p-1.5 text-zinc-500 hover:text-red-400" title="Eliminar Profesor">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     ))}
