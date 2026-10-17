@@ -652,24 +652,26 @@ export default function App() {
     const u = [...players, ...nonPlayers];
     setObjects(u); recordHistory(u); setShowSystemsMenu(false);
   };
- const applyDynamicSystem = (sysKey) => {
+  const applyDynamicSystem = (sysKey) => {
     const all = { ...(GET_TACTICAL_SYSTEMS(isPC)), ...(customSystems || {}) };
     const sys = all[sysKey];
     if (!sys || !Array.isArray(sys)) return;
+
     const newPlayers = sys.map((p, idx) => ({
-      id: 'p-sys-' + Date.now() + '-' + idx,
+      id: p.id || ('p-dyn-' + Date.now() + '-' + idx),
       type: 'player',
-      number: String(p.n || p.number || (idx + 1)),
-      role: p.r || p.role || 'JUG',
+      number: String(p.number || p.n || (idx === 0 ? '1' : idx + 1)),
+      role: p.role || p.r || (idx === 0 ? 'POR' : 'JUG'),
       x: Number(p.x),
       y: Number(p.y),
       team: p.team || (idx === 0 ? 'gk' : 'blue'),
       name: p.name || ''
     }));
-    const otherObjs = objects.filter(o => o.type !== 'player');
-    const combined = [...newPlayers, ...otherObjs];
-    setObjects(combined);
-    recordHistory(combined);
+
+    const otherObjects = objects.filter(o => o.type !== 'player');
+    const updated = [...newPlayers, ...otherObjects];
+    setObjects(updated);
+    recordHistory(updated);
     setShowSystemsMenu(false);
   };
   const currentDisplayLogo = customLogo || '/logo-andez.png';
