@@ -984,25 +984,27 @@ export default function App() {
           </div>
         )}
 
-        {/* MENÚ DE MATERIALES */}
-        {showTrainingMenu && (
-          <aside className="absolute right-2 top-2 bg-black/90 border border-zinc-800 p-3 rounded-2xl flex flex-col gap-2 shadow-2xl z-40 w-44 no-print">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-1 mb-1">
-              <span className="text-[11px] font-bold text-amber-400">Materiales</span>
-              <button onClick={() => setShowTrainingMenu(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
-            </div>
-            <button onClick={() => addElement('mini_goal')} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🥅 Mini Portería</button>
-            <button onClick={() => addElement('ladder')} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🪜 Escalera</button>
-            <button onClick={() => addElement('dummy')} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🧍 Maniquí</button>
-            <button onClick={() => addElement('hurdle')} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🚧 Valla de Salto</button>
-            <button onClick={() => addElement('cone', { color: '#ea580c' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-orange-500">▲</span> Cono Naranja</button>
-            <button onClick={() => addElement('cone', { color: '#2563eb' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-blue-500">▲</span> Cono Azul</button>
-            <button onClick={() => addElement('cone', { color: '#eab308' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white"><span className="text-yellow-400">▲</span> Cono Amarillo</button>
-            <button onClick={() => addElement('saucer', { color: '#facc15' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🟡 Plato Chino</button>
-            <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">⭕ Aro de Salto</button> 
-            <button onClick={() => addElement('pole', { color: '#facc15' })} className="p-1.5 text-left hover:bg-zinc-800 rounded text-xs text-white">🦯 Bastón / Estaca Slalom</button>
-          </aside>  
-        )}
+        {/* MENÚ DE MATERIALES - SUB-BARRA HORIZONTAL */}
+      {showTrainingMenu && (
+        <aside className="fixed top-12 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print [&::-webkit-scrollbar]:hidden">
+          <span className="text-[10px] font-bold text-amber-400 uppercase shrink-0 px-1">Materiales:</span>
+          
+          <button onClick={() => addElement('mini_goal')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🥅 Mini Portería</button>
+          <button onClick={() => addElement('ladder')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🪜 Escalera</button>
+          <button onClick={() => addElement('dummy')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🧍 Maniquí</button>
+          <button onClick={() => addElement('hurdle')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🚧 Valla</button>
+          <button onClick={() => addElement('cone', { color: '#ea580c' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-orange-500">▲</span> Cono Naranja</button>
+          <button onClick={() => addElement('cone', { color: '#2563eb' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-blue-500">▲</span> Cono Azul</button>
+          <button onClick={() => addElement('cone', { color: '#eab308' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-yellow-400">▲</span> Cono Amarillo</button>
+          <button onClick={() => addElement('saucer', { color: '#facc15' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🟡 Plato Chino</button>
+          <button onClick={() => addElement('ring', { color: '#38bdd8' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">⭕ Aro</button>
+          <button onClick={() => addElement('pole', { color: '#facc15' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🏒 Estaca</button>
+          
+          <button onClick={() => setShowTrainingMenu(false)} className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0 ml-1">
+            ✕
+          </button>
+        </aside>
+      )}
 
         {/* MENÚ SISTEMAS TÁCTICOS DINÁMICOS */}
         {showSystemsMenu && (
