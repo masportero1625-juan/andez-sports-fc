@@ -874,56 +874,49 @@ export default function App() {
         )}
 
         {/* MODAL PALETA DE TRAZOS Y LÍNEAS AVANZADA */}
-        {showLinePalette && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-sm text-white">Selector de Trazos y Líneas</h3>
-                <button onClick={() => setShowLinePalette(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
-              </div>
-
-              <span className="text-[10px] font-bold text-zinc-400 block mb-2">TIPO DE LÍNEA</span>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <button onClick={() => setLineType('arrow')} className={`p-2.5 rounded-xl border text-xs font-bold text-white flex items-center justify-center gap-2 ${lineType === 'arrow' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 border-zinc-800'}`}>
-                  <span>➜</span> Flecha Normal
-                </button>
-                <button onClick={() => setLineType('straight')} className={`p-2.5 rounded-xl border text-xs font-bold text-white flex items-center justify-center gap-2 ${lineType === 'straight' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 border-zinc-800'}`}>
-                  <span>━</span> Línea Recta
-                </button>
-                <button onClick={() => setLineType('dashed')} className={`p-2.5 rounded-xl border text-xs font-bold text-white flex items-center justify-center gap-2 ${lineType === 'dashed' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 border-zinc-800'}`}>
-                  <span>⤏</span> Flecha Discontinua
-                </button>
-                <button onClick={() => setLineType('block')} className={`p-2.5 rounded-xl border text-xs font-bold text-white flex items-center justify-center gap-2 ${lineType === 'block' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 border-zinc-800'}`}>
-                  <span>⊣</span> Bloqueo en T
-                </button>
-              </div>
-
-              <span className="text-[10px] font-bold text-zinc-400 block mb-2">COLOR DEL TRAZO</span>
-              <div className="flex gap-3 mb-4">
-                {['#ffffff', '#ef4444', '#3b82f6', '#facc15', '#000000'].map(c => (
-                  <button key={c} onClick={() => setLineColor(c)} style={{ backgroundColor: c }} className={`w-8 h-8 rounded-full border-2 ${lineColor === c ? 'border-amber-400 scale-110 shadow-lg' : 'border-zinc-700'}`} />
-                ))}
-              </div>
-
-              <span className="text-[10px] font-bold text-zinc-400 block mb-2">GROSOR</span>
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                {[
-                  { label: 'Fino', val: 0.8 },
-                  { label: 'Medio', val: 1.4 },
-                  { label: 'Grueso', val: 2.2 },
-                  { label: 'Extra', val: 3.2 }
-                ].map(g => (
-                  <button key={g.val} onClick={() => setLineWidth(g.val)} className={`py-1.5 rounded-lg text-xs font-bold border ${lineWidth === g.val ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-800'}`}>
-                    {g.label}
-                  </button>
-                ))}
-              </div>
-
-              <button onClick={() => { setTool('draw'); setShowLinePalette(false); }} className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase text-white rounded-xl shadow">Aplicar a la Pizarra</button>
-            </div>
+        {/* SUB-BARRA FLOTANTE DE TRAZOS Y LÍNEAS */}
+      {showLinePalette && (
+        <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-auto bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-2 shadow-2xl z-40 flex items-center gap-2 overflow-x-auto max-w-full shrink-0 no-print">
+          {/* Tipos de línea */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => { setLineType('arrow'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'arrow' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>➔ Normal</button>
+            <button onClick={() => { setLineType('straight'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'straight' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>― Recta</button>
+            <button onClick={() => { setLineType('dashed'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'dashed' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>⤏ Discontinua</button>
+            <button onClick={() => { setLineType('block'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'block' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>┫ Bloqueo</button>
           </div>
-        )}
 
+          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
+
+          {/* Colores */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {['#ffffff', '#ef4444', '#3b82f6', '#facc15', '#000000'].map(c => (
+              <button key={c} onClick={() => setLineColor(c)} style={{ backgroundColor: c }} className={`w-5 h-5 rounded-full border ${lineColor === c ? 'border-amber-400 scale-110 shadow-md ring-2 ring-amber-400/50' : 'border-zinc-700'}`} />
+            ))}
+          </div>
+
+          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
+
+          {/* Grosores */}
+          <div className="flex items-center gap-1 shrink-0">
+            {[
+              { label: 'Fino', val: 0.8 },
+              { label: 'Medio', val: 1.4 },
+              { label: 'Grueso', val: 2.2 }
+            ].map(g => (
+              <button key={g.val} onClick={() => setLineWidth(g.val)} className={`px-2 py-0.5 rounded text-[11px] font-bold border ${lineWidth === g.val ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-800'}`}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
+
+          {/* Botón cerrar */}
+          <button onClick={() => setShowLinePalette(false)} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0">
+            Listo ✕
+          </button>
+        </div>
+      )}
         {/* MODAL FICHA JUGADOR */}
         {editingPlayer && (
           <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
