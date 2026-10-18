@@ -853,17 +853,18 @@ export default function App() {
               isDraggingRef.current = true;
             }}
           >
-            {/* Fondo sutil translúcido */}
-            <rect
-              x={-(tb.text.length * size * 0.35 + 2)}
-              y={-(size * 1.1)}
-              width={tb.text.length * size * 0.7 + 4}
-              height={size * 1.8}
-              rx={size * 0.4}
-              fill="rgba(0, 0, 0, 0.45)"
-              stroke={isSelected ? '#facc15' : 'rgba(255,255,255,0.2)'}
-              strokeWidth={isSelected ? 0.5 : 0.2}
-            />
+            {/* Marco invisible para arrastre; solo se dibuja línea punteada al seleccionarlo */}
+         <rect
+           x={-(tb.text.length * size * 0.35 + 2)}
+           y={-(size * 1.1)}
+           width={tb.text.length * size * 0.7 + 4}
+           height={size * 1.8}
+           rx={size * 0.4}
+           fill="transparent"
+           stroke={isSelected ? '#facc15' : 'transparent'}
+           strokeWidth={0.4}
+           strokeDasharray={isSelected ? '1,1' : 'none'}
+         />
 
             {/* Texto táctico */}
             <text
