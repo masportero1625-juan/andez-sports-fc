@@ -1062,7 +1062,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Lista completa de sistemas */}
+              
               <div className="flex-1 overflow-y-auto space-y-1.5">
                 {Object.keys({ ...(GET_TACTICAL_SYSTEMS(isPC)), ...(customSystems || {}) }).map(sysKey => (
                   <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl hover:border-amber-500/50 transition overflow-hidden">
