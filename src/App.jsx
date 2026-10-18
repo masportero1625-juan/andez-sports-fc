@@ -1064,42 +1064,39 @@ export default function App() {
 
               
               <div className="flex-1 overflow-y-auto space-y-1.5">
-                {Object.keys({ ...(GET_TACTICAL_SYSTEMS(isPC)), ...(customSystems || {}) }).map(sysKey => (
-                  <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl hover:border-amber-500/50 transition overflow-hidden">
-                    <button 
-                      type="button"
-                      onClick={() => applyTacticalSystem(sysKey)} 
-                      className="w-full text-left font-bold text-xs text-white hover:text-amber-400 p-2.5 flex-1 cursor-pointer"
-                    >
-                      Formación {sysKey}
-                    </button>
-                    {customSystems && customSystems[sysKey] && (
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`¿Eliminar el sistema "${sysKey}"?`)) {
-                            const copy = { ...customSystems };
-                            delete copy[sysKey];
-                            setCustomSystems(copy);
-                            localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(copy));
-                          }
-                        }} 
-                        className="p-2.5 text-zinc-500 hover:text-red-400 cursor-pointer shrink-0"
-                        title="Eliminar Sistema"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+            {Object.keys({ ...(GET_TACTICAL_SYSTEMS(isPC)), ...(customSystems || {}) }).map(sysKey => (
+              <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl hover:border-amber-500/50 transition overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => applyTacticalSystem(sysKey)}
+                  className="w-full text-left font-bold text-xs text-white hover:text-amber-400 p-2.5 flex-1 cursor-pointer"
+                >
+                  Formación {sysKey}
+                </button>
+                {customSystems && customSystems[sysKey] && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`¿Eliminar el sistema "${sysKey}"?`)) {
+                        const copy = { ...customSystems };
+                        delete copy[sysKey];
+                        setCustomSystems(copy);
+                        localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(copy));
+                      }
+                    }}
+                    className="p-2 text-zinc-500 hover:text-red-400 hover:bg-zinc-800/80 transition cursor-pointer"
+                    title="Eliminar formación"
+                  >
+                    🗑️
+                  </button>
+                )}
               </div>
-                  </div>
-                ))}
-              </div>
+            ))}
             </div>
           </div>
-        )}
+        </div>
+      )}
         {/* MODAL GESTIÓN: SESIONES, ALUMNOS, ASISTENCIA, PAGOS Y PROFESORES */}
         {showLibraryModal && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-4 z-50 no-print">
