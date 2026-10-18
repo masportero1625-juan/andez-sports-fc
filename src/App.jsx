@@ -451,6 +451,11 @@ export default function App() {
   const [textModalOpen, setTextModalOpen] = useState(false);
   const [pendingTextPos, setPendingTextPos] = useState({ x: 50, y: 50 });
   const [inputTextVal, setInputTextVal] = useState('');
+  const [selectedTextId, setSelectedTextId] = useState(null);
+  const [textColor, setTextColor] = useState('#ffffff');
+  const [textIsBold, setTextIsBold] = useState(true);
+  const [textIsUnderline, setTextIsUnderline] = useState(false);
+  const [textSize, setTextSize] = useState(2.8);
 
   const [objects, setObjects] = useState(() => {
     const sys = GET_TACTICAL_SYSTEMS(window.innerWidth > 768)['4-3-3'];
@@ -616,6 +621,7 @@ export default function App() {
       if (e.cancelable) e.preventDefault();
       const c = getCoordinates(e);
       setObjects(prev => prev.map(o => o.id === selectedObj.id ? { ...o, x: c.x, y: c.y } : o));
+      setTextBlocks(prev => prev.map(t => t.id === selectedObj.id ? { ...t, x: c.x, y: c.y } : t));
     } else if (currentLine) {
       if (e.cancelable) e.preventDefault();
       const c = getCoordinates(e);
@@ -822,13 +828,103 @@ export default function App() {
             <line x1={currentLine.start.x} y1={currentLine.start.y} x2={currentLine.end.x} y2={currentLine.end.y} stroke={currentLine.color} strokeWidth={currentLine.width || 1.4} strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'} />
           )}
 
-          {/* TEXTOS LIBRES */}
-          {textBlocks.map(tb => (
-            <g key={tb.id} transform={`translate(${tb.x}, ${tb.y})`} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setTextBlocks(textBlocks.filter(t => t.id !== tb.id)); } }} className="cursor-pointer select-none">
-              <rect x="-2" y="-3.5" width={tb.text.length * 2.2 + 5} height="6.5" rx="1.5" fill="rgba(0,0,0,0.85)" stroke="#eab308" strokeWidth="0.3" />
-              <text x="1" y="0.8" fill="#ffffff" fontSize="2.8" fontWeight="bold">{tb.text}</text>
-            </g>
-          ))}
+          {/* TEXTOS TÁCTICOS FLOTANTES */}
+      {textBlocks.map(tb => {
+        const isSelected = selectedTextId === tb.id;
+        const rot = tb.rotation || 0;
+        const size = tb.size || 2.8;
+        const col = tb.color || '#ffffff';
+        const isBold = tb.isBold !== undefined ? tb.isBold : true;
+        const isUnder = !!tb.isUnderline;
+
+        return (
+          <g
+            key={tb.id}
+            transform={`translate(${tb.x}, ${tb.y}) rotate(${rot})`}
+            className="cursor-move select-none"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              if (tool === 'eraser') {
+                setTextBlocks(prev => prev.filter(t => t.id !== tb.id));
+                return;
+              }
+              setSelectedTextId(isSelected ? null : tb.id);
+              setSelectedObj(tb);
+              isDraggingRef.current = true;
+            }}
+          >
+            {/* Fondo sutil translúcido sin opacidad pesada */}
+            <rect
+              x={-(tb.text.length * size * 0.35 + 2)}
+              y={-(size * 1.1)}
+              width={tb.text.length * size * 0.7 + 4}
+              height={size * 1.8}
+              rx={size * 0.4}
+              fill="rgba(0, 0, 0, 0.45)"
+              stroke={isSelected ? '#facc15' : 'rgba(255,255,255,0.2)'}
+              strokeWidth={isSelected ? '0.5' : '0.2'}
+              className="backdrop-blur-sm"
+            />
+
+            {/* Texto táctico nítido */}
+            <text
+              x="0"
+              y={size * 0.35}
+              textAnchor="middle"
+              fill={col}
+              fontSize={size}
+              fontWeight={isBold ? 'bold' : 'normal'}
+              textDecoration={isUnder ? 'underline' : 'none'}
+              style={{ filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.9))' }}
+            >
+              {tb.text}
+            </text>
+
+            {/* Controles tácticos flotantes al seleccionar el texto */}
+            {isSelected && (
+              <g className="no-print">
+                {/* Rotar a 45° */}
+                <g
+                  transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${-size * 0.6})`}
+                  className="cursor-pointer"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, rotation: ((t.rotation || 0) + 45) % 360 } : t));
+                  }}
+                >
+                  <circle r="2" fill="#eab308" />
+                  <text x="0" y="0.8" textAnchor="middle" fontSize="1.8" fill="#000" fontWeight="bold">↻</text>
+                </g>
+
+                {/* Agrandar (+) */}
+                <g
+                  transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${size * 0.6})`}
+                  className="cursor-pointer"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.min((t.size || 2.8) + 0.4, 6.0) } : t));
+                  }}
+                >
+                  <circle r="1.8" fill="#22c55e" />
+                  <text x="0" y="0.7" textAnchor="middle" fontSize="1.8" fill="#fff" fontWeight="bold">+</text>
+                </g>
+
+                {/* Achicar (-) */}
+                <g
+                  transform={`translate(${-(tb.text.length * size * 0.35 + 3.5)}, ${size * 0.6})`}
+                  className="cursor-pointer"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.max((t.size || 2.8) - 0.4, 1.6) } : t));
+                  }}
+                >
+                  <circle r="1.8" fill="#ef4444" />
+                  <text x="0" y="0.6" textAnchor="middle" fontSize="1.8" fill="#fff" fontWeight="bold">-</text>
+                </g>
+              )}
+          </g>
+        );
+      })}
 
           {/* OBJETOS Y JUGADORES */}
           {objects.map(obj => {
@@ -854,24 +950,85 @@ export default function App() {
         </svg>
 
         {/* MODAL AGREGAR TEXTO LIBRE */}
-        {textModalOpen && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-[#121214] border border-zinc-800 rounded-3xl w-full max-w-xs p-5 shadow-2xl">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Type className="w-4 h-4 text-amber-400" /> Insertar Nota Táctica</h3>
-                <button onClick={() => setTextModalOpen(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+      {textModalOpen && (
+        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-xs p-4 shadow-2xl space-y-3">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-xs uppercase tracking-wide text-amber-400 flex items-center gap-1.5">
+                <Type className="w-4 h-4" /> Texto Táctico
+              </h3>
+              <button onClick={() => setTextModalOpen(false)} className="text-zinc-400 hover:text-white text-xs">✕</button>
+            </div>
+
+            <input
+              type="text"
+              autoFocus
+              value={inputTextVal}
+              onChange={e => setInputTextVal(e.target.value)}
+              placeholder="Ej: Presión alta / Salida rápida"
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400"
+            />
+
+            {/* Opciones de estilo: Negrita, Subrayado y Colores */}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setTextIsBold(!textIsBold)}
+                  className={`w-7 h-7 rounded-lg font-black text-xs border transition ${textIsBold ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700'}`}
+                >
+                  B
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTextIsUnderline(!textIsUnderline)}
+                  className={`w-7 h-7 rounded-lg underline font-bold text-xs border transition ${textIsUnderline ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700'}`}
+                >
+                  U
+                </button>
               </div>
-              <input type="text" value={inputTextVal} onChange={e => setInputTextVal(e.target.value)} placeholder="Ej: Máximo 2 toques / Salida rápida" className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-2 text-xs text-white outline-none focus:border-amber-400 mb-3" autoFocus />
-              <button onClick={() => {
+
+              <div className="flex items-center gap-1.5">
+                {['#ffffff', '#facc15', '#ef4444', '#38bdd8', '#000000'].map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setTextColor(c)}
+                    style={{ backgroundColor: c }}
+                    className={`w-5 h-5 rounded-full border ${textColor === c ? 'border-amber-400 scale-110 ring-2 ring-amber-400/50' : 'border-zinc-700'}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
                 if (inputTextVal.trim()) {
-                  setTextBlocks([...textBlocks, { id: 'txt-' + Date.now(), x: pendingTextPos.x, y: pendingTextPos.y, text: inputTextVal.trim() }]);
+                  setTextBlocks(prev => [
+                    ...prev,
+                    {
+                      id: 'txt-' + Date.now(),
+                      x: pendingTextPos.x,
+                      y: pendingTextPos.y,
+                      text: inputTextVal.trim(),
+                      color: textColor,
+                      isBold: textIsBold,
+                      isUnderline: textIsUnderline,
+                      size: textSize,
+                      rotation: 0
+                    }
+                  ]);
                 }
                 setTextModalOpen(false);
                 setTool('move');
-              }} className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase rounded-2xl shadow">Agregar a la Pizarra</button>
-            </div>
+              }}
+              className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase rounded-xl transition"
+            >
+              Insertar en Cancha
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
         {/* MODAL PALETA DE TRAZOS Y LÍNEAS AVANZADA */}
         {/* SUB-BARRA FLOTANTE DE TRAZOS Y LÍNEAS */}
