@@ -835,7 +835,7 @@ export default function App() {
         const size = tb.size || 2.8;
         const col = tb.color || '#ffffff';
         const isBold = tb.isBold !== undefined ? tb.isBold : true;
-        const isUnder = !!tb.isUnderline;
+        const isUnder = Boolean(tb.isUnderline);
 
         return (
           <g
@@ -853,7 +853,7 @@ export default function App() {
               isDraggingRef.current = true;
             }}
           >
-            {/* Fondo sutil translúcido sin opacidad pesada */}
+            {/* Fondo sutil translúcido */}
             <rect
               x={-(tb.text.length * size * 0.35 + 2)}
               y={-(size * 1.1)}
@@ -862,13 +862,12 @@ export default function App() {
               rx={size * 0.4}
               fill="rgba(0, 0, 0, 0.45)"
               stroke={isSelected ? '#facc15' : 'rgba(255,255,255,0.2)'}
-              strokeWidth={isSelected ? '0.5' : '0.2'}
-              className="backdrop-blur-sm"
+              strokeWidth={isSelected ? 0.5 : 0.2}
             />
 
-            {/* Texto táctico nítido */}
+            {/* Texto táctico */}
             <text
-              x="0"
+              x={0}
               y={size * 0.35}
               textAnchor="middle"
               fill={col}
@@ -880,53 +879,53 @@ export default function App() {
               {tb.text}
             </text>
 
-            {/* Controles tácticos flotantes al seleccionar el texto */}
+            {/* Rotar a 45° */}
             {isSelected && (
-              <g className="no-print">
-                {/* Rotar a 45° */}
-                <g
-                  transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${-size * 0.6})`}
-                  className="cursor-pointer"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, rotation: ((t.rotation || 0) + 45) % 360 } : t));
-                  }}
-                >
-                  <circle r="2" fill="#eab308" />
-                  <text x="0" y="0.8" textAnchor="middle" fontSize="1.8" fill="#000" fontWeight="bold">↻</text>
-                </g>
+              <g
+                transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${-size * 0.6})`}
+                className="cursor-pointer"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, rotation: ((t.rotation || 0) + 45) % 360 } : t));
+                }}
+              >
+                <circle r={2} fill="#eab308" />
+                <text x={0} y={0.8} textAnchor="middle" fontSize={1.8} fill="#000000" fontWeight="bold">↻</text>
+              </g>
+            )}
 
-                {/* Agrandar (+) */}
-                <g
-                  transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${size * 0.6})`}
-                  className="cursor-pointer"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.min((t.size || 2.8) + 0.4, 6.0) } : t));
-                  }}
-                >
-                  <circle r="1.8" fill="#22c55e" />
-                  <text x="0" y="0.7" textAnchor="middle" fontSize="1.8" fill="#fff" fontWeight="bold">+</text>
-                </g>
+            {/* Agrandar (+) */}
+            {isSelected && (
+              <g
+                transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${size * 0.6})`}
+                className="cursor-pointer"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.min((t.size || 2.8) + 0.4, 6.0) } : t));
+                }}
+              >
+                <circle r={1.8} fill="#22c55e" />
+                <text x={0} y={0.7} textAnchor="middle" fontSize={1.8} fill="#ffffff" fontWeight="bold">+</text>
+              </g>
+            )}
 
-                {/* Achicar (-) */}
-                <g
-                  transform={`translate(${-(tb.text.length * size * 0.35 + 3.5)}, ${size * 0.6})`}
-                  className="cursor-pointer"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.max((t.size || 2.8) - 0.4, 1.6) } : t));
-                  }}
-                >
-                  <circle r="1.8" fill="#ef4444" />
-                  <text x="0" y="0.6" textAnchor="middle" fontSize="1.8" fill="#fff" fontWeight="bold">-</text>
-      </g>
-    )}
-  </g>
-</g>
-)
-})}
-
+            {/* Achicar (-) */}
+            {isSelected && (
+              <g
+                transform={`translate(${-(tb.text.length * size * 0.35 + 3.5)}, ${size * 0.6})`}
+                className="cursor-pointer"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.max((t.size || 2.8) - 0.4, 1.6) } : t));
+                }}
+              >
+                <circle r={1.8} fill="#ef4444" />
+                <text x={0} y={0.6} textAnchor="middle" fontSize={1.8} fill="#ffffff" fontWeight="bold">-</text>
+              </g>
+            )}
+          </g>
+        );
+      })}
           {/* OBJETOS Y JUGADORES */}
           {objects.map(obj => {
             if (obj.type === 'player') {
