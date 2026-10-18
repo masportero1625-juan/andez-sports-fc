@@ -799,12 +799,12 @@ export default function App() {
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
         <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePitchPointerDown}>
           <defs>
-          <marker id="arrow-white" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M 0 1.5 L 8 5 L 0 8.5 L 2 5 z" fill="#ffffff" stroke="none" /></marker>
-          <marker id="arrow-red" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M 0 1.5 L 8 5 L 0 8.5 L 2 5 z" fill="#ef4444" stroke="none" /></marker>
-          <marker id="arrow-blue" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M 0 1.5 L 8 5 L 0 8.5 L 2 5 z" fill="#3b82f6" stroke="none" /></marker>
-          <marker id="arrow-yellow" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M 0 1.5 L 8 5 L 0 8.5 L 2 5 z" fill="#facc15" stroke="none" /></marker>
-          <marker id="arrow-black" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M 0 1.5 L 8 5 L 0 8.5 L 2 5 z" fill="#000000" stroke="none" /></marker>
-          <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3" markerHeight="3" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
+          <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" stroke="none" /></marker>
+          <marker id="arrow-red" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ef4444" stroke="none" /></marker>
+          <marker id="arrow-blue" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#3b82f6" stroke="none" /></marker>
+          <marker id="arrow-yellow" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#facc15" stroke="none" /></marker>
+          <marker id="arrow-black" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#000000" stroke="none" /></marker>
+          <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.5" markerHeight="3.5" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
         </defs>
 
           <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
@@ -858,16 +858,26 @@ export default function App() {
         {drawings.map(l => {
           const markerId = l.type === 'straight' ? '' : (l.type === 'block' ? 'url(#block-mark)' : (l.color === '#ef4444' ? 'url(#arrow-red)' : l.color === '#3b82f6' ? 'url(#arrow-blue)' : l.color === '#facc15' ? 'url(#arrow-yellow)' : l.color === '#000000' ? 'url(#arrow-black)' : 'url(#arrow-white)'));
           
+          const dx = l.end.x - l.start.x;
+          const dy = l.end.y - l.start.y;
+          const dist = Math.hypot(dx, dy) || 0.001;
+          const ux = dx / dist;
+          const uy = dy / dist;
+
+          // Margen de retroceso para que la línea no pise la punta de la flecha
+          const isArrow = l.type !== 'straight' && l.type !== 'block';
+          const strokeW = l.width || 1.4;
+          const shortenDist = isArrow ? (strokeW * 3.2) : 0; // Se acorta la línea en proporción al grosor
+          
+          const endX = dist > shortenDist ? l.start.x + ux * (dist - shortenDist) : l.start.x;
+          const endY = dist > shortenDist ? l.start.y + uy * (dist - shortenDist) : l.start.y;
+          const effectiveDist = dist > shortenDist ? dist - shortenDist : 0.001;
+
           let pathD = '';
           if (l.type === 'wavy') {
-            const dx = l.end.x - l.start.x;
-            const dy = l.end.y - l.start.y;
-            const dist = Math.hypot(dx, dy);
-            const numWaves = Math.max(1, Math.round(dist / 8));
-            const waveLen = dist / numWaves;
+            const numWaves = Math.max(1, Math.round(effectiveDist / 8));
+            const waveLen = effectiveDist / numWaves;
             const amp = 2.4;
-            const ux = dx / (dist || 1);
-            const uy = dy / (dist || 1);
             const px = -uy;
             const py = ux;
 
@@ -888,9 +898,9 @@ export default function App() {
           return (
             <g key={l.id} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setDrawings(prev => prev.filter(d => d.id !== l.id)); } }}>
               {l.type === 'wavy' ? (
-                <path d={pathD} fill="none" stroke={l.color} strokeWidth={l.width || 1.4} strokeLinecap="round" strokeLinejoin="round" markerEnd={markerId} />
+                <path d={pathD} fill="none" stroke={l.color} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" markerEnd={markerId} />
               ) : (
-                <line x1={l.start.x} y1={l.start.y} x2={l.end.x} y2={l.end.y} stroke={l.color} strokeWidth={l.width || 1.4} strokeLinecap="round" strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'} markerEnd={markerId} />
+                <line x1={l.start.x} y1={l.start.y} x2={endX} y2={endY} stroke={l.color} strokeWidth={strokeW} strokeLinecap="round" strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'} markerEnd={markerId} />
               )}
             </g>
           );
@@ -901,12 +911,16 @@ export default function App() {
             (() => {
               const dx = currentLine.end.x - currentLine.start.x;
               const dy = currentLine.end.y - currentLine.start.y;
-              const dist = Math.hypot(dx, dy);
-              const numWaves = Math.max(1, Math.round(dist / 8));
-              const waveLen = dist / numWaves;
+              const dist = Math.hypot(dx, dy) || 0.001;
+              const ux = dx / dist;
+              const uy = dy / dist;
+              const strokeW = currentLine.width || 1.4;
+              const shortenDist = strokeW * 3.2;
+              const effectiveDist = dist > shortenDist ? dist - shortenDist : 0.001;
+
+              const numWaves = Math.max(1, Math.round(effectiveDist / 8));
+              const waveLen = effectiveDist / numWaves;
               const amp = 2.4;
-              const ux = dx / (dist || 1);
-              const uy = dy / (dist || 1);
               const px = -uy;
               const py = ux;
 
@@ -922,10 +936,24 @@ export default function App() {
                 const cp2Y = bY + uy * (waveLen * 0.65) - py * amp;
                 d += ` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${eX} ${eY}`;
               }
-              return <path d={d} fill="none" stroke={currentLine.color} strokeWidth={currentLine.width || 1.4} strokeLinecap="round" strokeDasharray="2,2" />;
+              return <path d={d} fill="none" stroke={currentLine.color} strokeWidth={strokeW} strokeLinecap="round" strokeDasharray="2,2" />;
             })()
           ) : (
-            <line x1={currentLine.start.x} y1={currentLine.start.y} x2={currentLine.end.x} y2={currentLine.end.y} stroke={currentLine.color} strokeWidth={currentLine.width || 1.4} strokeLinecap="round" strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'} />
+            (() => {
+              const dx = currentLine.end.x - currentLine.start.x;
+              const dy = currentLine.end.y - currentLine.start.y;
+              const dist = Math.hypot(dx, dy) || 0.001;
+              const ux = dx / dist;
+              const uy = dy / dist;
+              const strokeW = currentLine.width || 1.4;
+              const isArrow = currentLine.type !== 'straight' && currentLine.type !== 'block';
+              const shortenDist = isArrow ? (strokeW * 3.2) : 0;
+
+              const endX = dist > shortenDist ? currentLine.start.x + ux * (dist - shortenDist) : currentLine.start.x;
+              const endY = dist > shortenDist ? currentLine.start.y + uy * (dist - shortenDist) : currentLine.start.y;
+
+              return <line x1={currentLine.start.x} y1={currentLine.start.y} x2={endX} y2={endY} stroke={currentLine.color} strokeWidth={strokeW} strokeLinecap="round" strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'} />;
+            })()
           )
         )}
           {/* TEXTOS TÁCTICOS FLOTANTES */}
