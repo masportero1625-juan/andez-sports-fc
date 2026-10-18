@@ -920,11 +920,12 @@ export default function App() {
                 >
                   <circle r="1.8" fill="#ef4444" />
                   <text x="0" y="0.6" textAnchor="middle" fontSize="1.8" fill="#fff" fontWeight="bold">-</text>
-                </g>
-              )}
-            </g>
-          )
-        })}
+      </g>
+    )}
+  </g>
+</g>
+)
+})}
 
           {/* OBJETOS Y JUGADORES */}
           {objects.map(obj => {
