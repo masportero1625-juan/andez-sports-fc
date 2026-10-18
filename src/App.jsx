@@ -167,6 +167,46 @@ export default function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  // Estados para paleta de camisetas y arqueros
+  const [showKitPalette, setShowKitPalette] = useState(false);
+  const [kitTarget, setKitTarget] = useState('blue');
+  const [teamColors, setTeamColors] = useState({
+    blue: '#2563eb',
+    red: '#dc2626',
+    gk: '#f59e0b',
+    gk_away: '#16a34a'
+  });
+
+  const officialKitColors = [
+    { name: 'Blanco', hex: '#ffffff' },
+    { name: 'Negro', hex: '#18181b' },
+    { name: 'Azul', hex: '#2563eb' },
+    { name: 'Rojo', hex: '#dc2626' },
+    { name: 'Amarillo', hex: '#eab308' },
+    { name: 'Verde', hex: '#16a34a' },
+    { name: 'Naranja', hex: '#f97316' },
+    { name: 'Celeste', hex: '#06b6d4' }
+  ];
+
+  const handleUpdateKitColor = (colorHex) => {
+    setTeamColors(prev => ({ ...prev, [kitTarget]: colorHex }));
+    setObjects(prev => prev.map(obj => {
+      if (obj.type !== 'player') return obj;
+      if (kitTarget === 'gk' && obj.role === 'GK' && (obj.team === 'gk' || obj.team === 'blue')) {
+        return { ...obj, customColor: colorHex };
+      }
+      if (kitTarget === 'gk_away' && obj.role === 'GK' && (obj.team === 'gk_away' || obj.team === 'red')) {
+        return { ...obj, customColor: colorHex };
+      }
+      if (kitTarget === 'blue' && obj.role !== 'GK' && obj.team === 'blue') {
+        return { ...obj, customColor: colorHex };
+      }
+      if (kitTarget === 'red' && obj.role !== 'GK' && obj.team === 'red') {
+        return { ...obj, customColor: colorHex };
+      }
+      return obj;
+    }));
+  };
 
   const [deviceId] = useState(() => {
     let id = localStorage.getItem('andez_device_id');
@@ -934,7 +974,7 @@ export default function App() {
               const w = Math.max(14, (obj.name || '').length * 1.5 + 4);
               return (
                 <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={e => handlePointerDown(e, obj)} onDoubleClick={() => { setEditingPlayer(obj); setPlayerCustomName(obj.name || ''); setPlayerCustomNumber(obj.number); }} className="cursor-grab active:cursor-grabbing touch-none select-none">
-                  <circle r="3.0" fill={obj.role === 'GK' ? '#f59e0b' : obj.team === 'blue' ? '#2563eb' : '#dc2626'} stroke="#ffffff" strokeWidth="0.6" />
+                  <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'blue' ? teamColors.blue : teamColors.red))} stroke="#ffffff" strokeWidth="0.6" />
                   <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" pointerEvents="none">{obj.number}</text>
                   {hasName && (
                     <g>
@@ -1792,12 +1832,98 @@ export default function App() {
           <button onClick={() => { if (historyIndex < history.length - 1) { setHistoryIndex(historyIndex + 1); setObjects(history[historyIndex + 1]); } }} disabled={historyIndex >= history.length - 1} className="p-1.5 text-zinc-300 disabled:opacity-30"><Redo2 className="w-5 h-5" /></button>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk' })} className="w-9 h-9 rounded-full bg-amber-500 border-2 border-white text-white font-black text-xs shadow flex items-center justify-center gap-0.5" title="Añadir Portero">🧤1</button>
-            <button onClick={() => addElement('player', { team: 'blue' })} className="w-9 h-9 rounded-full bg-blue-600 border-2 border-white text-white font-bold text-xs shadow">11</button>
-            <button onClick={() => addElement('player', { team: 'red' })} className="w-9 h-9 rounded-full bg-red-600 border-2 border-white text-white font-bold text-xs shadow">11</button>
-            <button onClick={() => addElement('ball')} className="w-9 h-9 rounded-full bg-white text-sm shadow">⚽</button>
+        {/* SUB-BARRA FLOTANTE DE CAMISETAS Y ARQUEROS */}
+      {showKitPalette && (
+        <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-2.5 shadow-2xl flex items-center gap-3 overflow-x-auto z-40 animate-fade-in no-print">
+          {/* Selector de ficha objetivo */}
+          <div className="flex items-center gap-1 shrink-0">
+            {[
+              { id: 'blue', label: 'Eq. 1' },
+              { id: 'red', label: 'Eq. 2' },
+              { id: 'gk', label: 'Arq. 1' },
+              { id: 'gk_away', label: 'Arq. 2' }
+            ].map(target => (
+              <button
+                key={target.id}
+                onClick={() => setKitTarget(target.id)}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition ${kitTarget === target.id ? 'bg-amber-500 text-black shadow' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
+              >
+                {target.label}
+              </button>
+            ))}
           </div>
+
+          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-0.5" />
+
+          {/* 8 Colores deportivos oficiales */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {officialKitColors.map(c => (
+              <button
+                key={c.hex}
+                title={c.name}
+                onClick={() => handleUpdateKitColor(c.hex)}
+                style={{ backgroundColor: c.hex }}
+                className={`w-6 h-6 rounded-full border border-black/30 transition-transform ${teamColors[kitTarget] === c.hex ? 'scale-125 ring-2 ring-amber-400 ring-offset-2 ring-offset-black' : 'hover:scale-110'}`}
+              />
+            ))}
+          </div>
+
+          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-0.5" />
+
+          <button
+            onClick={() => setShowKitPalette(false)}
+            className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0"
+          >
+            Listo ✕
+          </button>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Botón para abrir la paleta */}
+        <button
+          onClick={() => setShowKitPalette(prev => !prev)}
+          className={`px-2 py-1 rounded-xl text-xs font-bold border transition ${showKitPalette ? 'bg-amber-500 text-black border-amber-400 shadow-md' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'}`}
+          title="Personalizar colores de camisetas y arqueros"
+        >
+          🎨 Camisetas
+        </button>
+
+        {/* Fichas con color en vivo */}
+        <button
+          onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk', customColor: teamColors.gk })}
+          style={{ backgroundColor: teamColors.gk }}
+          className="w-9 h-9 rounded-full border-2 border-white text-white font-black text-xs shadow hover:scale-105 transition-transform"
+          title="Arquero Local"
+        >
+          1
+        </button>
+        <button
+          onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk_away', customColor: teamColors.gk_away })}
+          style={{ backgroundColor: teamColors.gk_away }}
+          className="w-9 h-9 rounded-full border-2 border-white text-white font-black text-xs shadow hover:scale-105 transition-transform"
+          title="Arquero Visitante"
+        >
+          1
+        </button>
+        <button
+          onClick={() => addElement('player', { team: 'blue', customColor: teamColors.blue })}
+          style={{ backgroundColor: teamColors.blue }}
+          className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform"
+          title="Jugador Equipo 1"
+        >
+          11
+        </button>
+        <button
+          onClick={() => addElement('player', { team: 'red', customColor: teamColors.red })}
+          style={{ backgroundColor: teamColors.red }}
+          className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform"
+          title="Jugador Equipo 2"
+        >
+          11
+        </button>
+        <button onClick={() => addElement('ball')} className="w-9 h-9 rounded-full bg-white text-sm shadow hover:scale-105 transition-transform">⚽</button>
+      </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`} title="Texto Explicativo"><Type className="w-5 h-5" /></button>
