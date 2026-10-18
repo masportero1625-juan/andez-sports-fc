@@ -697,7 +697,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black">
       {/* HEADER */}
-      <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 no-print">
+      <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 no-print overflow-x-auto max-w-full">
         <div className="flex items-center gap-2 sm:gap-3">
           {isPC ? (
             <label htmlFor="logo-up" className="cursor-pointer" title="Cambiar Logo Club">
@@ -718,7 +718,7 @@ export default function App() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {selectedMaterial && (
             <button onClick={() => rotateObject(selectedMaterial.id)} className="flex items-center gap-1 bg-amber-500 text-black px-2 py-1 rounded-full text-[10px] font-black"><RotateCw className="w-3.5 h-3.5" /> 45°</button>
           )}
