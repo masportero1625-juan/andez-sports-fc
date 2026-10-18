@@ -1649,7 +1649,7 @@ export default function App() {
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`} title="Texto Explicativo"><Type className="w-5 h-5" /></button>
           <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400'}`} title="Goma de Borrar"><Eraser className="w-5 h-5" /></button>
-          <button onClick={() => { setDrawings([]); setTextBlocks([]); }} className="p-1.5 text-zinc-400 hover:text-amber-400" title="Borrar Solo Trazos y Textos"><Eraser className="w-5 h-5" /></button>
+          
           <button onClick={() => { if (confirm('¿Vaciar toda la pizarra (jugadores, balones y materiales)?')) { setObjects([]); setDrawings([]); setTextBlocks([]); recordHistory([]); } }} className="p-1.5 text-red-400 hover:text-red-300" title="Vaciar Cancha Completa"><Trash2 className="w-5 h-5" /></button>
           <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300'}`} title="Trazados y Flechas"><PenTool className="w-5 h-5" /></button>
         </div>
