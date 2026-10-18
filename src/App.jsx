@@ -799,13 +799,13 @@ export default function App() {
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
         <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePitchPointerDown}>
           <defs>
-            <marker id="arrow-white" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ffffff" /></marker>
-            <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" /></marker>
-            <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" /></marker>
-            <marker id="arrow-yellow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#facc15" /></marker>
-            <marker id="arrow-black" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 10 5 L 0 9 z" fill="#000000" /></marker>
-            <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
-          </defs>
+          <marker id="arrow-white" viewBox="0 0 10 10" refX="6" refY="5" markerUnits="userSpaceOnUse" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ffffff" /></marker>
+          <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerUnits="userSpaceOnUse" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ef4444" /></marker>
+          <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerUnits="userSpaceOnUse" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#3b82f6" /></marker>
+          <marker id="arrow-yellow" viewBox="0 0 10 10" refX="6" refY="5" markerUnits="userSpaceOnUse" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#facc15" /></marker>
+          <marker id="arrow-black" viewBox="0 0 10 10" refX="6" refY="5" markerUnits="userSpaceOnUse" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse"><path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#000000" /></marker>
+          <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="3.5" markerHeight="3.5" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
+        </defs>
 
           <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
 
@@ -855,18 +855,63 @@ export default function App() {
           )}
 
           {/* DIBUJOS Y TRAZOS */}
-          {drawings.map(l => {
-            const markerId = l.type === 'straight' ? '' : (l.type === 'block' ? 'url(#block-mark)' : (l.color === '#ef4444' ? 'url(#arrow-red)' : l.color === '#3b82f6' ? 'url(#arrow-blue)' : l.color === '#facc15' ? 'url(#arrow-yellow)' : l.color === '#000000' ? 'url(#arrow-black)' : 'url(#arrow-white)'));
-            return (
-              <g key={l.id} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setDrawings(prev => prev.filter(d => d.id !== l.id)); } }}>
-                <line x1={l.start.x} y1={l.start.y} x2={l.end.x} y2={l.end.y} stroke={l.color} strokeWidth={l.width || 1.4} strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'} markerEnd={markerId} />
-              </g>
-            );
-          })}
+        {drawings.map(l => {
+          const markerId = l.type === 'straight' ? '' : (l.type === 'block' ? 'url(#block-mark)' : (l.color === '#ef4444' ? 'url(#arrow-red)' : l.color === '#3b82f6' ? 'url(#arrow-blue)' : l.color === '#facc15' ? 'url(#arrow-yellow)' : l.color === '#000000' ? 'url(#arrow-black)' : 'url(#arrow-white)'));
+          
+          // Generador de curva ondulada Bézier para conducción/slalom
+          const dx = l.end.x - l.start.x;
+          const dy = l.end.y - l.start.y;
+          const dist = Math.hypot(dx, dy);
+          const waves = Math.max(2, Math.round(dist / 6));
+          const nx = -dy / (dist || 1);
+          const ny = dx / (dist || 1);
+          let pathD = `M ${l.start.x} ${l.start.y}`;
+          for (let i = 0; i < waves; i++) {
+            const p1x = l.start.x + (dx / waves) * (i + 0.25) + nx * (i % 2 === 0 ? 1.8 : -1.8);
+            const p1y = l.start.y + (dy / waves) * (i + 0.25) + ny * (i % 2 === 0 ? 1.8 : -1.8);
+            const p2x = l.start.x + (dx / waves) * (i + 0.75) + nx * (i % 2 === 0 ? -1.8 : 1.8);
+            const p2y = l.start.y + (dy / waves) * (i + 0.75) + ny * (i % 2 === 0 ? -1.8 : 1.8);
+            const endSegmentX = l.start.x + (dx / waves) * (i + 1);
+            const endSegmentY = l.start.y + (dy / waves) * (i + 1);
+            pathD += ` C ${p1x} ${p1y}, ${p2x} ${p2y}, ${endSegmentX} ${endSegmentY}`;
+          }
 
-          {currentLine && (
+          return (
+            <g key={l.id} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setDrawings(prev => prev.filter(d => d.id !== l.id)); } }}>
+              {l.type === 'wavy' ? (
+                <path d={pathD} fill="none" stroke={l.color} strokeWidth={l.width || 1.4} markerEnd={markerId} />
+              ) : (
+                <line x1={l.start.x} y1={l.start.y} x2={l.end.x} y2={l.end.y} stroke={l.color} strokeWidth={l.width || 1.4} strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'} markerEnd={markerId} />
+              )}
+            </g>
+          );
+        })}
+
+        {currentLine && (
+          currentLine.type === 'wavy' ? (
+            (() => {
+              const dx = currentLine.end.x - currentLine.start.x;
+              const dy = currentLine.end.y - currentLine.start.y;
+              const dist = Math.hypot(dx, dy);
+              const waves = Math.max(2, Math.round(dist / 6));
+              const nx = -dy / (dist || 1);
+              const ny = dx / (dist || 1);
+              let pathD = `M ${currentLine.start.x} ${currentLine.start.y}`;
+              for (let i = 0; i < waves; i++) {
+                const p1x = currentLine.start.x + (dx / waves) * (i + 0.25) + nx * (i % 2 === 0 ? 1.8 : -1.8);
+                const p1y = currentLine.start.y + (dy / waves) * (i + 0.25) + ny * (i % 2 === 0 ? 1.8 : -1.8);
+                const p2x = currentLine.start.x + (dx / waves) * (i + 0.75) + nx * (i % 2 === 0 ? -1.8 : 1.8);
+                const p2y = currentLine.start.y + (dy / waves) * (i + 0.75) + ny * (i % 2 === 0 ? -1.8 : 1.8);
+                const endSegmentX = currentLine.start.x + (dx / waves) * (i + 1);
+                const endSegmentY = currentLine.start.y + (dy / waves) * (i + 1);
+                pathD += ` C ${p1x} ${p1y}, ${p2x} ${p2y}, ${endSegmentX} ${endSegmentY}`;
+              }
+              return <path d={pathD} fill="none" stroke={currentLine.color} strokeWidth={currentLine.width || 1.4} strokeDasharray="2,2" />;
+            })()
+          ) : (
             <line x1={currentLine.start.x} y1={currentLine.start.y} x2={currentLine.end.x} y2={currentLine.end.y} stroke={currentLine.color} strokeWidth={currentLine.width || 1.4} strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'} />
-          )}
+          )
+        )}
 
           {/* TEXTOS TÁCTICOS FLOTANTES */}
       {textBlocks.map(tb => {
@@ -1081,6 +1126,7 @@ export default function App() {
             <button onClick={() => { setLineType('straight'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'straight' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>― Recta</button>
             <button onClick={() => { setLineType('dashed'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'dashed' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>⤏ Discontinua</button>
             <button onClick={() => { setLineType('block'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'block' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>┫ Bloqueo</button>
+            <button onClick={() => { setLineType('wavy'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'wavy' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>〰 Dribling</button>
           </div>
 
           <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
