@@ -1055,7 +1055,7 @@ export default function App() {
                     }} 
                     className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3 py-1 rounded-xl shadow flex items-center gap-1 shrink-0 cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Guardar
+                    + Guardar
                   </button>
                 </div>
               </div>
