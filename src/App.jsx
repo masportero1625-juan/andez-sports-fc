@@ -876,7 +876,7 @@ export default function App() {
         {/* MODAL PALETA DE TRAZOS Y LÍNEAS AVANZADA */}
         {/* SUB-BARRA FLOTANTE DE TRAZOS Y LÍNEAS */}
       {showLinePalette && (
-        <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-auto bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-2 shadow-2xl z-40 flex items-center gap-2 overflow-x-auto max-w-full shrink-0 no-print">
+        <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print [&::-webkit-scrollbar]:hidden">
           {/* Tipos de línea */}
           <div className="flex items-center gap-1 shrink-0">
             <button onClick={() => { setLineType('arrow'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'arrow' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>➔ Normal</button>
