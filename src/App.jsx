@@ -573,7 +573,7 @@ export default function App() {
 
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [promptText, setPromptText] = useState('');
-
+  
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
 
   const handleGenerateTacticalPrompt = async (e) => {
@@ -588,24 +588,31 @@ export default function App() {
 
     setIsGeneratingPrompt(true);
 
-    const systemInstruction = `Eres un asistente táctico de fútbol profesional.
-Interpreta la solicitud y responde ÚNICAMENTE con un array JSON válido sin bloques markdown ni explicaciones adicionales. Formato: [...]
+    const isHalf = pitchMode === 'half';
+    const systemInstruction = `Eres un DT y analista táctico profesional de fútbol.
+Convierte la solicitud del usuario en un array JSON con las posiciones exactas en el campo.
 
-Coordenadas del campo:
-- Si pitchMode es 'full': X de 0 a 105, Y de 0 a 68. El arco izquierdo está en X=0, Y=34.
-- Si pitchMode es 'half': X de 0 a 55, Y de 0 a 68.
-- Parámetros actuales: pitchMode='${pitchMode}', isPC=${isPC}.
+GEOMETRÍA Y MEDIDAS OFICIALES (Eje X: 0 a 105 largo, Eje Y: 0 a 68 ancho):
+- Centro del campo: X=52.5, Y=34.
+- Portería Izquierda: X=2, Y=34.
+- Área Chica Izquierda: X va de 0 a 5.5, Y va de 24.8 a 43.2.
+- Área Grande Izquierda: X va de 0 a 16.5, Y va de 13.8 a 54.2. (Vértice superior Y=13.8, Vértice inferior Y=54.2, Borde frontal X=16.5).
+- Punto penal: X=11, Y=34.
+- Medialuna / Borde del área grande: X=18 a 22, Y entre 26 y 42.
+- Bandas / Laterales: Y=8 (banda superior) e Y=60 (banda inferior).
+- Modo actual: ${isHalf ? "Medio campo (X: 0 a 55)" : "Campo completo (X: 0 a 105)"}.
 
-Formatos de objetos:
-1. Jugador / Arquero / Tirador: {"id": "p_1", "type": "player", "number": "1", "name": "Arquero", "x": 4, "y": 34, "team": "blue"}
-2. Balón: {"id": "b_1", "type": "ball", "x": 25, "y": 34}
-3. Maniquí / Barrera: {"id": "m_1", "type": "dummy", "name": "Barrera", "x": 16, "y": 34, "rotation": 90}
-4. Cono: {"id": "c_1", "type": "cone", "color": "#ea580c", "x": 20, "y": 20, "rotation": 0}
-5. Mini portería: {"id": "mg_1", "type": "mini_goal", "x": 30, "y": 34, "rotation": 0}
+FORMATO OBLIGATORIO DE ELEMENTOS EN EL JSON:
+- Jugador: {"id": "p_1", "type": "player", "number": "1", "name": "Arquero", "x": 3, "y": 34, "team": "blue"} (team: 'blue' o 'red')
+- Balón: {"id": "b_1", "type": "ball", "x": 6, "y": 34}
+- Maniquí: {"id": "m_1", "type": "dummy", "name": "Barrera", "x": 20, "y": 34, "rotation": 90}
+- Cono: {"id": "c_1", "type": "cone", "color": "#ea580c", "x": 30, "y": 34, "rotation": 0}
+- Mini portería: {"id": "mg_1", "type": "mini_goal", "x": 35, "y": 34, "rotation": 0}
 
-Reglas:
-- Cumple con fidelidad absoluta lo solicitado (cantidades exactas, posiciones y elementos).
-- Si el usuario dice "coloca solo lo que te pido", NO añadas elementos extras.`;
+CRITERIOS TÁCTICOS:
+- Separa adecuadamente los jugadores; nunca coloques rivales encima del arquero en un saque de meta (los delanteros rivales esperan al borde exterior del área grande, X=18 a 22).
+- Los laterales se posicionan abiertos a las bandas (Y entre 8 y 12, o entre 56 y 60) pero adelantados a la altura de X=20 a 25.
+- Devuelve estricta y únicamente el array JSON: [{...}, {...}]`;
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
@@ -613,11 +620,18 @@ Reglas:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{
-            parts: [
-              { text: systemInstruction },
-              { text: `Instrucción táctica: "${promptText}"` }
-            ]
-          }]
+            parts: [{ text: `Instrucción táctica: "${promptText}"` }]
+          }],
+          systemInstruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.1,
+            thinkingConfig: {
+              thinkingBudget: 0
+            }
+          }
         })
       });
 
@@ -627,8 +641,6 @@ Reglas:
       }
 
       let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-      rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-
       const parsedObjects = JSON.parse(rawText);
 
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
@@ -637,7 +649,7 @@ Reglas:
         setShowPromptModal(false);
         setPromptText('');
       } else {
-        alert("Gemini no devolvió elementos válidos para esa instrucción.");
+        alert("Gemini no devolvió elementos válidos.");
       }
     } catch (err) {
       console.error("Error en Gemini:", err);
@@ -645,8 +657,7 @@ Reglas:
     } finally {
       setIsGeneratingPrompt(false);
     }
-   }; 
-
+  };
   const maxX = isPC ? (pitchMode === 'half' ? 55 : 105) : 68;
   const maxY = isPC ? 68 : (pitchMode === 'half' ? 85 : 105);
 
