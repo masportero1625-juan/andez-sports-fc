@@ -615,7 +615,7 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
 - Genera el JSON compacto y directo.
 - Devuelve estricta y únicamente el array JSON: [{...}, {...}]`;
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -628,10 +628,7 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
           generationConfig: {
             responseMimeType: "application/json",
             temperature: 0.0,
-            maxOutputTokens: 1000,
-            thinkingConfig: {
-              thinkingBudget: 0
-            }
+            maxOutputTokens: 800
           }
         })
       });
