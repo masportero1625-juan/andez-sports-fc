@@ -756,7 +756,7 @@ export default function App() {
 
           <button onClick={() => setShowLibraryModal(true)} className="text-zinc-300 hover:text-amber-400" title="Biblioteca y Gestión"><Folder className="w-5 h-5" /></button>
           <button onClick={() => setShowSystemsMenu(true)} className="text-zinc-300 hover:text-amber-400" title="Sistemas Tácticos"><Play className="w-5 h-5" /></button>
-          <button onClick={() => setPitchMode(prev => prev === 'full' ? 'half' : prev === 'half' ? 'abp' : 'full')} title={`Vista: ${pitchMode === 'full' ? 'Cancha Entera' : pitchMode === 'half' ? 'Media Cancha' : 'Balón Parado (ABP)'}`} className={`p-1 rounded transition text-xs font-bold flex items-center gap-1 ${pitchMode === 'abp' ? 'bg-amber-500 text-black px-1.5' : pitchMode === 'half' ? 'bg-red-600 text-white px-1.5' : 'text-zinc-300 hover:text-amber-400'}`}><RotateCcw className="w-5 h-5" />{pitchMode !== 'full' && <span>{pitchMode === 'half' ? '1/2' : 'ABP'}</span>}</button>
+          <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} title={`Vista: ${pitchMode === 'full' ? 'Media Cancha' : 'Cancha Entera'}`} className={`p-1 rounded transition ${pitchMode === 'half' ? 'bg-red-600 text-white px-1.5' : 'text-zinc-300 hover:text-amber-400'}`}><RotateCcw className="w-5 h-5" />{pitchMode === 'half' && <span className="text-xs font-bold ml-0.5">1/2</span>}</button>
           <button onClick={() => setShowTrainingMenu(!showTrainingMenu)} className={`p-1 rounded ${showTrainingMenu ? 'bg-amber-500 text-black' : 'text-amber-400'}`}><span className="font-bold">▲</span></button>
 
           <button onClick={() => setShowPromptModal(true)} className="flex items-center gap-1 bg-amber-500/20 border border-amber-400 text-amber-300 px-2 py-1 rounded-full text-[11px] font-bold shadow active:scale-95">
@@ -797,7 +797,7 @@ export default function App() {
       </header>
 {/* CANCHA CON SOPORTE TÁCTIL TOTAL */}
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
-          <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'abp' ? "0 10 38 48" : pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'abp' ? "10 0 48 45" : pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePointerDown}>
+          <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePointerDown}>
           <defs>
           <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" stroke="none" /></marker>
           <marker id="arrow-red" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ef4444" stroke="none" /></marker>
