@@ -609,11 +609,11 @@ FORMATO OBLIGATORIO DE ELEMENTOS EN EL JSON:
 - Cono: {"id": "c_1", "type": "cone", "color": "#ea580c", "x": 30, "y": 34, "rotation": 0}
 - Mini portería: {"id": "mg_1", "type": "mini_goal", "x": 35, "y": 34, "rotation": 0}
 
-CRITERIOS TÁCTICOS:
-- Separa adecuadamente los jugadores; nunca coloques rivales encima del arquero en un saque de meta (los delanteros rivales esperan al borde exterior del área grande, X=18 a 22).
-- Los laterales se posicionan abiertos a las bandas (Y entre 8 y 12, o entre 56 y 60) pero adelantados a la altura de X=20 a 25.
+CRITERIOS TÁCTICOS Y DE VELOCIDAD:
+- Nombres de jugadores MUY CORTOS (máximo 8 caracteres, ej: "Arquero", "Central", "Lat Der", "Lat Izq", "Pivote", "Ext Der", "Ext Izq", "Delantero"). NUNCA uses nombres compuestos largos ni barras inclinadas.
+- No encimar fichas: arquero en X=2, defensores en X=10 a 14, delanteros rivales en X=18 a 24.
+- Genera el JSON compacto y directo.
 - Devuelve estricta y únicamente el array JSON: [{...}, {...}]`;
-
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
