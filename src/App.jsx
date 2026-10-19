@@ -627,7 +627,8 @@ CRITERIOS TÁCTICOS:
           },
           generationConfig: {
             responseMimeType: "application/json",
-            temperature: 0.1,
+            temperature: 0.0,
+            maxOutputTokens: 1000,
             thinkingConfig: {
               thinkingBudget: 0
             }
