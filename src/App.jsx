@@ -574,42 +574,78 @@ export default function App() {
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [promptText, setPromptText] = useState('');
 
-  const handleGenerateTacticalPrompt = (e) => {
-    e.preventDefault();
-    if (!promptText.trim()) return;
-    const txt = promptText.toLowerCase();
-    let newObjs = [];
-    const midX = isPC ? (pitchMode === 'half' ? 27.5 : 52.5) : 34;
-    const midY = isPC ? 34 : (pitchMode === 'half' ? 42.5 : 52.5);
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
 
-    if (txt.includes('rondo') || txt.includes('posesion')) {
-      newObjs = [
-        { id: 'p-r1', type: 'player', number: '1', name: 'Apoyo', x: midX - 10, y: midY, team: 'blue' },
-        { id: 'p-r2', type: 'player', number: '2', name: 'Apoyo', x: midX + 10, y: midY, team: 'blue' },
-        { id: 'p-r3', type: 'player', number: '3', name: 'Apoyo', x: midX, y: midY - 10, team: 'blue' },
-        { id: 'p-r4', type: 'player', number: '4', name: 'Apoyo', x: midX, y: midY + 10, team: 'blue' },
-        { id: 'p-r5', type: 'player', number: '5', name: 'Presión', x: midX - 3, y: midY, team: 'red' },
-        { id: 'p-r6', type: 'player', number: '6', name: 'Presión', x: midX + 3, y: midY, team: 'red' },
-        { id: 'b-r1', type: 'ball', x: midX - 7, y: midY },
-        { id: 'c-1', type: 'cone', color: '#ea580c', x: midX - 14, y: midY - 14, rotation: 0 },
-        { id: 'c-2', type: 'cone', color: '#ea580c', x: midX + 14, y: midY - 14, rotation: 0 },
-        { id: 'c-3', type: 'cone', color: '#ea580c', x: midX - 14, y: midY + 14, rotation: 0 },
-        { id: 'c-4', type: 'cone', color: '#ea580c', x: midX + 14, y: midY + 14, rotation: 0 },
-      ];
-    } else {
-      newObjs = [
-        { id: 'gen-1', type: 'player', number: '1', name: 'Portero', x: isPC ? 12 : 34, y: isPC ? 34 : 90, team: 'blue' },
-        { id: 'gen-2', type: 'player', number: '4', name: 'Central', x: midX - 8, y: midY, team: 'blue' },
-        { id: 'gen-3', type: 'player', number: '9', name: 'Delantero', x: midX + 8, y: midY, team: 'red' },
-        { id: 'b-gen', type: 'ball', x: midX - 5, y: midY },
-        { id: 'mg-1', type: 'mini_goal', x: isPC ? 90 : 34, y: isPC ? 34 : 20, rotation: 0 }
-      ];
+  const handleGenerateTacticalPrompt = async (e) => {
+    e.preventDefault();
+    if (!promptText.trim() || isGeneratingPrompt) return;
+
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      alert("No se encontró la clave VITE_GEMINI_API_KEY en las variables de entorno.");
+      return;
     }
-    setObjects(newObjs);
-    recordHistory(newObjs);
-    setShowPromptModal(false);
-    setPromptText('');
-  };
+
+    setIsGeneratingPrompt(true);
+
+    const systemInstruction = `Eres un asistente táctico de fútbol profesional.
+Interpreta la solicitud y responde ÚNICAMENTE con un array JSON válido sin bloques markdown ni explicaciones adicionales. Formato: [...]
+
+Coordenadas del campo:
+- Si pitchMode es 'full': X de 0 a 105, Y de 0 a 68. El arco izquierdo está en X=0, Y=34.
+- Si pitchMode es 'half': X de 0 a 55, Y de 0 a 68.
+- Parámetros actuales: pitchMode='${pitchMode}', isPC=${isPC}.
+
+Formatos de objetos:
+1. Jugador / Arquero / Tirador: {"id": "p_1", "type": "player", "number": "1", "name": "Arquero", "x": 4, "y": 34, "team": "blue"}
+2. Balón: {"id": "b_1", "type": "ball", "x": 25, "y": 34}
+3. Maniquí / Barrera: {"id": "m_1", "type": "dummy", "name": "Barrera", "x": 16, "y": 34, "rotation": 90}
+4. Cono: {"id": "c_1", "type": "cone", "color": "#ea580c", "x": 20, "y": 20, "rotation": 0}
+5. Mini portería: {"id": "mg_1", "type": "mini_goal", "x": 30, "y": 34, "rotation": 0}
+
+Reglas:
+- Cumple con fidelidad absoluta lo solicitado (cantidades exactas, posiciones y elementos).
+- Si el usuario dice "coloca solo lo que te pido", NO añadas elementos extras.`;
+
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: systemInstruction },
+              { text: `Instrucción táctica: "${promptText}"` }
+            ]
+          }]
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Error al conectar con Gemini");
+      }
+
+      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+      const parsedObjects = JSON.parse(rawText);
+
+      if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
+        setObjects(parsedObjects);
+        recordHistory(parsedObjects);
+        setShowPromptModal(false);
+        setPromptText('');
+      } else {
+        alert("Gemini no devolvió elementos válidos para esa instrucción.");
+      }
+    } catch (err) {
+      console.error("Error en Gemini:", err);
+      alert("Error al consultar Gemini: " + err.message);
+    } finally {
+      setIsGeneratingPrompt(false);
+    }
+   }; 
 
   const maxX = isPC ? (pitchMode === 'half' ? 55 : 105) : 68;
   const maxY = isPC ? 68 : (pitchMode === 'half' ? 85 : 105);
@@ -1247,7 +1283,7 @@ export default function App() {
               </div>
               <form onSubmit={handleGenerateTacticalPrompt} className="space-y-3">
                 <textarea rows={3} value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Ej: Rondo 4v2 con conos y balón..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400 resize-none" autoFocus />
-                <button type="submit" className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase rounded-xl shadow">Crear en la Pizarra</button>
+                <button type="submit" disabled={isGeneratingPrompt} className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-black text-xs uppercase rounded-xl shadow">{isGeneratingPrompt ? 'Generando con Gemini...' : 'Crear en la Pizarra'}</button>
               </form>
             </div>
           </div>
