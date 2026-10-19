@@ -633,8 +633,8 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
               thinkingBudget: 0
             }
           }
+        })
       });
-
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error?.message || "Error al conectar con Gemini");
