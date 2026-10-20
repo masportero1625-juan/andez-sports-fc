@@ -81,71 +81,135 @@ function SoccerBall({ x, y, onPointerDown }) {
 
 function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   const rot = obj.rotation || 0;
+  const s = obj.scale || 1.0;
   let body = null;
+
   if (obj.type === 'mini_goal') {
+    // Mini portería con travesaño, profundidad y red cuadriculada
     body = (
       <>
-        <rect x="-4.2" y="-2.2" width="8.4" height="4.4" fill="rgba(255,255,255,0.25)" stroke="#eab308" strokeWidth="0.7" rx="0.4" />
-        <rect x="-4.2" y="1.8" width="8.4" height="0.6" fill="#ca8a04" />
-      </>
-    );
-  } else if (obj.type === 'ladder') {
-    body = (
-      <>
-        <line x1="-2.2" y1="-7.2" x2="-2.2" y2="7.2" stroke="#0f172a" strokeWidth="0.6" />
-        <line x1="2.2" y1="-7.2" x2="2.2" y2="7.2" stroke="#0f172a" strokeWidth="0.6" />
-        {[-5.4, -3.6, -1.8, 0, 1.8, 3.6, 5.4].map(s => <line key={s} x1="-2.2" y1={s} x2="2.2" y2={s} stroke="#facc15" strokeWidth="0.7" />)}
+        {/* Sombra de apoyo en el césped */}
+        <ellipse cx="0" cy="2.2" rx="4.8" ry="1.2" fill="rgba(0,0,0,0.3)" />
+        {/* Red de fondo con efecto de malla */}
+        <path d="M -4.2 -2.4 L 4.2 -2.4 L 4.0 1.8 L -4.0 1.8 Z" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.25" strokeDasharray="0.7,0.7" />
+        {/* Estructura tubular (postes y travesaño) */}
+        <line x1="-4.2" y1="-2.4" x2="-4.2" y2="1.8" stroke="#facc15" strokeWidth="0.8" strokeLinecap="round" />
+        <line x1="4.2" y1="-2.4" x2="4.2" y2="1.8" stroke="#facc15" strokeWidth="0.8" strokeLinecap="round" />
+        <line x1="-4.2" y1="-2.4" x2="4.2" y2="-2.4" stroke="#facc15" strokeWidth="0.9" strokeLinecap="round" />
+        {/* Barra base trasera */}
+        <line x1="-4.0" y1="1.8" x2="4.0" y2="1.8" stroke="#ca8a04" strokeWidth="0.7" strokeLinecap="round" />
       </>
     );
   } else if (obj.type === 'dummy') {
+    // Maniquí de entrenamiento tipo tiro libre con piernas y estacas
     body = (
       <>
-        <circle cx="0" cy="-3.6" r="1.3" fill="#eab308" stroke="#ca8a04" strokeWidth="0.3" />
-        <path d="M -2.2 -2.1 Q 0 -2.6 2.2 -2.1 L 1.8 2.2 Q 0 2.5 -1.8 2.2 Z" fill="#facc15" stroke="#ca8a04" strokeWidth="0.35" />
+        {/* Sombra en el suelo */}
+        <ellipse cx="0" cy="3.6" rx="2.5" ry="0.8" fill="rgba(0,0,0,0.35)" />
+        {/* Piernas / Varillas de soporte inferiores */}
+        <line x1="-1.0" y1="1.6" x2="-1.2" y2="3.4" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="1.0" y1="1.6" x2="1.2" y2="3.4" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
+        {/* Estacas de inserción al suelo */}
+        <line x1="-1.2" y1="3.4" x2="-1.2" y2="4.2" stroke="#475569" strokeWidth="0.35" />
+        <line x1="1.2" y1="3.4" x2="1.2" y2="4.2" stroke="#475569" strokeWidth="0.35" />
+        {/* Torso aerodinámico con costillas tácticas */}
+        <path d="M -2.4 -2.2 C -2.4 -2.6, 2.4 -2.6, 2.4 -2.2 L 1.8 1.6 C 1.8 1.9, -1.8 1.9, -1.8 1.6 Z" fill="#eab308" stroke="#ca8a04" strokeWidth="0.4" />
+        <line x1="-1.8" y1="-1.0" x2="1.8" y2="-1.0" stroke="#ca8a04" strokeWidth="0.3" />
+        <line x1="-1.6" y1="0.2" x2="1.6" y2="0.2" stroke="#ca8a04" strokeWidth="0.3" />
+        {/* Cabeza anatómica con relieve */}
+        <circle cx="0" cy="-3.8" r="1.35" fill="#facc15" stroke="#ca8a04" strokeWidth="0.35" />
       </>
     );
   } else if (obj.type === 'hurdle') {
+    // Valla de salto con patas estabilizadoras
     body = (
       <>
-        <ellipse cx="0" cy="2.2" rx="3.2" ry="0.7" fill="rgba(0,0,0,0.25)" />
-        <line x1="-3" y1="2" x2="-3" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" />
-        <line x1="3" y1="2" x2="3" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" />
-        <rect x="-3.2" y="-2.2" width="6.4" height="0.8" fill="#facc15" stroke="#ca8a04" strokeWidth="0.2" rx="0.2" />
+        {/* Sombras de las dos bases */}
+        <ellipse cx="-3.0" cy="2.2" rx="1.2" ry="0.5" fill="rgba(0,0,0,0.3)" />
+        <ellipse cx="3.0" cy="2.2" rx="1.2" ry="0.5" fill="rgba(0,0,0,0.3)" />
+        {/* Bases de suelo horizontales */}
+        <line x1="-4.0" y1="2.2" x2="-2.0" y2="2.2" stroke="#ca8a04" strokeWidth="0.6" strokeLinecap="round" />
+        <line x1="2.0" y1="2.2" x2="4.0" y2="2.2" stroke="#ca8a04" strokeWidth="0.6" strokeLinecap="round" />
+        {/* Postes verticales */}
+        <line x1="-3.0" y1="2.2" x2="-3.0" y2="-2.0" stroke="#eab308" strokeWidth="0.6" strokeLinecap="round" />
+        <line x1="3.0" y1="2.2" x2="3.0" y2="-2.0" stroke="#eab308" strokeWidth="0.6" strokeLinecap="round" />
+        {/* Barra superior de salto fluorescente */}
+        <rect x="-3.4" y="-2.6" width="6.8" height="0.9" fill="#facc15" stroke="#ca8a04" strokeWidth="0.25" rx="0.3" />
+      </>
+    );
+  } else if (obj.type === 'ladder') {
+    // Escalera de agilidad y coordinación
+    body = (
+      <>
+        {/* Cintas laterales flexibles de nylon */}
+        <line x1="-2.3" y1="-7.5" x2="-2.3" y2="7.5" stroke="#0f172a" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="2.3" y1="-7.5" x2="2.3" y2="7.5" stroke="#0f172a" strokeWidth="0.5" strokeLinecap="round" />
+        {/* Peldaños rígidos amarillos de coordinación */}
+        {[-6.0, -4.0, -2.0, 0, 2.0, 4.0, 6.0].map(s => (
+          <line key={s} x1="-2.3" y1={s} x2="2.3" y2={s} stroke="#facc15" strokeWidth="0.8" strokeLinecap="round" />
+        ))}
       </>
     );
   } else if (obj.type === 'cone') {
+    // Cono de tráfico deportivo con base octogonal y sombra
+    const baseColor = obj.color || '#ea580c';
     body = (
       <>
-        <ellipse cx="0" cy="1.2" rx="2.0" ry="0.7" fill={obj.color || '#ea580c'} />
-        <polygon points="-1.6,1.2 1.6,1.2 0,-2.6" fill={obj.color || '#f97316'} stroke="#c2410c" strokeWidth="0.25" />
+        {/* Sombra ovalada */}
+        <ellipse cx="0.4" cy="1.6" rx="2.4" ry="0.9" fill="rgba(0,0,0,0.3)" />
+        {/* Base cuadrada redondeada */}
+        <rect x="-2.2" y="0.6" width="4.4" height="1.6" rx="0.6" fill="#c2410c" stroke="#9a3412" strokeWidth="0.2" />
+        {/* Cono cónico reflectante */}
+        <polygon points="-1.8,0.8 1.8,0.8 0,-3.2" fill={baseColor} stroke="#9a3412" strokeWidth="0.25" />
+        {/* Franja reflectante blanca reglamentaria */}
+        <polygon points="-0.9,-0.8 0.9,-0.8 0.5,-1.8 -0.5,-1.8" fill="#ffffff" opacity="0.9" />
+        {/* Punta de seguridad redondeada */}
+        <circle cx="0" cy="-3.2" r="0.45" fill={baseColor} />
       </>
     );
   } else if (obj.type === 'saucer') {
+    // Plato chino / Mini cono plano de delimitación
+    const c = obj.color || '#facc15';
     body = (
       <>
-        <ellipse cx="0" cy="0.6" rx="2.2" ry="0.9" fill={obj.color || '#facc15'} stroke="#000" strokeWidth="0.2" />
-        <ellipse cx="0" cy="0.3" rx="0.7" ry="0.35" fill="#1e293b" />
+        <ellipse cx="0.3" cy="0.8" rx="2.4" ry="0.9" fill="rgba(0,0,0,0.3)" />
+        <ellipse cx="0" cy="0.6" rx="2.3" ry="0.9" fill={c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.3" />
+        <ellipse cx="0" cy="0.2" rx="1.3" ry="0.5" fill="#fef08a" />
+        <ellipse cx="0" cy="0.2" rx="0.6" ry="0.25" fill="#0f172a" />
       </>
     );
   } else if (obj.type === 'ring') {
-    body = <circle cx="0" cy="0" r="3.0" fill="none" stroke={obj.color || '#38bdf8'} strokeWidth="0.7" />;
-  }  else if (obj.type === 'pole') {
+    // Aro de agilidad y coordinación motriz
+    const c = obj.color || '#38bdf8';
     body = (
       <>
-        <ellipse cx="0" cy="4.2" rx="1.8" ry="0.6" fill="rgba(0,0,0,0.35)" />
-        <rect x="-0.4" y="-7.5" width="0.8" height="11.5" rx="0.3" fill={obj.color || '#facc15'} stroke="#ca8a04" strokeWidth="0.2" />
-        <circle cx="0" cy="-7.5" r="0.8" fill="#ef4444" />
+        <ellipse cx="0.2" cy="0.4" rx="3.1" ry="3.1" fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="0.6" />
+        <circle cx="0" cy="0" r="3.0" fill="none" stroke={c} strokeWidth="0.75" />
+      </>
+    );
+  } else if (obj.type === 'pole') {
+    // Estaca / Pica de eslalon con resorte de absorción de impacto
+    const c = obj.color || '#facc15';
+    body = (
+      <>
+        {/* Base de inserción y sombra */}
+        <ellipse cx="0.4" cy="4.2" rx="2.0" ry="0.7" fill="rgba(0,0,0,0.35)" />
+        {/* Resorte flexible de base negra */}
+        <rect x="-0.7" y="2.0" width="1.4" height="2.2" rx="0.4" fill="#0f172a" stroke="#334155" strokeWidth="0.2" />
+        {/* Tubo de PVC de alta visibilidad */}
+        <rect x="-0.4" y="-8.2" width="0.8" height="10.4" rx="0.4" fill={c} stroke="#ca8a04" strokeWidth="0.2" />
+        {/* Tapa protectora superior roja */}
+        <circle cx="0" cy="-8.2" r="0.85" fill="#ef4444" stroke="#991b1b" strokeWidth="0.2" />
       </>
     );
   }
 
   return (
-    <g transform={`translate(${obj.x}, ${obj.y}) rotate(${rot})`} onPointerDown={onPointerDown} onDoubleClick={onDoubleClick} className="cursor-grab active:cursor-grabbing touch-none select-none">
+    <g transform={`translate(${obj.x}, ${obj.y}) rotate(${rot}) scale(${s})`} onPointerDown={onPointerDown} onDoubleClick={onDoubleClick} className="cursor-grab active:cursor-grabbing touch-none select-none">
       {body}
     </g>
   );
 }
-
 function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   if (!phone) return <span className="text-[10px] text-zinc-600 italic">Sin WhatsApp</span>;
   const num = phone.replace(/[^0-9]/g, '');
