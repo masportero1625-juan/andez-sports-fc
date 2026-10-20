@@ -85,83 +85,89 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   let body = null;
 
   if (obj.type === 'mini_goal') {
-    // Portería con perspectiva isométrica reglamentaria y red tensada
+    // Mini portería isométrica 2.5D idéntica a TacticalPad
     body = (
       <>
-        {/* Sombra base en ángulo de fuga */}
-        <polygon points="-4.8,1.6 4.8,1.6 5.8,0.2 -3.8,0.2" fill="rgba(0,0,0,0.3)" />
-        {/* Red de fondo y techo con caída trasera */}
-        <polygon points="-4.4,-2.2 4.4,-2.2 5.4,-0.6 -3.4,-0.6" fill="#f8fafc" stroke="#94a3b8" strokeWidth="0.2" strokeDasharray="0.4,0.4" fillOpacity="0.85" />
-        <polygon points="4.4,-2.2 5.4,-0.6 5.4,1.0 4.4,0.6" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="0.18" strokeDasharray="0.4,0.4" fillOpacity="0.9" />
-        <polygon points="-4.4,-2.2 -3.4,-0.6 -3.4,1.0 -4.4,0.6" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="0.18" fillOpacity="0.8" />
-        {/* Tirantes tubulares traseros de acero */}
-        <line x1="-4.4" y1="-2.2" x2="-3.4" y2="-0.6" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="4.4" y1="-2.2" x2="5.4" y2="-0.6" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="-3.4" y1="-0.6" x2="5.4" y2="-0.6" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="-3.4" y1="-0.6" x2="-3.4" y2="1.0" stroke="#475569" strokeWidth="0.3" />
-        <line x1="5.4" y1="-0.6" x2="5.4" y2="1.0" stroke="#475569" strokeWidth="0.3" />
-        {/* Marco frontal tubular blanco de alta visibilidad */}
-        <line x1="-4.4" y1="0.6" x2="-4.4" y2="-2.2" stroke="#ffffff" strokeWidth="0.55" strokeLinecap="round" />
-        <line x1="4.4" y1="0.6" x2="4.4" y2="-2.2" stroke="#ffffff" strokeWidth="0.55" strokeLinecap="round" />
-        <line x1="-4.4" y1="-2.2" x2="4.4" y2="-2.2" stroke="#ffffff" strokeWidth="0.6" strokeLinecap="round" />
-        <line x1="-4.4" y1="0.6" x2="4.4" y2="0.6" stroke="#cbd5e1" strokeWidth="0.45" strokeLinecap="round" />
+        {/* Sombra de proyección en el césped */}
+        <path d="M -5.2 2.2 L 5.2 2.2 L 6.6 0.2 L -3.8 0.2 Z" fill="rgba(0,0,0,0.35)" />
+        {/* Red de fondo y techo con caída tensada */}
+        <path d="M -4.6 -2.4 L 4.6 -2.4 L 6.0 0.4 L -3.2 0.4 Z" fill="rgba(241, 245, 249, 0.4)" stroke="#94a3b8" strokeWidth="0.15" strokeDasharray="0.35,0.35" />
+        <path d="M 4.6 -2.4 L 6.0 0.4 L 6.0 1.6 L 4.6 0.8 Z" fill="rgba(203, 213, 225, 0.35)" stroke="#94a3b8" strokeWidth="0.15" strokeDasharray="0.35,0.35" />
+        <path d="M -4.6 -2.4 L -3.2 0.4 L -3.2 1.6 L -4.6 0.8 Z" fill="rgba(148, 163, 184, 0.25)" stroke="#94a3b8" strokeWidth="0.15" strokeDasharray="0.35,0.35" />
+        {/* Tirantes traseros de acero */}
+        <line x1="-4.6" y1="-2.4" x2="-3.2" y2="0.4" stroke="#64748b" strokeWidth="0.3" strokeLinecap="round" />
+        <line x1="4.6" y1="-2.4" x2="6.0" y2="0.4" stroke="#64748b" strokeWidth="0.3" strokeLinecap="round" />
+        <line x1="-3.2" y1="0.4" x2="6.0" y2="0.4" stroke="#475569" strokeWidth="0.3" strokeLinecap="round" />
+        <line x1="-3.2" y1="0.4" x2="-3.2" y2="1.6" stroke="#475569" strokeWidth="0.3" />
+        <line x1="6.0" y1="0.4" x2="6.0" y2="1.6" stroke="#475569" strokeWidth="0.3" />
+        {/* Poste base inferior */}
+        <line x1="-4.6" y1="0.8" x2="4.6" y2="0.8" stroke="#cbd5e1" strokeWidth="0.4" strokeLinecap="round" />
+        {/* Marco frontal tubular blanco puro con iluminación */}
+        <line x1="-4.6" y1="0.8" x2="-4.6" y2="-2.4" stroke="#ffffff" strokeWidth="0.6" strokeLinecap="round" />
+        <line x1="4.6" y1="0.8" x2="4.6" y2="-2.4" stroke="#e2e8f0" strokeWidth="0.6" strokeLinecap="round" />
+        <line x1="-4.6" y1="-2.4" x2="4.6" y2="-2.4" stroke="#ffffff" strokeWidth="0.65" strokeLinecap="round" />
+        {/* Escuadras en las esquinas */}
+        <circle cx="-4.6" cy="-2.4" r="0.4" fill="#ffffff" />
+        <circle cx="4.6" cy="-2.4" r="0.4" fill="#e2e8f0" />
       </>
     );
   } else if (obj.type === 'dummy') {
-    // Maniquí esbelto profesional tipo TacticalPad (proporción anatómica 1:2.4)
+    // Maniquí de entrenamiento tipo TacticalPad: estructura tubular esbelta con base en cruz
     body = (
       <>
-        {/* Sombra proyectada lateral elíptica */}
-        <ellipse cx="2.0" cy="4.4" rx="2.4" ry="0.6" fill="rgba(0,0,0,0.3)" transform="rotate(-15, 2.0, 4.4)" />
-        {/* Patas de acero dobles clavadas al suelo */}
-        <line x1="-0.8" y1="2.2" x2="-0.8" y2="4.4" stroke="#334155" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="0.8" y1="2.2" x2="0.8" y2="4.4" stroke="#334155" strokeWidth="0.35" strokeLinecap="round" />
-        <circle cx="-0.8" cy="4.4" r="0.25" fill="#0f172a" />
-        <circle cx="0.8" cy="4.4" r="0.25" fill="#0f172a" />
-        {/* Silueta anatómica esbelta (hombros angostos y torso estilizado) */}
-        <path d="M -1.5,-2.2 C -1.6,-0.8 -1.2,1.2 -0.8,2.2 L 0.8,2.2 C 1.2,1.2 1.6,-0.8 1.5,-2.2 C 1.2,-2.8 -1.2,-2.8 -1.5,-2.2 Z" fill="#facc15" stroke="#ca8a04" strokeWidth="0.35" />
-        {/* Ranuras de costillas horizontales de ventilación */}
-        <line x1="-1.2" y1="-1.4" x2="1.2" y2="-1.4" stroke="#ca8a04" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="-1.3" y1="-0.6" x2="1.3" y2="-0.6" stroke="#ca8a04" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="-1.2" y1="0.2" x2="1.2" y2="0.2" stroke="#ca8a04" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="-1.0" y1="1.0" x2="1.0" y2="1.0" stroke="#ca8a04" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="-0.8" y1="1.7" x2="0.8" y2="1.7" stroke="#ca8a04" strokeWidth="0.3" strokeLinecap="round" />
-        {/* Columna vertebral de refuerzo */}
-        <line x1="0" y1="-2.6" x2="0" y2="2.2" stroke="#eab308" strokeWidth="0.35" />
-        {/* Cuello y cabeza anatómica alargada */}
-        <line x1="0" y1="-2.6" x2="0" y2="-2.9" stroke="#ca8a04" strokeWidth="0.4" />
-        <ellipse cx="0" cy="-3.8" rx="0.75" ry="0.95" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.35" />
+        {/* Sombra de la base en cruz y silueta en el pasto */}
+        <ellipse cx="2.2" cy="4.2" rx="2.5" ry="0.6" fill="rgba(0,0,0,0.32)" transform="rotate(-15, 2.2, 4.2)" />
+        <ellipse cx="0" cy="3.6" rx="1.6" ry="0.5" fill="rgba(0,0,0,0.3)" />
+        {/* Base metálica inferior de fijación con resortes */}
+        <line x1="-1.4" y1="3.6" x2="1.4" y2="3.6" stroke="#1e293b" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="0" y1="3.0" x2="0" y2="4.2" stroke="#1e293b" strokeWidth="0.35" strokeLinecap="round" />
+        {/* Postes dobles de soporte vertical */}
+        <line x1="-0.7" y1="1.8" x2="-0.7" y2="3.6" stroke="#475569" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="0.7" y1="1.8" x2="0.7" y2="3.6" stroke="#475569" strokeWidth="0.35" strokeLinecap="round" />
+        {/* Silueta exterior de tubo amarillo flúor */}
+        <path d="M -1.6 -2.4 C -1.8 -0.8 -1.2 0.8 -0.8 1.8 L 0.8 1.8 C 1.2 0.8 1.8 -0.8 1.6 -2.4 C 1.2 -3.0 -1.2 -3.0 -1.6 -2.4 Z" fill="rgba(250, 204, 21, 0.12)" stroke="#eab308" strokeWidth="0.5" strokeLinejoin="round" />
+        {/* Costillas tubulares horizontales */}
+        <line x1="-1.3" y1="-1.6" x2="1.3" y2="-1.6" stroke="#facc15" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="-1.4" y1="-0.8" x2="1.4" y2="-0.8" stroke="#facc15" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="-1.3" y1="0.0" x2="1.3" y2="0.0" stroke="#facc15" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="-1.1" y1="0.8" x2="1.1" y2="0.8" stroke="#facc15" strokeWidth="0.35" strokeLinecap="round" />
+        {/* Eje central de refuerzo */}
+        <line x1="0" y1="-2.8" x2="0" y2="1.8" stroke="#ca8a04" strokeWidth="0.4" />
+        {/* Cabeza estilizada de alambre tubular ovalada */}
+        <ellipse cx="0" cy="-4.0" rx="0.85" ry="1.05" fill="rgba(250, 204, 21, 0.15)" stroke="#eab308" strokeWidth="0.45" />
+        <line x1="0" y1="-2.9" x2="0" y2="-2.6" stroke="#ca8a04" strokeWidth="0.4" />
       </>
     );
   } else if (obj.type === 'hurdle') {
-    // Valla de salto técnica
+    // Valla de salto técnica isométrica
     body = (
       <>
-        <ellipse cx="-2.4" cy="1.8" rx="1.1" ry="0.4" fill="rgba(0,0,0,0.28)" />
-        <ellipse cx="2.4" cy="1.8" rx="1.1" ry="0.4" fill="rgba(0,0,0,0.28)" />
-        <line x1="-3.2" y1="2.0" x2="-1.6" y2="1.6" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="1.6" y1="2.0" x2="3.2" y2="1.6" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="-2.4" y1="1.8" x2="-2.4" y2="-1.8" stroke="#facc15" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="2.4" y1="1.8" x2="2.4" y2="-1.8" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
-        <rect x="-2.6" y="-2.2" width="5.2" height="0.65" rx="0.2" fill="#facc15" stroke="#ca8a04" strokeWidth="0.2" />
+        <ellipse cx="-2.5" cy="1.6" rx="1.1" ry="0.35" fill="rgba(0,0,0,0.28)" />
+        <ellipse cx="2.5" cy="1.6" rx="1.1" ry="0.35" fill="rgba(0,0,0,0.28)" />
+        <line x1="-3.2" y1="1.8" x2="-1.8" y2="1.4" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="1.8" y1="1.8" x2="3.2" y2="1.4" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="-2.5" y1="1.6" x2="-2.5" y2="-1.6" stroke="#facc15" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="2.5" y1="1.6" x2="2.5" y2="-1.6" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
+        <rect x="-2.8" y="-2.0" width="5.6" height="0.6" rx="0.2" fill="#facc15" stroke="#ca8a04" strokeWidth="0.15" />
+        <line x1="-2.8" y1="-1.7" x2="2.8" y2="-1.7" stroke="#ffffff" strokeWidth="0.2" opacity="0.8" />
       </>
     );
   } else if (obj.type === 'ladder') {
-    // Escalera de coordinación
+    // Escalera de agilidad
     body = (
       <>
-        <polygon points="-1.8,-7.2 2.2,-7.2 2.4,7.4 -1.6,7.4" fill="rgba(0,0,0,0.16)" />
+        <polygon points="-1.8,-7.2 2.2,-7.2 2.4,7.4 -1.6,7.4" fill="rgba(0,0,0,0.18)" />
         <line x1="-1.9" y1="-7.2" x2="-1.7" y2="7.2" stroke="#0f172a" strokeWidth="0.4" strokeLinecap="round" />
         <line x1="1.7" y1="-7.2" x2="1.9" y2="7.2" stroke="#0f172a" strokeWidth="0.4" strokeLinecap="round" />
         {[-6.0, -4.0, -2.0, 0, 2.0, 4.0, 6.0].map(pos => (
-          <line key={pos} x1="-1.9" y1={pos} x2="1.9" y2={pos} stroke="#facc15" strokeWidth="0.65" strokeLinecap="round" />
+          <line key={pos} x1="-1.9" y1={pos} x2="1.9" y2={pos} stroke="#facc15" strokeWidth="0.6" strokeLinecap="round" />
         ))}
       </>
     );
   } else if (obj.type === 'cone') {
-    // Cono de delimitación calibrado
+    // Cono de delimitación 2.5D
     const isCustom = obj.color && obj.color !== '#ea580c';
-    const cFill = isCustom ? obj.color : '#f97316';
+    const cFill = isCustom ? obj.color : '#ea580c';
     const bFill = isCustom ? obj.color : '#c2410c';
     body = (
       <>
@@ -174,7 +180,7 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
       </>
     );
   } else if (obj.type === 'saucer') {
-    // Plato chino / mini cono
+    // Plato chino / lenteja
     const c = obj.color || '#facc15';
     body = (
       <>
@@ -185,7 +191,7 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
       </>
     );
   } else if (obj.type === 'ring') {
-    // Aro de agilidad
+    // Aro de suelo
     const c = obj.color || '#38bdf8';
     body = (
       <>
@@ -194,7 +200,7 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
       </>
     );
   } else if (obj.type === 'pole') {
-    // Estaca de eslalon fina
+    // Estaca de eslalon
     const c = obj.color || '#facc15';
     body = (
       <>
@@ -217,7 +223,7 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
       </>
     );
   } else if (obj.type === 'trampoline') {
-    // Trampolín de reacción
+    // Cama elástica / trampolín
     body = (
       <>
         <ellipse cx="0.6" cy="0.8" rx="2.8" ry="1.7" fill="rgba(0,0,0,0.28)" />
@@ -229,7 +235,7 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
       </>
     );
   } else if (obj.type === 'mat') {
-    // Colchoneta de caída
+    // Colchoneta
     body = (
       <>
         <polygon points="-3.6,1.6 3.6,1.6 4.2,-0.2 -3.0,-0.2" fill="rgba(0,0,0,0.22)" />
