@@ -85,68 +85,62 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   let body = null;
 
   if (obj.type === 'mini_goal') {
-    // Mini portería isométrica 2.5D con tubos metalizados y red tensada
+    // Mini portería profesional con red opaca y marco tubular blanco
     body = (
       <>
-        {/* Sombra de apoyo proyectada */}
-        <polygon points="-5.2,1.6 4.8,1.6 6.8,-0.6 -3.2,-0.6" fill="rgba(0,0,0,0.32)" />
-        {/* Red de fondo y laterales con trama romboidal traslúcida */}
-        <polygon points="-4.2,-2.6 4.2,-2.6 6.0,-0.4 -2.4,-0.4" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.5)" strokeWidth="0.25" strokeDasharray="0.6,0.6" />
-        <polygon points="4.2,-2.6 6.0,-0.4 6.0,1.2 4.2,-1.0" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.2" strokeDasharray="0.5,0.5" />
-        <polygon points="-4.2,-2.6 -2.4,-0.4 -2.4,1.2 -4.2,1.4" fill="rgba(0,0,0,0.12)" />
-        {/* Estructura trasera de fijación */}
-        <line x1="-4.2" y1="-2.6" x2="-2.4" y2="-0.4" stroke="#94a3b8" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="4.2" y1="-2.6" x2="6.0" y2="-0.4" stroke="#94a3b8" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="-2.4" y1="-0.4" x2="6.0" y2="-0.4" stroke="#64748b" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="-2.4" y1="-0.4" x2="-4.2" y2="1.4" stroke="#64748b" strokeWidth="0.5" />
-        <line x1="6.0" y1="-0.4" x2="4.2" y2="1.4" stroke="#64748b" strokeWidth="0.5" />
-        {/* Tubos delanteros con gradiente metálico tubular */}
-        <line x1="-4.2" y1="1.4" x2="-4.2" y2="-2.6" stroke="url(#metal-white)" strokeWidth="0.85" strokeLinecap="round" />
-        <line x1="4.2" y1="1.4" x2="4.2" y2="-2.6" stroke="url(#metal-white)" strokeWidth="0.85" strokeLinecap="round" />
-        <line x1="-4.2" y1="-2.6" x2="4.2" y2="-2.6" stroke="url(#metal-white)" strokeWidth="0.9" strokeLinecap="round" />
-        {/* Barra frontal de suelo */}
-        <line x1="-4.2" y1="1.4" x2="4.2" y2="1.4" stroke="url(#metal-white)" strokeWidth="0.65" strokeLinecap="round" />
+        {/* Sombra de proyección en el suelo */}
+        <polygon points="-5.5,1.8 5.5,1.8 4.2,-1.2 -4.2,-1.2" fill="rgba(0,0,0,0.35)" />
+        {/* Red microperforada opaca que oculta el césped */}
+        <polygon points="-4.8,-2.6 4.8,-2.6 4.0,-0.8 -4.0,-0.8" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="0.25" strokeDasharray="0.5,0.5" />
+        <polygon points="-4.8,-2.6 -4.0,-0.8 -4.0,1.4 -4.8,1.4" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="0.2" />
+        <polygon points="4.8,-2.6 4.0,-0.8 4.0,1.4 4.8,1.4" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="0.2" />
+        {/* Estructura tubular trasera */}
+        <line x1="-4.0" y1="-0.8" x2="4.0" y2="-0.8" stroke="#64748b" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="-4.0" y1="-0.8" x2="-4.0" y2="1.4" stroke="#64748b" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="4.0" y1="-0.8" x2="4.0" y2="1.4" stroke="#64748b" strokeWidth="0.5" strokeLinecap="round" />
+        {/* Marco tubular frontal blanco reflectante con bisel */}
+        <line x1="-4.8" y1="1.4" x2="-4.8" y2="-2.6" stroke="#ffffff" strokeWidth="0.85" strokeLinecap="round" />
+        <line x1="4.8" y1="1.4" x2="4.8" y2="-2.6" stroke="#ffffff" strokeWidth="0.85" strokeLinecap="round" />
+        <line x1="-4.8" y1="-2.6" x2="4.8" y2="-2.6" stroke="#ffffff" strokeWidth="0.9" strokeLinecap="round" />
+        <line x1="-4.8" y1="1.4" x2="4.8" y2="1.4" stroke="#f1f5f9" strokeWidth="0.75" strokeLinecap="round" />
       </>
     );
   } else if (obj.type === 'dummy') {
-    // Maniquí metálico profesional tipo TacticalPad con relieve anatómico
+    // Maniquí de tiro libre anatómico sólido con varillas de acero
     body = (
       <>
-        {/* Sombra larga proyectada en diagonal */}
-        <ellipse cx="2.6" cy="4.0" rx="3.0" ry="0.9" fill="rgba(0,0,0,0.32)" transform="rotate(-18, 2.6, 4.0)" />
+        {/* Sombra proyectada en diagonal */}
+        <ellipse cx="2.2" cy="4.2" rx="2.8" ry="0.8" fill="rgba(0,0,0,0.35)" transform="rotate(-15, 2.2, 4.2)" />
         {/* Varillas de anclaje de acero al suelo */}
-        <line x1="-1.1" y1="2.2" x2="-1.1" y2="4.0" stroke="#334155" strokeWidth="0.45" strokeLinecap="round" />
-        <line x1="1.1" y1="2.2" x2="1.1" y2="4.0" stroke="#334155" strokeWidth="0.45" strokeLinecap="round" />
-        <circle cx="-1.1" cy="4.0" r="0.4" fill="#0f172a" />
-        <circle cx="1.1" cy="4.0" r="0.4" fill="#0f172a" />
-        {/* Silueta exterior tubular con gradiente fluorescente */}
-        <path d="M -2.2 -1.8 Q -2.6 0.2 -1.4 2.2 L 1.4 2.2 Q 2.6 0.2 2.2 -1.8 Q 1.8 -2.8 0 -2.8 Q -1.8 -2.8 -2.2 -1.8 Z" fill="rgba(250, 204, 21, 0.2)" stroke="url(#tube-yellow)" strokeWidth="0.75" strokeLinejoin="round" />
-        {/* Rejilla de varillas horizontales tubulares */}
-        <line x1="-1.8" y1="-1.4" x2="1.8" y2="-1.4" stroke="url(#tube-yellow)" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="-2.1" y1="-0.5" x2="2.1" y2="-0.5" stroke="url(#tube-yellow)" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="-1.9" y1="0.4" x2="1.9" y2="0.4" stroke="url(#tube-yellow)" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="-1.5" y1="1.3" x2="1.5" y2="1.3" stroke="url(#tube-yellow)" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="0" y1="-2.8" x2="0" y2="2.2" stroke="url(#tube-yellow)" strokeWidth="0.55" />
-        {/* Cabeza anatómica con relieve */}
-        <ellipse cx="0" cy="-3.9" rx="1.15" ry="1.35" fill="url(#tube-yellow)" stroke="#ca8a04" strokeWidth="0.35" />
-        <line x1="0" y1="-2.8" x2="0" y2="-2.5" stroke="#ca8a04" strokeWidth="0.5" />
+        <line x1="-1.1" y1="2.2" x2="-1.1" y2="4.2" stroke="#334155" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="1.1" y1="2.2" x2="1.1" y2="4.2" stroke="#334155" strokeWidth="0.5" strokeLinecap="round" />
+        <circle cx="-1.1" cy="4.2" r="0.4" fill="#0f172a" />
+        <circle cx="1.1" cy="4.2" r="0.4" fill="#0f172a" />
+        {/* Placa sólida opaca de base (amarillo intenso) */}
+        <path d="M -2.2 -1.8 Q -2.6 0.2 -1.4 2.2 L 1.4 2.2 Q 2.6 0.2 2.2 -1.8 Q 1.8 -2.8 0 -2.8 Q -1.8 -2.8 -2.2 -1.8 Z" fill="#eab308" stroke="#ca8a04" strokeWidth="0.4" strokeLinejoin="round" />
+        {/* Costillas horizontales de ventilación */}
+        <line x1="-1.8" y1="-1.3" x2="1.8" y2="-1.3" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="-2.1" y1="-0.4" x2="2.1" y2="-0.4" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="-1.9" y1="0.5" x2="1.9" y2="0.5" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="-1.4" y1="1.4" x2="1.4" y2="1.4" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        {/* Borde exterior tubular amarillo flúor */}
+        <path d="M -2.2 -1.8 Q -2.6 0.2 -1.4 2.2 L 1.4 2.2 Q 2.6 0.2 2.2 -1.8 Q 1.8 -2.8 0 -2.8 Q -1.8 -2.8 -2.2 -1.8 Z" fill="none" stroke="#facc15" strokeWidth="0.65" strokeLinejoin="round" />
+        {/* Cabeza anatómica sólida con relieve */}
+        <ellipse cx="0" cy="-3.8" rx="1.2" ry="1.35" fill="#facc15" stroke="#ca8a04" strokeWidth="0.45" />
+        <line x1="0" y1="-2.8" x2="0" y2="-2.45" stroke="#ca8a04" strokeWidth="0.6" />
       </>
     );
   } else if (obj.type === 'hurdle') {
-    // Valla de salto técnica 2.5D
+    // Valla de salto sólida
     body = (
       <>
-        {/* Sombras de apoyos */}
-        <ellipse cx="-2.6" cy="2.2" rx="1.6" ry="0.55" fill="rgba(0,0,0,0.3)" />
-        <ellipse cx="3.4" cy="2.2" rx="1.6" ry="0.55" fill="rgba(0,0,0,0.3)" />
-        {/* Patas de apoyo en suelo */}
+        <ellipse cx="-2.6" cy="2.2" rx="1.4" ry="0.5" fill="rgba(0,0,0,0.3)" />
+        <ellipse cx="3.4" cy="2.2" rx="1.4" ry="0.5" fill="rgba(0,0,0,0.3)" />
         <line x1="-3.6" y1="2.4" x2="-1.6" y2="2.0" stroke="#ca8a04" strokeWidth="0.7" strokeLinecap="round" />
         <line x1="2.4" y1="2.4" x2="4.4" y2="2.0" stroke="#ca8a04" strokeWidth="0.7" strokeLinecap="round" />
-        {/* Postes verticales con gradiente */}
-        <line x1="-2.6" y1="2.2" x2="-2.6" y2="-2.2" stroke="url(#tube-yellow)" strokeWidth="0.7" strokeLinecap="round" />
-        <line x1="3.4" y1="2.2" x2="3.4" y2="-2.2" stroke="url(#tube-yellow)" strokeWidth="0.7" strokeLinecap="round" />
-        {/* Barra superior de alta visibilidad */}
-        <rect x="-3.0" y="-2.8" width="6.8" height="0.9" rx="0.3" fill="url(#tube-yellow)" stroke="#ca8a04" strokeWidth="0.25" />
+        <line x1="-2.6" y1="2.2" x2="-2.6" y2="-2.2" stroke="#eab308" strokeWidth="0.65" strokeLinecap="round" />
+        <line x1="3.4" y1="2.2" x2="3.4" y2="-2.2" stroke="#ca8a04" strokeWidth="0.65" strokeLinecap="round" />
+        <rect x="-3.0" y="-2.8" width="6.8" height="0.9" rx="0.3" fill="#facc15" stroke="#ca8a04" strokeWidth="0.25" />
       </>
     );
   } else if (obj.type === 'ladder') {
@@ -158,24 +152,25 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
         <line x1="2.0" y1="-7.5" x2="2.3" y2="7.5" stroke="#0f172a" strokeWidth="0.5" strokeLinecap="round" />
         {[-6.2, -4.2, -2.1, 0, 2.1, 4.2, 6.2].map(pos => (
           <g key={pos}>
-            <line x1="-2.3" y1={pos} x2="2.3" y2={pos} stroke="url(#tube-yellow)" strokeWidth="0.9" strokeLinecap="round" />
-            <line x1="-2.1" y1={pos - 0.15} x2="2.1" y2={pos - 0.15} stroke="#ffffff" strokeWidth="0.3" strokeLinecap="round" opacity="0.8" />
+            <line x1="-2.3" y1={pos} x2="2.3" y2={pos} stroke="#eab308" strokeWidth="0.85" strokeLinecap="round" />
+            <line x1="-2.1" y1={pos - 0.15} x2="2.1" y2={pos - 0.15} stroke="#fef08a" strokeWidth="0.35" strokeLinecap="round" />
           </g>
         ))}
       </>
     );
   } else if (obj.type === 'cone') {
-    // Cono deportivo con gradiente volumétrico y sombra
+    // Cono de tráfico sólido de alto contraste
     const isCustom = obj.color && obj.color !== '#ea580c';
-    const coneFill = isCustom ? obj.color : 'url(#cone-orange)';
+    const coneColor = isCustom ? obj.color : '#f97316';
+    const baseColor = isCustom ? obj.color : '#c2410c';
     body = (
       <>
-        <ellipse cx="1.6" cy="1.6" rx="2.6" ry="0.9" fill="rgba(0,0,0,0.32)" />
+        <ellipse cx="1.6" cy="1.6" rx="2.5" ry="0.9" fill="rgba(0,0,0,0.32)" />
         <polygon points="-2.2,0.8 1.8,0.8 2.3,1.6 -1.7,1.6" fill="#7c2d12" />
-        <polygon points="-2.2,0.8 1.8,0.8 1.6,0.3 -2.0,0.3" fill="#9a3412" />
-        <polygon points="-1.8,0.6 1.6,0.6 0.1,-3.4 -0.3,-3.4" fill={coneFill} stroke="#7c2d12" strokeWidth="0.2" />
-        <polygon points="-1.0,-0.6 0.8,-0.6 0.5,-1.6 -0.7,-1.6" fill="#f8fafc" opacity="0.95" />
-        <circle cx="-0.1" cy="-3.4" r="0.4" fill={coneFill} />
+        <polygon points="-2.2,0.8 1.8,0.8 1.6,0.3 -2.0,0.3" fill={baseColor} />
+        <polygon points="-1.8,0.6 1.6,0.6 0.1,-3.4 -0.3,-3.4" fill={coneColor} stroke="#7c2d12" strokeWidth="0.25" />
+        <polygon points="-1.0,-0.6 0.8,-0.6 0.5,-1.6 -0.7,-1.6" fill="#ffffff" stroke="none" />
+        <circle cx="-0.1" cy="-3.4" r="0.4" fill={coneColor} />
       </>
     );
   } else if (obj.type === 'saucer') {
@@ -192,43 +187,45 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
     );
   } else if (obj.type === 'ring') {
     // Aro de agilidad
+    const c = obj.color || '#38bdf8';
     body = (
       <>
         <ellipse cx="0.5" cy="0.6" rx="3.0" ry="2.2" fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="0.6" />
-        <ellipse cx="0" cy="0" rx="3.0" ry="2.2" fill="none" stroke="url(#ring-glow)" strokeWidth="0.8" />
+        <ellipse cx="0" cy="0" rx="3.0" ry="2.2" fill="none" stroke={c} strokeWidth="0.8" />
       </>
     );
   } else if (obj.type === 'pole') {
     // Estaca de eslalon
+    const c = obj.color || '#facc15';
     body = (
       <>
         <polygon points="0,3.6 0.5,3.6 7.5,-1.5 7.0,-1.5" fill="rgba(0,0,0,0.28)" />
         <circle cx="0" cy="3.6" r="0.8" fill="rgba(0,0,0,0.35)" />
         <rect x="-0.6" y="1.8" width="1.2" height="1.8" rx="0.3" fill="#1e293b" stroke="#475569" strokeWidth="0.2" />
-        <rect x="-0.4" y="-8.4" width="0.8" height="10.2" rx="0.3" fill="url(#tube-yellow)" stroke="#ca8a04" strokeWidth="0.2" />
+        <rect x="-0.4" y="-8.4" width="0.8" height="10.2" rx="0.3" fill={c} stroke="#ca8a04" strokeWidth="0.25" />
         <circle cx="0" cy="-8.4" r="0.85" fill="#ef4444" stroke="#991b1b" strokeWidth="0.2" />
       </>
     );
   } else if (obj.type === 'rebounder') {
-    // Banco sueco / panel de rebote con textura madera
+    // Panel de rebote de pases
     body = (
       <>
         <polygon points="-4.2,2.2 4.2,2.2 5.0,0.8 -3.4,0.8" fill="rgba(0,0,0,0.3)" />
         <line x1="-3.2" y1="0.8" x2="-3.2" y2="-1.4" stroke="#334155" strokeWidth="0.6" />
         <line x1="3.2" y1="0.8" x2="3.2" y2="-1.4" stroke="#334155" strokeWidth="0.6" />
-        <polygon points="-4.2,-1.4 4.2,-1.4 4.2,1.8 -4.2,1.8" fill="url(#rebound-wood)" stroke="#581c87" strokeWidth="0.3" />
+        <polygon points="-4.2,-1.4 4.2,-1.4 4.2,1.8 -4.2,1.8" fill="#d97706" stroke="#78350f" strokeWidth="0.35" />
         <line x1="-3.8" y1="0.2" x2="3.8" y2="0.2" stroke="#451a03" strokeWidth="0.3" strokeDasharray="1.5,1.5" />
       </>
     );
   } else if (obj.type === 'trampoline') {
-    // Trampolín de salto y reacción
+    // Trampolín de reacción
     body = (
       <>
         <ellipse cx="0.8" cy="1.0" rx="3.6" ry="2.2" fill="rgba(0,0,0,0.32)" />
         {[-2.2, 0, 2.2].map(xP => (
           <line key={xP} x1={xP} y1="0.6" x2={xP} y2="2.2" stroke="#475569" strokeWidth="0.6" strokeLinecap="round" />
         ))}
-        <ellipse cx="0" cy="0.6" rx="3.4" ry="1.9" fill="#0f172a" stroke="url(#ring-glow)" strokeWidth="0.7" />
+        <ellipse cx="0" cy="0.6" rx="3.4" ry="1.9" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.7" />
         <ellipse cx="0" cy="0.6" rx="2.5" ry="1.3" fill="#0284c7" stroke="#bae6fd" strokeWidth="0.3" strokeDasharray="0.8,0.8" />
       </>
     );
