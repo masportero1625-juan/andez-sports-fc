@@ -1243,7 +1243,90 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
               );
             }
             if (obj.type === 'ball') return <SoccerBall key={obj.id} x={obj.x} y={obj.y} onPointerDown={e => handlePointerDown(e, obj)} />;
-            return <TrainingMaterial key={obj.id} obj={obj} onPointerDown={e => handlePointerDown(e, obj)} onDoubleClick={() => rotateObject(obj.id)} />;
+            const isMatSelected = selectedMaterial?.id === obj.id;
+            const matScale = obj.scale || 1.0;
+            return (
+              <g key={obj.id}>
+                <TrainingMaterial
+                  obj={obj}
+                  onPointerDown={e => handlePointerDown(e, obj)}
+                  onDoubleClick={() => rotateObject(obj.id)}
+                />
+                {isMatSelected && (
+                  <g transform={`translate(${obj.x}, ${obj.y})`} className="select-none">
+                    {/* Aro punteado selector */}
+                    <circle
+                      r={6 * matScale + 2}
+                      fill="none"
+                      stroke="#facc15"
+                      strokeWidth="0.5"
+                      strokeDasharray="1.2,1.2"
+                    />
+
+                    {/* Botón Rotar 45° (Arriba) */}
+                    <g
+                      transform={`translate(0, ${-(6 * matScale + 4)})`}
+                      className="cursor-pointer"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        rotateObject(obj.id);
+                      }}
+                    >
+                      <circle r={2.0} fill="#eab308" stroke="#000" strokeWidth="0.2" />
+                      <text x="0" y="0.8" textAnchor="middle" fontSize="1.8" fill="#000" fontWeight="bold">↻</text>
+                    </g>
+
+                    {/* Botón Agrandar (+) (Derecha) */}
+                    <g
+                      transform={`translate(${6 * matScale + 4}, 0)`}
+                      className="cursor-pointer"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        const next = objects.map(o => o.id === obj.id ? { ...o, scale: Math.min(Number((o.scale || 1.0) + 0.2).toFixed(1), 3.0) } : o);
+                        setObjects(next);
+                        setSelectedMaterial(next.find(o => o.id === obj.id));
+                        recordHistory(next);
+                      }}
+                    >
+                      <circle r={2.0} fill="#22c55e" stroke="#000" strokeWidth="0.2" />
+                      <text x="0" y="0.8" textAnchor="middle" fontSize="2.0" fill="#ffffff" fontWeight="bold">+</text>
+                    </g>
+
+                    {/* Botón Achicar (-) (Izquierda) */}
+                    <g
+                      transform={`translate(${-(6 * matScale + 4)}, 0)`}
+                      className="cursor-pointer"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        const next = objects.map(o => o.id === obj.id ? { ...o, scale: Math.max(Number((o.scale || 1.0) - 0.2).toFixed(1), 0.4) } : o);
+                        setObjects(next);
+                        setSelectedMaterial(next.find(o => o.id === obj.id));
+                        recordHistory(next);
+                      }}
+                    >
+                      <circle r={2.0} fill="#ef4444" stroke="#000" strokeWidth="0.2" />
+                      <text x="0" y="0.7" textAnchor="middle" fontSize="2.0" fill="#ffffff" fontWeight="bold">-</text>
+                    </g>
+
+                    {/* Botón Eliminar (Abajo) */}
+                    <g
+                      transform={`translate(0, ${6 * matScale + 4})`}
+                      className="cursor-pointer"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        const next = objects.filter(o => o.id !== obj.id);
+                        setObjects(next);
+                        setSelectedMaterial(null);
+                        recordHistory(next);
+                      }}
+                    >
+                      <circle r={2.0} fill="#18181b" stroke="#ef4444" strokeWidth="0.3" />
+                      <text x="0" y="0.8" textAnchor="middle" fontSize="1.6" fill="#ef4444" fontWeight="bold">✕</text>
+                    </g>
+                  </g>
+                )}
+              </g>
+            );
           })}
         </svg>
 
