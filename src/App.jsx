@@ -85,121 +85,179 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   let body = null;
 
   if (obj.type === 'mini_goal') {
-    // Mini portería con travesaño, profundidad y red cuadriculada
+    // Mini portería isométrica 2.5D con profundidad y red romboidal
     body = (
       <>
-        {/* Sombra de apoyo en el césped */}
-        <ellipse cx="0" cy="2.2" rx="4.8" ry="1.2" fill="rgba(0,0,0,0.3)" />
-        {/* Red de fondo con efecto de malla */}
-        <path d="M -4.2 -2.4 L 4.2 -2.4 L 4.0 1.8 L -4.0 1.8 Z" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.25" strokeDasharray="0.7,0.7" />
-        {/* Estructura tubular (postes y travesaño) */}
-        <line x1="-4.2" y1="-2.4" x2="-4.2" y2="1.8" stroke="#facc15" strokeWidth="0.8" strokeLinecap="round" />
-        <line x1="4.2" y1="-2.4" x2="4.2" y2="1.8" stroke="#facc15" strokeWidth="0.8" strokeLinecap="round" />
-        <line x1="-4.2" y1="-2.4" x2="4.2" y2="-2.4" stroke="#facc15" strokeWidth="0.9" strokeLinecap="round" />
-        {/* Barra base trasera */}
-        <line x1="-4.0" y1="1.8" x2="4.0" y2="1.8" stroke="#ca8a04" strokeWidth="0.7" strokeLinecap="round" />
+        {/* Sombra proyectada en diagonal */}
+        <polygon points="-5,1.5 5,1.5 7,-0.5 -3,-0.5" fill="rgba(0,0,0,0.28)" />
+        {/* Red de fondo y laterales */}
+        <polygon points="-4.2,-2.6 4.2,-2.6 5.8,-0.2 -2.6,-0.2" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.25" strokeDasharray="0.6,0.6" />
+        <polygon points="4.2,-2.6 5.8,-0.2 5.8,1.4 4.2,-1.0" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.35)" strokeWidth="0.2" strokeDasharray="0.5,0.5" />
+        {/* Tubos de soporte traseros en ángulo */}
+        <line x1="-4.2" y1="-2.6" x2="-2.6" y2="-0.2" stroke="#94a3b8" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="4.2" y1="-2.6" x2="5.8" y2="-0.2" stroke="#94a3b8" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="-2.6" y1="-0.2" x2="5.8" y2="-0.2" stroke="#64748b" strokeWidth="0.5" strokeLinecap="round" />
+        <line x1="-2.6" y1="-0.2" x2="-4.2" y2="1.4" stroke="#64748b" strokeWidth="0.4" />
+        <line x1="5.8" y1="-0.2" x2="4.2" y2="1.4" stroke="#64748b" strokeWidth="0.4" />
+        {/* Marco frontal tubular blanco/amarillo reflectante */}
+        <line x1="-4.2" y1="1.4" x2="-4.2" y2="-2.6" stroke="#f8fafc" strokeWidth="0.75" strokeLinecap="round" />
+        <line x1="4.2" y1="1.4" x2="4.2" y2="-2.6" stroke="#cbd5e1" strokeWidth="0.75" strokeLinecap="round" />
+        <line x1="-4.2" y1="-2.6" x2="4.2" y2="-2.6" stroke="#ffffff" strokeWidth="0.8" strokeLinecap="round" />
+        {/* Tubos base delanteros */}
+        <line x1="-4.2" y1="1.4" x2="4.2" y2="1.4" stroke="#e2e8f0" strokeWidth="0.6" strokeLinecap="round" />
       </>
     );
   } else if (obj.type === 'dummy') {
-    // Maniquí de entrenamiento tipo tiro libre con piernas y estacas
+    // Maniquí estilizado tubular profesional con silueta anatómica y varillas
     body = (
       <>
-        {/* Sombra en el suelo */}
-        <ellipse cx="0" cy="3.6" rx="2.5" ry="0.8" fill="rgba(0,0,0,0.35)" />
-        {/* Piernas / Varillas de soporte inferiores */}
-        <line x1="-1.0" y1="1.6" x2="-1.2" y2="3.4" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="1.0" y1="1.6" x2="1.2" y2="3.4" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
-        {/* Estacas de inserción al suelo */}
-        <line x1="-1.2" y1="3.4" x2="-1.2" y2="4.2" stroke="#475569" strokeWidth="0.35" />
-        <line x1="1.2" y1="3.4" x2="1.2" y2="4.2" stroke="#475569" strokeWidth="0.35" />
-        {/* Torso aerodinámico con costillas tácticas */}
-        <path d="M -2.4 -2.2 C -2.4 -2.6, 2.4 -2.6, 2.4 -2.2 L 1.8 1.6 C 1.8 1.9, -1.8 1.9, -1.8 1.6 Z" fill="#eab308" stroke="#ca8a04" strokeWidth="0.4" />
-        <line x1="-1.8" y1="-1.0" x2="1.8" y2="-1.0" stroke="#ca8a04" strokeWidth="0.3" />
-        <line x1="-1.6" y1="0.2" x2="1.6" y2="0.2" stroke="#ca8a04" strokeWidth="0.3" />
-        {/* Cabeza anatómica con relieve */}
-        <circle cx="0" cy="-3.8" r="1.35" fill="#facc15" stroke="#ca8a04" strokeWidth="0.35" />
+        {/* Sombra larga proyectada en diagonal sobre el césped */}
+        <ellipse cx="2.2" cy="3.8" rx="2.8" ry="0.8" fill="rgba(0,0,0,0.3)" transform="rotate(-15, 2.2, 3.8)" />
+        {/* Varillas de anclaje de acero al suelo */}
+        <line x1="-1.1" y1="2.2" x2="-1.1" y2="3.8" stroke="#334155" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="1.1" y1="2.2" x2="1.1" y2="3.8" stroke="#334155" strokeWidth="0.45" strokeLinecap="round" />
+        <circle cx="-1.1" cy="3.8" r="0.4" fill="#0f172a" />
+        <circle cx="1.1" cy="3.8" r="0.4" fill="#0f172a" />
+        {/* Silueta exterior tubular con curvatura anatómica */}
+        <path d="M -2.2 -1.8 Q -2.6 0.2 -1.4 2.2 L 1.4 2.2 Q 2.6 0.2 2.2 -1.8 Q 1.8 -2.8 0 -2.8 Q -1.8 -2.8 -2.2 -1.8 Z" fill="rgba(250, 204, 21, 0.15)" stroke="#eab308" strokeWidth="0.65" strokeLinejoin="round" />
+        {/* Rejilla interior de costillas horizontales */}
+        <line x1="-1.8" y1="-1.4" x2="1.8" y2="-1.4" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="-2.1" y1="-0.5" x2="2.1" y2="-0.5" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="-1.9" y1="0.4" x2="1.9" y2="0.4" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="-1.5" y1="1.3" x2="1.5" y2="1.3" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="0" y1="-2.8" x2="0" y2="2.2" stroke="#eab308" strokeWidth="0.5" />
+        {/* Cabeza anatómica estilizada con aro y soporte */}
+        <ellipse cx="0" cy="-3.8" rx="1.1" ry="1.3" fill="#facc15" stroke="#ca8a04" strokeWidth="0.4" />
+        <line x1="0" y1="-2.8" x2="0" y2="-2.5" stroke="#ca8a04" strokeWidth="0.5" />
       </>
     );
   } else if (obj.type === 'hurdle') {
-    // Valla de salto con patas estabilizadoras
+    // Valla técnica isométrica con soporte en "T" invertida
     body = (
       <>
-        {/* Sombras de las dos bases */}
-        <ellipse cx="-3.0" cy="2.2" rx="1.2" ry="0.5" fill="rgba(0,0,0,0.3)" />
-        <ellipse cx="3.0" cy="2.2" rx="1.2" ry="0.5" fill="rgba(0,0,0,0.3)" />
-        {/* Bases de suelo horizontales */}
-        <line x1="-4.0" y1="2.2" x2="-2.0" y2="2.2" stroke="#ca8a04" strokeWidth="0.6" strokeLinecap="round" />
-        <line x1="2.0" y1="2.2" x2="4.0" y2="2.2" stroke="#ca8a04" strokeWidth="0.6" strokeLinecap="round" />
-        {/* Postes verticales */}
-        <line x1="-3.0" y1="2.2" x2="-3.0" y2="-2.0" stroke="#eab308" strokeWidth="0.6" strokeLinecap="round" />
-        <line x1="3.0" y1="2.2" x2="3.0" y2="-2.0" stroke="#eab308" strokeWidth="0.6" strokeLinecap="round" />
-        {/* Barra superior de salto fluorescente */}
-        <rect x="-3.4" y="-2.6" width="6.8" height="0.9" fill="#facc15" stroke="#ca8a04" strokeWidth="0.25" rx="0.3" />
+        {/* Sombras de las patas */}
+        <ellipse cx="-2.6" cy="2.2" rx="1.6" ry="0.5" fill="rgba(0,0,0,0.3)" />
+        <ellipse cx="3.4" cy="2.2" rx="1.6" ry="0.5" fill="rgba(0,0,0,0.3)" />
+        {/* Patas de suelo en perspectiva */}
+        <line x1="-3.6" y1="2.4" x2="-1.6" y2="2.0" stroke="#ca8a04" strokeWidth="0.7" strokeLinecap="round" />
+        <line x1="2.4" y1="2.4" x2="4.4" y2="2.0" stroke="#ca8a04" strokeWidth="0.7" strokeLinecap="round" />
+        {/* Postes verticales con efecto tubular */}
+        <line x1="-2.6" y1="2.2" x2="-2.6" y2="-2.2" stroke="#eab308" strokeWidth="0.65" strokeLinecap="round" />
+        <line x1="3.4" y1="2.2" x2="3.4" y2="-2.2" stroke="#ca8a04" strokeWidth="0.65" strokeLinecap="round" />
+        {/* Barra superior biselada de alta visibilidad */}
+        <rect x="-3.0" y="-2.8" width="6.8" height="0.9" rx="0.3" fill="#facc15" stroke="#ca8a04" strokeWidth="0.25" />
+        <line x1="-3.0" y1="-2.4" x2="3.8" y2="-2.4" stroke="#fef08a" strokeWidth="0.3" />
       </>
     );
   } else if (obj.type === 'ladder') {
-    // Escalera de agilidad y coordinación
+    // Escalera de agilidad con perspectiva de suelo
     body = (
       <>
-        {/* Cintas laterales flexibles de nylon */}
-        <line x1="-2.3" y1="-7.5" x2="-2.3" y2="7.5" stroke="#0f172a" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="2.3" y1="-7.5" x2="2.3" y2="7.5" stroke="#0f172a" strokeWidth="0.5" strokeLinecap="round" />
-        {/* Peldaños rígidos amarillos de coordinación */}
-        {[-6.0, -4.0, -2.0, 0, 2.0, 4.0, 6.0].map(s => (
-          <line key={s} x1="-2.3" y1={s} x2="2.3" y2={s} stroke="#facc15" strokeWidth="0.8" strokeLinecap="round" />
+        {/* Sombra de la escalera en el césped */}
+        <polygon points="-2.2,-7.5 2.6,-7.5 3.0,7.9 -1.8,7.9" fill="rgba(0,0,0,0.18)" />
+        {/* Cintas laterales de nylon azul marino/negro */}
+        <line x1="-2.3" y1="-7.5" x2="-2.0" y2="7.5" stroke="#0f172a" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="2.0" y1="-7.5" x2="2.3" y2="7.5" stroke="#0f172a" strokeWidth="0.45" strokeLinecap="round" />
+        {/* Peldaños plásticos rígidos con reflejo fluorescente */}
+        {[-6.2, -4.2, -2.1, 0, 2.1, 4.2, 6.2].map(pos => (
+          <g key={pos}>
+            <line x1="-2.3" y1={pos} x2="2.3" y2={pos} stroke="#ca8a04" strokeWidth="0.85" strokeLinecap="round" />
+            <line x1="-2.1" y1={pos - 0.15} x2="2.1" y2={pos - 0.15} stroke="#fef08a" strokeWidth="0.4" strokeLinecap="round" />
+          </g>
         ))}
       </>
     );
   } else if (obj.type === 'cone') {
-    // Cono de tráfico deportivo con base octogonal y sombra
+    // Cono de tráfico estilizado con franja reflectante y sombra en el suelo
     const baseColor = obj.color || '#ea580c';
     body = (
       <>
-        {/* Sombra ovalada */}
-        <ellipse cx="0.4" cy="1.6" rx="2.4" ry="0.9" fill="rgba(0,0,0,0.3)" />
-        {/* Base cuadrada redondeada */}
-        <rect x="-2.2" y="0.6" width="4.4" height="1.6" rx="0.6" fill="#c2410c" stroke="#9a3412" strokeWidth="0.2" />
-        {/* Cono cónico reflectante */}
-        <polygon points="-1.8,0.8 1.8,0.8 0,-3.2" fill={baseColor} stroke="#9a3412" strokeWidth="0.25" />
+        {/* Sombra ovalada realista */}
+        <ellipse cx="1.6" cy="1.6" rx="2.5" ry="0.9" fill="rgba(0,0,0,0.32)" />
+        {/* Base octogonal / rectangular biselada */}
+        <polygon points="-2.2,0.8 1.8,0.8 2.3,1.6 -1.7,1.6" fill="#9a3412" />
+        <polygon points="-2.2,0.8 1.8,0.8 1.6,0.3 -2.0,0.3" fill="#c2410c" />
+        {/* Cuerpo cónico */}
+        <polygon points="-1.8,0.6 1.6,0.6 0.1,-3.4 -0.3,-3.4" fill={baseColor} stroke="#9a3412" strokeWidth="0.2" />
         {/* Franja reflectante blanca reglamentaria */}
-        <polygon points="-0.9,-0.8 0.9,-0.8 0.5,-1.8 -0.5,-1.8" fill="#ffffff" opacity="0.9" />
-        {/* Punta de seguridad redondeada */}
-        <circle cx="0" cy="-3.2" r="0.45" fill={baseColor} />
+        <polygon points="-1.0,-0.6 0.8,-0.6 0.5,-1.6 -0.7,-1.6" fill="#f8fafc" opacity="0.95" />
+        <circle cx="-0.1" cy="-3.4" r="0.4" fill={baseColor} />
       </>
     );
   } else if (obj.type === 'saucer') {
-    // Plato chino / Mini cono plano de delimitación
+    // Plato chino / mini lenteja de delimitación
     const c = obj.color || '#facc15';
     body = (
       <>
-        <ellipse cx="0.3" cy="0.8" rx="2.4" ry="0.9" fill="rgba(0,0,0,0.3)" />
-        <ellipse cx="0" cy="0.6" rx="2.3" ry="0.9" fill={c} stroke="rgba(0,0,0,0.25)" strokeWidth="0.3" />
-        <ellipse cx="0" cy="0.2" rx="1.3" ry="0.5" fill="#fef08a" />
-        <ellipse cx="0" cy="0.2" rx="0.6" ry="0.25" fill="#0f172a" />
+        <ellipse cx="0.8" cy="1.0" rx="2.4" ry="0.8" fill="rgba(0,0,0,0.28)" />
+        <ellipse cx="0" cy="0.6" rx="2.4" ry="0.9" fill="rgba(0,0,0,0.2)" />
+        <ellipse cx="0" cy="0.4" rx="2.2" ry="0.8" fill={c} stroke="rgba(0,0,0,0.2)" strokeWidth="0.2" />
+        <ellipse cx="0" cy="0.2" rx="1.3" ry="0.45" fill="#fef08a" />
+        <ellipse cx="0" cy="0.2" rx="0.55" ry="0.2" fill="#0f172a" />
       </>
     );
   } else if (obj.type === 'ring') {
-    // Aro de agilidad y coordinación motriz
+    // Aro de suelo en perspectiva elíptica
     const c = obj.color || '#38bdf8';
     body = (
       <>
-        <ellipse cx="0.2" cy="0.4" rx="3.1" ry="3.1" fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="0.6" />
-        <circle cx="0" cy="0" r="3.0" fill="none" stroke={c} strokeWidth="0.75" />
+        <ellipse cx="0.5" cy="0.6" rx="3.0" ry="2.2" fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="0.6" />
+        <ellipse cx="0" cy="0" rx="3.0" ry="2.2" fill="none" stroke={c} strokeWidth="0.75" />
       </>
     );
   } else if (obj.type === 'pole') {
-    // Estaca / Pica de eslalon con resorte de absorción de impacto
+    // Estaca de eslalon estilizada con sombra y resorte
     const c = obj.color || '#facc15';
     body = (
       <>
-        {/* Base de inserción y sombra */}
-        <ellipse cx="0.4" cy="4.2" rx="2.0" ry="0.7" fill="rgba(0,0,0,0.35)" />
-        {/* Resorte flexible de base negra */}
-        <rect x="-0.7" y="2.0" width="1.4" height="2.2" rx="0.4" fill="#0f172a" stroke="#334155" strokeWidth="0.2" />
-        {/* Tubo de PVC de alta visibilidad */}
-        <rect x="-0.4" y="-8.2" width="0.8" height="10.4" rx="0.4" fill={c} stroke="#ca8a04" strokeWidth="0.2" />
-        {/* Tapa protectora superior roja */}
-        <circle cx="0" cy="-8.2" r="0.85" fill="#ef4444" stroke="#991b1b" strokeWidth="0.2" />
+        {/* Sombra larga hacia la derecha */}
+        <polygon points="0,3.6 0.5,3.6 7.5,-1.5 7.0,-1.5" fill="rgba(0,0,0,0.28)" />
+        <circle cx="0" cy="3.6" r="0.8" fill="rgba(0,0,0,0.35)" />
+        {/* Resorte de piso flexible de acero */}
+        <rect x="-0.6" y="1.8" width="1.2" height="1.8" rx="0.3" fill="#1e293b" stroke="#475569" strokeWidth="0.2" />
+        {/* Pica de PVC vertical con brillo */}
+        <rect x="-0.4" y="-8.4" width="0.8" height="10.2" rx="0.3" fill={c} stroke="#ca8a04" strokeWidth="0.2" />
+        <line x1="-0.1" y1="-8.4" x2="-0.1" y2="1.8" stroke="#fef08a" strokeWidth="0.25" />
+        {/* Tapón esférico superior de protección */}
+        <circle cx="0" cy="-8.4" r="0.8" fill="#ef4444" stroke="#991b1b" strokeWidth="0.2" />
+      </>
+    );
+  } else if (obj.type === 'rebounder') {
+    // Banco sueco / Panel de rebote de pases
+    body = (
+      <>
+        <polygon points="-4.2,2.2 4.2,2.2 5.0,0.8 -3.4,0.8" fill="rgba(0,0,0,0.3)" />
+        {/* Patas de acero de apoyo trasero */}
+        <line x1="-3.2" y1="0.8" x2="-3.2" y2="-1.4" stroke="#334155" strokeWidth="0.6" />
+        <line x1="3.2" y1="0.8" x2="3.2" y2="-1.4" stroke="#334155" strokeWidth="0.6" />
+        {/* Tabla frontal de impacto de madera reforzada */}
+        <polygon points="-4.2,-1.4 4.2,-1.4 4.2,1.8 -4.2,1.8" fill="#b45309" stroke="#78350f" strokeWidth="0.4" />
+        <rect x="-3.8" y="-1.0" width="7.6" height="2.4" fill="#d97706" />
+        <line x1="-3.8" y1="0.2" x2="3.8" y2="0.2" stroke="#78350f" strokeWidth="0.3" strokeDasharray="1.5,1.5" />
+      </>
+    );
+  } else if (obj.type === 'trampoline') {
+    // Trampolín / Cama elástica de salto y reacción
+    body = (
+      <>
+        <ellipse cx="0.8" cy="1.0" rx="3.6" ry="2.2" fill="rgba(0,0,0,0.32)" />
+        {/* Marco circular metálico con patas */}
+        {[-2.2, 0, 2.2].map(xP => (
+          <line key={xP} x1={xP} y1="0.6" x2={xP} y2="2.2" stroke="#475569" strokeWidth="0.6" strokeLinecap="round" />
+        ))}
+        <ellipse cx="0" cy="0.6" rx="3.4" ry="1.9" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.6" />
+        {/* Malla elástica interior de salto */}
+        <ellipse cx="0" cy="0.6" rx="2.5" ry="1.3" fill="#0284c7" stroke="#bae6fd" strokeWidth="0.3" strokeDasharray="0.8,0.8" />
+      </>
+    );
+  } else if (obj.type === 'mat') {
+    // Colchoneta de caída y preparación física
+    body = (
+      <>
+        <polygon points="-4.4,2.2 4.4,2.2 5.2,-0.4 -3.6,-0.4" fill="rgba(0,0,0,0.25)" />
+        <polygon points="-4.2,1.8 4.2,1.8 4.8,-0.2 -3.6,-0.2" fill="#2563eb" stroke="#1d4ed8" strokeWidth="0.3" />
+        <polygon points="-4.2,1.8 4.2,1.8 4.2,2.4 -4.2,2.4" fill="#1e40af" />
+        <polygon points="4.2,1.8 4.8,-0.2 4.8,0.4 4.2,2.4" fill="#1e3a8a" />
       </>
     );
   }
