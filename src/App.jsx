@@ -9,9 +9,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
-// ==============================================
 // CREDENCIALES SUPABASE
-// ==============================================
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
 
@@ -242,35 +240,28 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   );
 }
 
-// ==============================================
-// MOTOR 3D PROFESIONAL
-// ==============================================
+// MOTOR 3D
 function Pitch3D() {
   return (
     <group>
-      {/* Césped dimensional */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[105, 68]} />
         <meshStandardMaterial color="#15803d" roughness={0.8} />
       </mesh>
-      {/* Franjas de corte de césped */}
       {Array.from({ length: 14 }).map((_, i) => (
         <mesh key={`stripe-3d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[-52.5 + i * 7.5 + 3.75, 0.01, 0]}>
           <planeGeometry args={[7.4, 66]} />
           <meshStandardMaterial color={i % 2 === 0 ? '#16a34a' : '#15803d'} roughness={0.8} />
         </mesh>
       ))}
-      {/* Líneas perimetrales y círculo central */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <ringGeometry args={[9.1, 9.25, 64]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
-      {/* Línea media */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <planeGeometry args={[0.2, 66]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
-      {/* Áreas Grandes 3D */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-44.25, 0.02, 0]}>
         <planeGeometry args={[16.5, 40.4]} />
         <meshBasicMaterial color="#ffffff" wireframe />
@@ -279,7 +270,6 @@ function Pitch3D() {
         <planeGeometry args={[16.5, 40.4]} />
         <meshBasicMaterial color="#ffffff" wireframe />
       </mesh>
-      {/* Arcos 3D reglamentarios */}
       <mesh position={[-51, 1.22, 0]}>
         <boxGeometry args={[0.4, 2.44, 7.32]} />
         <meshStandardMaterial color="#ffffff" metalness={0.2} roughness={0.4} />
@@ -386,9 +376,6 @@ function Scene3D({ objects, selectedObj, setSelectedObj, teamColors, cameraLocke
   );
 }
 
-// ==============================================
-// COMPONENTE PRINCIPAL
-// ==============================================
 export default function App() {
   const [isPC, setIsPC] = useState(window.innerWidth > 768);
   const [viewMode, setViewMode] = useState('2d');
@@ -597,7 +584,6 @@ export default function App() {
     }
   };
 
-  // ESTADOS DE LA PIZARRA
   const [pitchMode, setPitchMode] = useState('full');
   const [showTrainingMenu, setShowTrainingMenu] = useState(false);
   const [showSystemsMenu, setShowSystemsMenu] = useState(false);
@@ -628,7 +614,6 @@ export default function App() {
     }
   };
 
-  // NÓMINAS Y GESTIÓN
   const [newCatName, setNewCatName] = useState('');
   const [editingCatId, setEditingCatId] = useState(null);
   const [editingCatName, setEditingCatName] = useState('');
@@ -651,7 +636,6 @@ export default function App() {
   const [schoolMonthlyFee, setSchoolMonthlyFee] = useState(() => localStorage.getItem('andez_monthly_fee') || '25000');
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  // SESIONES
   const [drillTitle, setDrillTitle] = useState('Salida y Progresión');
   const [drillCategory, setDrillCategory] = useState(categories[0]?.id || 'sub14');
   const [drillNotes, setDrillNotes] = useState('Transición rápida a 2 toques.');
@@ -1056,7 +1040,7 @@ Devuelve estricta y únicamente el array JSON.`;
         </div>
       </header>
 
-      {/* CANCHA CON SOPORTE TÁCTIL TOTAL O VISOR 3D */}
+      {/* CANCHA 2D CON TEXTOS INTERACTIVOS (+ / - / ↻) O VISOR 3D */}
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]">
         {viewMode === '2d' ? (
           <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePitchPointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
@@ -1099,26 +1083,26 @@ Devuelve estricta y únicamente el array JSON.`;
               </g>
             ) : (
               <g stroke="white" strokeWidth="0.8" fill="none">
-                <rect x="2" y="2" width="64" height={pitchMode === 'half' ? 79 : 101} />
+                <rect x="2" y="2" width="64" height={pitchMode === 'half' ? 79 : 101} rx="0.2" />
                 <line x1="2" y1={pitchMode === 'half' ? 81 : 52.5} x2="66" y2={pitchMode === 'half' ? 81 : 52.5} />
                 <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="9.15" />
-                <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="0.8" fill="white" />
+                <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="0.7" fill="white" />
                 {!pitchMode.includes('half') && (
                   <>
                     <rect x="13.8" y="2" width="40.4" height="16.5" />
                     <rect x="24.8" y="2" width="18.4" height="5.5" />
-                    <rect x="30.3" y="-0.8" width="7.32" height="2.8" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
+                    <circle cx="34" cy="11" r="0.6" fill="white" />
                     <path d="M 28 18.5 A 9.15 9.15 0 0 0 40 18.5" />
                   </>
                 )}
                 <rect x="13.8" y={pitchMode === 'half' ? 64.5 : 86.5} width="40.4" height="16.5" />
                 <rect x="24.8" y={pitchMode === 'half' ? 75.5 : 97.5} width="18.4" height="5.5" />
-                <rect x="30.3" y={pitchMode === 'half' ? 81 : 103} width="7.32" height="2.8" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
+                <circle cx="34" cy={pitchMode === 'half' ? 70 : 94} r="0.6" fill="white" />
                 <path d={`M 28 ${pitchMode === 'half' ? 64.5 : 86.5} A 9.15 9.15 0 0 1 40 ${pitchMode === 'half' ? 64.5 : 86.5}`} />
               </g>
             )}
 
-            {/* TRAZADOS Y LÍNEAS */}
+            {/* TRAZADOS TÁCTICOS CON 5 ESTILOS */}
             {drawings.map(l => {
               const markerId = l.type === 'straight' ? '' : (l.type === 'block' ? 'url(#block-mark)' : (l.color === '#ef4444' ? 'url(#arrow-red)' : l.color === '#3b82f6' ? 'url(#arrow-blue)' : l.color === '#facc15' ? 'url(#arrow-yellow)' : l.color === '#000000' ? 'url(#arrow-black)' : 'url(#arrow-white)'));
               const dx = l.end.x - l.start.x;
@@ -1131,9 +1115,36 @@ Devuelve estricta y únicamente el array JSON.`;
               const shortenDist = isArrow ? (strokeW * 3.2) : 0;
               const endX = dist > shortenDist ? l.start.x + ux * (dist - shortenDist) : l.start.x;
               const endY = dist > shortenDist ? l.start.y + uy * (dist - shortenDist) : l.start.y;
+              const effectiveDist = dist > shortenDist ? dist - shortenDist : 0.001;
+
+              let pathD = '';
+              if (l.type === 'wavy') {
+                const numWaves = Math.max(1, Math.round(effectiveDist / 8));
+                const waveLen = effectiveDist / numWaves;
+                const amp = 2.4;
+                const px = -uy;
+                const py = ux;
+                pathD = `M ${l.start.x} ${l.start.y}`;
+                for (let i = 0; i < numWaves; i++) {
+                  const bX = l.start.x + ux * (i * waveLen);
+                  const bY = l.start.y + uy * (i * waveLen);
+                  const eX = l.start.x + ux * ((i + 1) * waveLen);
+                  const eY = l.start.y + uy * ((i + 1) * waveLen);
+                  const cp1X = bX + ux * (waveLen * 0.35) + px * amp;
+                  const cp1Y = bY + uy * (waveLen * 0.35) + py * amp;
+                  const cp2X = bX + ux * (waveLen * 0.65) - px * amp;
+                  const cp2Y = bY + uy * (waveLen * 0.65) - py * amp;
+                  pathD += ` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${eX} ${eY}`;
+                }
+              }
+
               return (
                 <g key={l.id} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setDrawings(prev => prev.filter(d => d.id !== l.id)); } }}>
-                  <line x1={l.start.x} y1={l.start.y} x2={endX} y2={endY} stroke={l.color} strokeWidth={strokeW} strokeLinecap="round" strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'} markerEnd={markerId} />
+                  {l.type === 'wavy' ? (
+                    <path d={pathD} fill="none" stroke={l.color} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" markerEnd={markerId} />
+                  ) : (
+                    <line x1={l.start.x} y1={l.start.y} x2={endX} y2={endY} stroke={l.color} strokeWidth={strokeW} strokeLinecap="round" strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'} markerEnd={markerId} />
+                  )}
                 </g>
               );
             })}
@@ -1142,12 +1153,103 @@ Devuelve estricta y únicamente el array JSON.`;
               <line x1={currentLine.start.x} y1={currentLine.start.y} x2={currentLine.end.x} y2={currentLine.end.y} stroke={currentLine.color} strokeWidth={currentLine.width} strokeLinecap="round" strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'} />
             )}
 
-            {/* TEXTOS TÁCTICOS */}
-            {textBlocks.map(tb => (
-              <g key={tb.id} transform={`translate(${tb.x}, ${tb.y})`} onPointerDown={(e) => { e.stopPropagation(); setSelectedObj(tb); isDraggingRef.current = true; }}>
-                <text x={0} y={0} textAnchor="middle" fill={tb.color || '#ffffff'} fontSize={tb.size || 2.8} fontWeight={tb.isBold ? 'bold' : 'normal'}>{tb.text}</text>
-              </g>
-            ))}
+            {/* TEXTOS TÁCTICOS CON BOTONES AGRANDAR, ACHICAR Y ROTAR */}
+            {textBlocks.map(tb => {
+              const isSelected = selectedTextId === tb.id;
+              const rot = tb.rotation || 0;
+              const size = tb.size || 2.8;
+              const col = tb.color || '#ffffff';
+              const isBold = tb.isBold !== undefined ? tb.isBold : true;
+              const isUnder = Boolean(tb.isUnderline);
+
+              return (
+                <g
+                  key={tb.id}
+                  transform={`translate(${tb.x}, ${tb.y}) rotate(${rot})`}
+                  className="cursor-move select-none"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    if (tool === 'eraser') {
+                      setTextBlocks(prev => prev.filter(t => t.id !== tb.id));
+                      return;
+                    }
+                    setSelectedTextId(isSelected ? null : tb.id);
+                    setSelectedObj(tb);
+                    isDraggingRef.current = true;
+                  }}
+                >
+                  <rect
+                    x={-(tb.text.length * size * 0.35 + 2)}
+                    y={-(size * 1.1)}
+                    width={tb.text.length * size * 0.7 + 4}
+                    height={size * 1.8}
+                    rx={size * 0.4}
+                    fill="transparent"
+                    stroke={isSelected ? '#facc15' : 'transparent'}
+                    strokeWidth={0.4}
+                    strokeDasharray={isSelected ? '1,1' : 'none'}
+                  />
+
+                  <text
+                    x={0}
+                    y={size * 0.35}
+                    textAnchor="middle"
+                    fill={col}
+                    fontSize={size}
+                    fontWeight={isBold ? 'bold' : 'normal'}
+                    textDecoration={isUnder ? 'underline' : 'none'}
+                    style={{ filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.9))' }}
+                  >
+                    {tb.text}
+                  </text>
+
+                  {/* Botón Rotar 45° */}
+                  {isSelected && (
+                    <g
+                      transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${-size * 0.6})`}
+                      className="cursor-pointer"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, rotation: ((t.rotation || 0) + 45) % 360 } : t));
+                      }}
+                    >
+                      <circle r={2} fill="#eab308" />
+                      <text x={0} y={0.8} textAnchor="middle" fontSize={1.8} fill="#000000" fontWeight="bold">↻</text>
+                    </g>
+                  )}
+
+                  {/* Botón Agrandar (+) */}
+                  {isSelected && (
+                    <g
+                      transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${size * 0.6})`}
+                      className="cursor-pointer"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.min((t.size || 2.8) + 0.5, 7.0) } : t));
+                      }}
+                    >
+                      <circle r={1.8} fill="#22c55e" />
+                      <text x={0} y={0.7} textAnchor="middle" fontSize={1.8} fill="#ffffff" fontWeight="bold">+</text>
+                    </g>
+                  )}
+
+                  {/* Botón Achicar (-) */}
+                  {isSelected && (
+                    <g
+                      transform={`translate(${-(tb.text.length * size * 0.35 + 3.5)}, ${size * 0.6})`}
+                      className="cursor-pointer"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.max((t.size || 2.8) - 0.5, 1.4) } : t));
+                      }}
+                    >
+                      <circle r={1.8} fill="#ef4444" />
+                      <text x={0} y={0.6} textAnchor="middle" fontSize={1.8} fill="#ffffff" fontWeight="bold">-</text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
 
             {/* JUGADORES, BALÓN Y MATERIALES */}
             {objects.map(obj => {
@@ -1269,7 +1371,7 @@ Devuelve estricta y únicamente el array JSON.`;
           </div>
         )}
 
-        {/* SUB-BARRA DE MATERIALES HORIZONTAL */}
+        {/* SUB-BARRA DE MATERIALES */}
         {showTrainingMenu && (
           <aside className="fixed top-12 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print [&::-webkit-scrollbar]:hidden">
             <span className="text-[10px] font-bold text-amber-400 uppercase shrink-0 px-1">Materiales:</span>
@@ -1306,19 +1408,47 @@ Devuelve estricta y únicamente el array JSON.`;
           </div>
         )}
 
-        {/* MODAL PALETA DE LÍNEAS */}
+        {/* SUB-BARRA FLOTANTE DE LÍNEAS AVANZADA CON 5 TIPOS Y 3 GROSORES */}
         {showLinePalette && (
-          <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print">
-            <button onClick={() => { setLineType('arrow'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'arrow' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>➔ Normal</button>
-            <button onClick={() => { setLineType('straight'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'straight' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>― Recta</button>
-            <button onClick={() => { setLineType('dashed'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'dashed' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>⤏ Discontinua</button>
+          <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print [&::-webkit-scrollbar]:hidden">
+            {/* 5 Tipos de trazo */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => { setLineType('arrow'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'arrow' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>➔ Normal</button>
+              <button onClick={() => { setLineType('straight'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'straight' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>― Recta</button>
+              <button onClick={() => { setLineType('dashed'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'dashed' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>⤏ Discontinua</button>
+              <button onClick={() => { setLineType('block'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'block' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>┫ Bloqueo</button>
+              <button onClick={() => { setLineType('wavy'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'wavy' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>〰 Dribling</button>
+            </div>
+
             <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
+
+            {/* Colores */}
             <div className="flex items-center gap-1.5 shrink-0">
               {['#ffffff', '#ef4444', '#3b82f6', '#facc15', '#000000'].map(c => (
                 <button key={c} onClick={() => setLineColor(c)} style={{ backgroundColor: c }} className={`w-5 h-5 rounded-full border ${lineColor === c ? 'border-amber-400 scale-110 shadow-md ring-2 ring-amber-400/50' : 'border-zinc-700'}`} />
               ))}
             </div>
-            <button onClick={() => setShowLinePalette(false)} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0">✕</button>
+
+            <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
+
+            {/* 3 Grosores */}
+            <div className="flex items-center gap-1 shrink-0">
+              {[
+                { label: 'Fino', val: 0.8 },
+                { label: 'Medio', val: 1.4 },
+                { label: 'Grueso', val: 2.2 }
+              ].map(g => (
+                <button key={g.val} onClick={() => setLineWidth(g.val)} className={`px-2 py-0.5 rounded text-[11px] font-bold border ${lineWidth === g.val ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-800'}`}>
+                  {g.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
+
+            <button onClick={() => setShowLinePalette(false)} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0">
+              Listo ✕
+            </button>
           </div>
         )}
 
@@ -1371,7 +1501,25 @@ Devuelve estricta y únicamente el array JSON.`;
           </div>
         )}
 
-        {/* MODAL GESTIÓN COMPLETA: SESIONES, ALUMNOS, ASISTENCIA, PAGOS Y PROFESORES */}
+        {/* MODAL VIDEO */}
+        {recordedVideoUrl && (
+          <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-4 z-50 no-print">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md p-5 shadow-2xl flex flex-col items-center">
+              <div className="w-full flex justify-between items-center mb-3">
+                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Video className="w-4 h-4 text-red-500" /> Video Grabado</h3>
+                <button onClick={() => setRecordedVideoUrl(null)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+              <video src={recordedVideoUrl} controls autoPlay className="w-full rounded-2xl mb-4 border border-zinc-800 max-h-60" />
+              <div className="w-full flex gap-2">
+                <a href={recordedVideoUrl} download={`ejercicio-${drillTitle.replace(/\s+/g, '_')}.webm`} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 shadow">
+                  <Download className="w-4 h-4" /> Descargar
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL GESTIÓN COMPLETA */}
         {showLibraryModal && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-3xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
@@ -1566,7 +1714,7 @@ Devuelve estricta y únicamente el array JSON.`;
                 </div>
               )}
 
-              {/* COBRANZA Y MENSUALIDADES (DIRECTOR) */}
+              {/* COBRANZA Y MENSUALIDADES */}
               {activeTabLibrary === 'billing' && !isTeacherRestricted && (
                 <div className="flex-1 flex flex-col min-h-0">
                   {(() => {
@@ -1767,7 +1915,7 @@ Devuelve estricta y únicamente el array JSON.`;
           </div>
         )}
 
-        {/* MODAL PANEL DE DUEÑO SUPERADMINISTRADOR COMPLETO */}
+        {/* MODAL PANEL DE DUEÑO SUPERADMINISTRADOR */}
         {showAdminDashboard && (
           <div className="absolute inset-0 bg-black/90 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
