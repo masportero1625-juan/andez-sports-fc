@@ -85,56 +85,39 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   let content = null;
 
   if (obj.type === 'mini_goal') {
-    // Mini portería oficial 2.5D de alta resolución (red micro-trama y tubos de aluminio)
+    // Mini portería vista cenital táctica (Estándar TacticalPad 2D)
     content = (
-      <svg viewBox="0 0 100 60" width="14" height="8.4" x="-7" y="-4.2" overflow="visible">
-        {/* Sombra de proyección en el pasto */}
-        <polygon points="4,48 96,48 106,30 14,30" fill="rgba(0,0,0,0.32)" />
-        {/* Malla lateral izquierda */}
-        <polygon points="10,12 24,30 24,46 10,40" fill="rgba(241,245,249,0.3)" stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3,3" />
-        {/* Malla trasera y techo de la portería */}
-        <polygon points="10,12 90,12 104,30 24,30" fill="rgba(255,255,255,0.4)" stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3,3" />
-        {/* Malla lateral derecha */}
-        <polygon points="90,12 104,30 104,46 90,40" fill="rgba(203,213,225,0.35)" stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3,3" />
-        {/* Estructura tubular trasera de fijación */}
-        <line x1="24" y1="30" x2="104" y2="30" stroke="#64748b" strokeWidth="2.4" strokeLinecap="round" />
-        <line x1="24" y1="30" x2="24" y2="46" stroke="#475569" strokeWidth="2.2" strokeLinecap="round" />
-        <line x1="104" y1="30" x2="104" y2="46" stroke="#475569" strokeWidth="2.2" strokeLinecap="round" />
-        {/* Marco frontal blanco brillante */}
-        <line x1="10" y1="40" x2="90" y2="40" stroke="#e2e8f0" strokeWidth="3.2" strokeLinecap="round" />
-        <line x1="10" y1="40" x2="10" y2="12" stroke="#ffffff" strokeWidth="3.8" strokeLinecap="round" />
-        <line x1="90" y1="40" x2="90" y2="12" stroke="#ffffff" strokeWidth="3.8" strokeLinecap="round" />
-        <line x1="10" y1="12" x2="90" y2="12" stroke="#ffffff" strokeWidth="4.2" strokeLinecap="round" />
-        {/* Codos de unión en esquinas superiores */}
-        <circle cx="10" cy="12" r="2.4" fill="#f8fafc" />
-        <circle cx="90" cy="12" r="2.4" fill="#f8fafc" />
-      </svg>
+      <g>
+        {/* Sombra suave de apoyo */}
+        <rect x="-4.2" y="-1.5" width="8.4" height="3.2" rx="0.4" fill="rgba(0,0,0,0.28)" />
+        {/* Red de fondo vista desde arriba */}
+        <rect x="-4.0" y="-1.2" width="8.0" height="2.2" fill="rgba(241,245,249,0.5)" stroke="#94a3b8" strokeWidth="0.2" strokeDasharray="0.4,0.4" />
+        {/* Tirantes laterales y trasero */}
+        <line x1="-4.0" y1="-1.2" x2="-4.0" y2="1.0" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="4.0" y1="-1.2" x2="4.0" y2="1.0" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="-4.0" y1="-1.2" x2="4.0" y2="-1.2" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
+        {/* Travesaño frontal blanco reflectante de alta definición */}
+        <line x1="-4.2" y1="1.0" x2="4.2" y2="1.0" stroke="#ffffff" strokeWidth="0.65" strokeLinecap="round" />
+        {/* Postes frontales */}
+        <circle cx="-4.0" cy="1.0" r="0.4" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.15" />
+        <circle cx="4.0" cy="1.0" r="0.4" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.15" />
+      </g>
     );
   } else if (obj.type === 'dummy') {
-    // Maniquí oficial de barrera estilo TacticalPad (silueta anatómica enrejada esbelta)
+    // Maniquí vista cenital táctica esbelta (Estándar TacticalPad 2D)
     content = (
-      <svg viewBox="0 0 60 120" width="5.5" height="11" x="-2.75" y="-5.5" overflow="visible">
-        {/* Sombra de proyección suave */}
-        <ellipse cx="38" cy="112" rx="22" ry="7" fill="rgba(0,0,0,0.35)" transform="rotate(-12, 38, 112)" />
-        {/* Varillas dobles de acero clavadas al piso */}
-        <line x1="24" y1="94" x2="24" y2="114" stroke="#334155" strokeWidth="2.8" strokeLinecap="round" />
-        <line x1="36" y1="94" x2="36" y2="114" stroke="#334155" strokeWidth="2.8" strokeLinecap="round" />
-        <circle cx="24" cy="114" r="2.2" fill="#0f172a" />
-        <circle cx="36" cy="114" r="2.2" fill="#0f172a" />
-        {/* Contorno tubular amarillo fluorescente */}
-        <path d="M 17,26 C 14,48 20,78 24,94 L 36,94 C 40,78 46,48 43,26 C 39,20 21,20 17,26 Z" fill="rgba(250,204,21,0.18)" stroke="#eab308" strokeWidth="3.2" strokeLinejoin="round" />
-        {/* Varillas horizontales del pecho */}
-        <line x1="19" y1="36" x2="41" y2="36" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
-        <line x1="18" y1="50" x2="42" y2="50" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
-        <line x1="20" y1="64" x2="40" y2="64" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
-        <line x1="22" y1="78" x2="38" y2="78" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
-        {/* Columna central */}
-        <line x1="30" y1="22" x2="30" y2="94" stroke="#ca8a04" strokeWidth="2.6" />
-        {/* Cuello y cabeza estilizada con anillo tubular */}
-        <line x1="30" y1="22" x2="30" y2="16" stroke="#ca8a04" strokeWidth="3" />
-        <ellipse cx="30" cy="10" rx="7.5" ry="9.5" fill="rgba(254,240,138,0.3)" stroke="#eab308" strokeWidth="2.8" />
-      </svg>
+      <g>
+        {/* Sombra en el césped */}
+        <ellipse cx="0.8" cy="1.0" rx="1.8" ry="1.0" fill="rgba(0,0,0,0.3)" />
+        {/* Base en cruz de apoyo al suelo */}
+        <line x1="-1.2" y1="0" x2="1.2" y2="0" stroke="#1e293b" strokeWidth="0.3" strokeLinecap="round" />
+        <line x1="0" y1="-0.8" x2="0" y2="0.8" stroke="#1e293b" strokeWidth="0.3" strokeLinecap="round" />
+        {/* Silueta de hombros y cabeza vista cenital estilizada */}
+        <ellipse cx="0" cy="0" rx="1.3" ry="0.6" fill="#facc15" stroke="#ca8a04" strokeWidth="0.25" />
+        <circle cx="0" cy="0" r="0.45" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.2" />
+      </g>
     );
+  }
   } else if (obj.type === 'hurdle') {
     // Valla de salto técnica
     content = (
