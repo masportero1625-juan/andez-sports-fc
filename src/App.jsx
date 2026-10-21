@@ -1,10 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import {
   Folder, Play, RotateCcw, Save, Undo2, Redo2, Trash2, PenTool, X,
   Eraser, Lock, Plus, AlertTriangle, RotateCw, LogOut, MessageCircle,
   Upload, Printer, Edit2, Video, Square, Download, Sparkles, Gift,
- CheckCircle2, Clock, Users, DollarSign, Type, Shield, Image as ImageIcon
+  CheckCircle2, Clock, Users, DollarSign, Type, Shield, Image as ImageIcon
 } from 'lucide-react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, PerspectiveCamera, Html } from '@react-three/drei';
+import * as THREE from 'three';
 
 // CREDENCIALES SUPABASE
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
@@ -37,198 +40,244 @@ async function sbSet(key, value) {
   } catch (e) {}
 }
 
-const DEFAULT_CATEGORIES = [
-  { id: 'sub10', name: 'Sub-8 a Sub-10 (Iniciación)' },
-  { id: 'sub14', name: 'Sub-12 a Sub-14 (Formación)' },
-  { id: 'sub18', name: 'Sub-16 a Juvenil (Especialización)' },
-  { id: 'senior', name: 'Adulto / Senior (Rendimiento)' },
-];
-
-const DEFAULT_PLANS = [
-  { id: 'p-trial', name: 'Prueba Gratuita (7 Días)', seats: 2, price: 0 },
-  { id: 'p-ind', name: 'Plan Individual (2 Dispositivos)', seats: 2, price: 15000 },
-  { id: 'p-silver', name: 'Plan Plata (4 Dispositivos)', seats: 4, price: 25000 },
-  { id: 'p-gold', name: 'Plan Oro (6 Dispositivos)', seats: 6, price: 35000 }
-];
-
-const GET_TACTICAL_SYSTEMS = (isLand) => {
-  if (isLand) {
+const GET_TACTICAL_SYSTEMS = (isLandscape) => {
+  if (isLandscape) {
     return {
-      '4-3-3': [{n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},{n:'6',r:'CDM',x:40,y:34},{n:'8',r:'CM',x:52,y:22},{n:'10',r:'CAM',x:52,y:46},{n:'7',r:'RW',x:74,y:12},{n:'11',r:'LW',x:74,y:56},{n:'9',r:'ST',x:82,y:34}],
-      '4-4-2': [{n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},{n:'6',r:'CM',x:48,y:24},{n:'8',r:'CM',x:48,y:44},{n:'7',r:'RM',x:56,y:10},{n:'11',r:'LM',x:56,y:58},{n:'9',r:'ST',x:78,y:26},{n:'10',r:'ST',x:78,y:42}],
-      '3-5-2': [{n:'1',r:'GK',x:8,y:34},{n:'2',r:'CB',x:22,y:18},{n:'4',r:'CB',x:21,y:34},{n:'3',r:'CB',x:22,y:50},{n:'6',r:'CDM',x:38,y:34},{n:'8',r:'CM',x:50,y:23},{n:'10',r:'CM',x:50,y:45},{n:'7',r:'RWB',x:56,y:8},{n:'11',r:'LWB',x:56,y:60},{n:'9',r:'ST',x:78,y:26},{n:'19',r:'ST',x:78,y:42}]
+      '4-3-3': [
+        { n: '1', r: 'GK', x: 8, y: 34 },
+        { n: '4', r: 'CB', x: 22, y: 24 },
+        { n: '3', r: 'CB', x: 22, y: 44 },
+        { n: '2', r: 'RB', x: 30, y: 10 },
+        { n: '5', r: 'LB', x: 30, y: 58 },
+        { n: '6', r: 'CDM', x: 40, y: 34 },
+        { n: '8', r: 'CM', x: 52, y: 22 },
+        { n: '10', r: 'CAM', x: 52, y: 46 },
+        { n: '7', r: 'RW', x: 74, y: 12 },
+        { n: '11', r: 'LW', x: 74, y: 56 },
+        { n: '9', r: 'ST', x: 82, y: 34 }
+      ],
+      '4-4-2': [
+        { n: '1', r: 'GK', x: 8, y: 34 },
+        { n: '4', r: 'CB', x: 22, y: 24 },
+        { n: '3', r: 'CB', x: 22, y: 44 },
+        { n: '2', r: 'RB', x: 30, y: 10 },
+        { n: '5', r: 'LB', x: 30, y: 58 },
+        { n: '6', r: 'CM', x: 48, y: 24 },
+        { n: '8', r: 'CM', x: 48, y: 44 },
+        { n: '7', r: 'RM', x: 56, y: 10 },
+        { n: '11', r: 'LM', x: 56, y: 58 },
+        { n: '9', r: 'ST', x: 78, y: 26 },
+        { n: '10', r: 'ST', x: 78, y: 42 }
+      ],
+      '3-5-2': [
+        { n: '1', r: 'GK', x: 8, y: 34 },
+        { n: '2', r: 'CB', x: 22, y: 18 },
+        { n: '4', r: 'CB', x: 21, y: 34 },
+        { n: '3', r: 'CB', x: 22, y: 50 },
+        { n: '6', r: 'CDM', x: 38, y: 34 },
+        { n: '8', r: 'CM', x: 50, y: 23 },
+        { n: '10', r: 'CM', x: 50, y: 45 },
+        { n: '7', r: 'RWB', x: 56, y: 8 },
+        { n: '11', r: 'LWB', x: 56, y: 60 },
+        { n: '9', r: 'ST', x: 78, y: 26 },
+        { n: '19', r: 'ST', x: 78, y: 42 }
+      ]
     };
   }
   return {
-    '4-3-3': [{n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},{n:'6',r:'CDM',x:34,y:64},{n:'8',r:'CM',x:22,y:52},{n:'10',r:'CAM',x:46,y:52},{n:'7',r:'RW',x:12,y:32},{n:'11',r:'LW',x:56,y:32},{n:'9',r:'ST',x:34,y:24}],
-    '4-4-2': [{n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},{n:'6',r:'CM',x:24,y:56},{n:'8',r:'CM',x:44,y:56},{n:'7',r:'RM',x:10,y:48},{n:'11',r:'LM',x:58,y:48},{n:'9',r:'ST',x:26,y:26},{n:'10',r:'ST',x:42,y:26}],
-    '3-5-2': [{n:'1',r:'GK',x:34,y:96},{n:'2',r:'CB',x:18,y:82},{n:'4',r:'CB',x:34,y:83},{n:'3',r:'CB',x:50,y:82},{n:'6',r:'CDM',x:34,y:66},{n:'8',r:'CM',x:23,y:54},{n:'10',r:'CM',x:45,y:54},{n:'7',r:'RWB',x:8,y:48},{n:'11',r:'LWB',x:60,y:48},{n:'9',r:'ST',x:26,y:26},{n:'19',r:'ST',x:42,y:26}]
+    '4-3-3': [
+      { n: '1', r: 'GK', x: 34, y: 96 },
+      { n: '4', r: 'CB', x: 23, y: 82 },
+      { n: '3', r: 'CB', x: 45, y: 82 },
+      { n: '2', r: 'RB', x: 10, y: 74 },
+      { n: '5', r: 'LB', x: 58, y: 74 },
+      { n: '6', r: 'CDM', x: 34, y: 64 },
+      { n: '8', r: 'CM', x: 22, y: 52 },
+      { n: '10', r: 'CAM', x: 46, y: 52 },
+      { n: '7', r: 'RW', x: 12, y: 32 },
+      { n: '11', r: 'LW', x: 56, y: 32 },
+      { n: '9', r: 'ST', x: 34, y: 24 }
+    ],
+    '4-4-2': [
+      { n: '1', r: 'GK', x: 34, y: 96 },
+      { n: '4', r: 'CB', x: 23, y: 82 },
+      { n: '3', r: 'CB', x: 45, y: 82 },
+      { n: '2', r: 'RB', x: 10, y: 74 },
+      { n: '5', r: 'LB', x: 58, y: 74 },
+      { n: '6', r: 'CM', x: 24, y: 56 },
+      { n: '8', r: 'CM', x: 44, y: 56 },
+      { n: '7', r: 'RM', x: 10, y: 48 },
+      { n: '11', r: 'LM', x: 58, y: 48 },
+      { n: '9', r: 'ST', x: 26, y: 26 },
+      { n: '10', r: 'ST', x: 42, y: 26 }
+    ],
+    '3-5-2': [
+      { n: '1', r: 'GK', x: 34, y: 96 },
+      { n: '2', r: 'CB', x: 18, y: 82 },
+      { n: '4', r: 'CB', x: 34, y: 83 },
+      { n: '3', r: 'CB', x: 50, y: 82 },
+      { n: '6', r: 'CDM', x: 34, y: 66 },
+      { n: '8', r: 'CM', x: 23, y: 54 },
+      { n: '10', r: 'CM', x: 45, y: 54 },
+      { n: '7', r: 'RWB', x: 8, y: 48 },
+      { n: '11', r: 'LWB', x: 60, y: 48 },
+      { n: '9', r: 'ST', x: 26, y: 26 },
+      { n: '19', r: 'ST', x: 42, y: 26 }
+    ]
   };
 };
 
-function SoccerBall({ x, y, onPointerDown }) {
+// COMPONENTES 3D
+function Pitch3D() {
   return (
-    <g transform={`translate(${x}, ${y})`} onPointerDown={onPointerDown} className="cursor-grab active:cursor-grabbing touch-none select-none">
-      <circle r="2.9" fill="rgba(0,0,0,0.3)" transform="translate(0.3, 0.4)" />
-      <circle r="2.6" fill="#f8fafc" stroke="#0f172a" strokeWidth="0.4" />
-      <polygon points="0,-0.9 0.85,-0.28 0.53,0.73 -0.53,0.73 -0.85,-0.28" fill="#0f172a" />
-      {[0, 72, 144, 216, 288].map((ang, i) => (
-        <line key={i} x1="0" y1="0" x2={Math.cos((ang * Math.PI)/180) * 1.8} y2={Math.sin((ang * Math.PI)/180) * 1.8} stroke="#0f172a" strokeWidth="0.25" />
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+        <planeGeometry args={[105, 68]} />
+        <meshStandardMaterial color="#16a34a" roughness={0.8} />
+      </mesh>
+      {Array.from({ length: 14 }).map((_, i) => (
+        <mesh
+          key={`stripe-3d-${i}`}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[-52.5 + i * 7.5 + 3.75, 0.01, 0]}
+          receiveShadow
+        >
+          <planeGeometry args={[7.4, 66]} />
+          <meshStandardMaterial color={i % 2 === 0 ? '#15803d' : '#16a34a'} roughness={0.8} />
+        </mesh>
       ))}
-    </g>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <ringGeometry args={[9.1, 9.25, 64]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+      <mesh position={[-51, 1.22, 0]}>
+        <boxGeometry args={[0.4, 2.44, 7.32]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.2} roughness={0.4} />
+      </mesh>
+      <mesh position={[51, 1.22, 0]}>
+        <boxGeometry args={[0.4, 2.44, 7.32]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.2} roughness={0.4} />
+      </mesh>
+    </group>
   );
 }
 
-function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
-  const rot = obj.rotation || 0;
-  const s = obj.scale || 1.0;
-
-  const renderContent = () => {
-    switch (obj.type) {
-      case 'mini_goal':
-        return (
-          <g>
-            <rect x="-2.6" y="-1.6" width="5.2" height="1.8" rx="0.2" fill="rgba(0,0,0,0.25)" />
-            <rect x="-2.5" y="-1.5" width="5.0" height="1.5" fill="rgba(255,255,255,0.4)" stroke="#94a3b8" strokeWidth="0.12" strokeDasharray="0.3,0.3" />
-            <line x1="-2.5" y1="-1.5" x2="2.5" y2="-1.5" stroke="#cbd5e1" strokeWidth="0.2" />
-            <line x1="-2.5" y1="-1.5" x2="-2.5" y2="0" stroke="#cbd5e1" strokeWidth="0.2" />
-            <line x1="2.5" y1="-1.5" x2="2.5" y2="0" stroke="#cbd5e1" strokeWidth="0.2" />
-            <line x1="-2.5" y1="0" x2="2.5" y2="0" stroke="#ffffff" strokeWidth="0.4" strokeLinecap="round" />
-          </g>
-        );
-      case 'dummy':
-        return (
-          <g>
-            <ellipse cx="1.2" cy="1.2" rx="2.2" ry="0.9" fill="rgba(0,0,0,0.35)" transform="rotate(-15, 1.2, 1.2)" />
-            <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#0f172a" strokeWidth="0.35" strokeLinecap="round" />
-            <line x1="0" y1="-1.0" x2="0" y2="1.0" stroke="#0f172a" strokeWidth="0.35" strokeLinecap="round" />
-            <circle cx="-1.4" cy="0" r="0.2" fill="#0f172a" />
-            <circle cx="1.4" cy="0" r="0.2" fill="#0f172a" />
-            <circle cx="0" cy="-1.0" r="0.2" fill="#0f172a" />
-            <circle cx="0" cy="1.0" r="0.2" fill="#0f172a" />
-            <ellipse cx="0" cy="0" rx="1.6" ry="0.75" fill="#eab308" stroke="#ca8a04" strokeWidth="0.25" />
-            <ellipse cx="0" cy="-0.1" rx="1.3" ry="0.5" fill="#facc15" />
-            <line x1="-1.1" y1="0" x2="1.1" y2="0" stroke="#ca8a04" strokeWidth="0.25" strokeLinecap="round" />
-            <circle cx="0" cy="0" r="0.48" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.2" />
-            <circle cx="0" cy="-0.08" r="0.25" fill="#ffffff" opacity="0.6" />
-          </g>
-        );
-      case 'hurdle':
-        return (
-          <g>
-            <ellipse cx="-2.6" cy="0.6" rx="1.0" ry="0.4" fill="rgba(0,0,0,0.28)" />
-            <ellipse cx="2.6" cy="0.6" rx="1.0" ry="0.4" fill="rgba(0,0,0,0.28)" />
-            <line x1="-2.6" y1="-0.9" x2="-2.6" y2="0.9" stroke="#713f12" strokeWidth="0.45" strokeLinecap="round" />
-            <line x1="2.6" y1="-0.9" x2="2.6" y2="0.9" stroke="#713f12" strokeWidth="0.45" strokeLinecap="round" />
-            <line x1="-2.6" y1="0" x2="2.6" y2="0" stroke="#ca8a04" strokeWidth="0.65" strokeLinecap="round" />
-            <line x1="-2.6" y1="-0.1" x2="2.6" y2="-0.1" stroke="#facc15" strokeWidth="0.4" strokeLinecap="round" />
-            <line x1="-1.0" y1="0" x2="1.0" y2="0" stroke="#000000" strokeWidth="0.3" strokeDasharray="0.6,0.6" />
-          </g>
-        );
-      case 'cone': {
-        const cFill = obj.color && obj.color !== '#ea580c' ? obj.color : '#f97316';
-        return (
-          <g>
-            <ellipse cx="0.5" cy="0.6" rx="1.8" ry="1.0" fill="rgba(0,0,0,0.35)" />
-            <rect x="-1.5" y="-1.5" width="3.0" height="3.0" rx="0.3" fill="#7c2d12" stroke="#000000" strokeWidth="0.2" />
-            <rect x="-1.3" y="-1.3" width="2.6" height="2.6" rx="0.2" fill={cFill} />
-            <circle cx="0" cy="0" r="1.1" fill="#ea580c" stroke="#000000" strokeWidth="0.15" />
-            <circle cx="0" cy="0" r="0.75" fill="#ffffff" stroke="#000000" strokeWidth="0.1" />
-            <circle cx="0" cy="0" r="0.35" fill={cFill} />
-          </g>
-        );
-      }
-      case 'saucer': {
-        const c = obj.color || '#facc15';
-        return (
-          <g>
-            <ellipse cx="0.4" cy="0.4" rx="1.7" ry="1.0" fill="rgba(0,0,0,0.3)" />
-            <circle cx="0" cy="0" r="1.5" fill={c} stroke="#000000" strokeWidth="0.25" />
-            <circle cx="0" cy="-0.1" r="1.0" fill="#ffffff" opacity="0.35" />
-            <circle cx="0" cy="0" r="0.4" fill="#0f172a" stroke="#000000" strokeWidth="0.1" />
-          </g>
-        );
-      }
-      case 'pole': {
-        const c = obj.color || '#facc15';
-        return (
-          <g>
-            <line x1="0" y1="0" x2="3.2" y2="3.2" stroke="rgba(0,0,0,0.35)" strokeWidth="0.6" strokeLinecap="round" />
-            <circle cx="0" cy="0" r="1.3" fill="#09090b" stroke="#000000" strokeWidth="0.2" />
-            <circle cx="0" cy="0" r="0.8" fill="#27272a" />
-            <circle cx="0" cy="0" r="0.45" fill={c} stroke="#000000" strokeWidth="0.15" />
-            <circle cx="0" cy="0" r="0.15" fill="#ffffff" />
-          </g>
-        );
-      }
-      case 'rebounder':
-        return (
-          <g>
-            <rect x="-3.7" y="-0.7" width="7.4" height="2.0" rx="0.3" fill="rgba(0,0,0,0.28)" />
-            <rect x="-3.5" y="-0.5" width="7.0" height="1.0" rx="0.25" fill="#78350f" stroke="#451a03" strokeWidth="0.2" />
-            <rect x="-3.3" y="-0.4" width="6.6" height="0.6" rx="0.15" fill="#d97706" />
-            <line x1="-3.0" y1="-0.1" x2="3.0" y2="-0.1" stroke="#fef3c7" strokeWidth="0.15" opacity="0.6" />
-          </g>
-        );
-      case 'trampoline':
-        return (
-          <g>
-            <ellipse cx="0.4" cy="0.4" rx="2.7" ry="2.7" fill="rgba(0,0,0,0.28)" />
-            <circle cx="0" cy="0" r="2.6" fill="#1e293b" stroke="#0f172a" strokeWidth="0.2" />
-            <circle cx="0" cy="0" r="2.35" fill="#0284c7" />
-            <circle cx="0" cy="0" r="1.85" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.25" />
-            <circle cx="0" cy="0" r="1.7" fill="#0369a1" stroke="#bae6fd" strokeWidth="0.15" strokeDasharray="0.5,0.5" />
-          </g>
-        );
-      case 'mat':
-        return (
-          <g>
-            <rect x="-3.7" y="-1.9" width="7.4" height="3.8" rx="0.35" fill="rgba(0,0,0,0.22)" />
-            <rect x="-3.5" y="-1.7" width="7.0" height="3.4" rx="0.25" fill="#1e3a8a" stroke="#172554" strokeWidth="0.2" />
-            <rect x="-3.3" y="-1.5" width="6.6" height="3.0" rx="0.2" fill="#2563eb" />
-            <rect x="-3.1" y="-1.3" width="6.2" height="2.6" fill="none" stroke="#60a5fa" strokeWidth="0.15" strokeDasharray="0.8,0.8" opacity="0.7" />
-          </g>
-        );
-      default:
-        return null;
+function Player3D({ position, color, number, isSelected, onClick }) {
+  const groupRef = useRef();
+  useFrame(() => {
+    if (groupRef.current && isSelected) {
+      groupRef.current.position.y = Math.sin(Date.now() * 0.005) * 0.15;
     }
-  };
+  });
 
   return (
-    <g
-      transform={`translate(${obj.x}, ${obj.y}) rotate(${rot}) scale(${s})`}
-      onPointerDown={onPointerDown}
-      onDoubleClick={onDoubleClick}
-      className="cursor-grab active:cursor-grabbing touch-none select-none"
+    <group
+      ref={groupRef}
+      position={[position.x - 52.5, 0, position.y - 34]}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
     >
-      {renderContent()}
-    </g>
-  );
-}
-function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
-  if (!phone) return <span className="text-[10px] text-zinc-600 italic">Sin WhatsApp</span>;
-  const num = phone.replace(/[^0-9]/g, '');
-  const finalNum = num.startsWith('56') ? num : `56${num}`;
-  const defMsg = `Hola ${name || ''}, te contacto desde Andez Sports FC.`;
-  const msg = encodeURIComponent(customMessage || defMsg);
-  return (
-    <a href={`https://wa.me/${finalNum}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow transition active:scale-95">
-      <MessageCircle className="w-3.5 h-3.5" />
-      <span>{label || phone}</span>
-    </a>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <circleGeometry args={[1.2, 32]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.3} />
+      </mesh>
+      <mesh position={[0, 1.3, 0]} castShadow>
+        <capsuleGeometry args={[0.55, 1.2, 8, 16]} />
+        <meshStandardMaterial color={color} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 2.3, 0]} castShadow>
+        <sphereGeometry args={[0.38, 16, 16]} />
+        <meshStandardMaterial color="#fcd34d" roughness={0.5} />
+      </mesh>
+      <Html center position={[0, 1.4, 0.6]}>
+        <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '14px', textShadow: '0 1px 3px rgba(0,0,0,0.9)', pointerEvents: 'none' }}>
+          {number}
+        </div>
+      </Html>
+      {isSelected && (
+        <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[1.3, 1.5, 32]} />
+          <meshBasicMaterial color="#facc15" />
+        </mesh>
+      )}
+    </group>
   );
 }
 
+function Ball3D({ position, onClick }) {
+  const meshRef = useRef();
+  useFrame(() => {
+    if (meshRef.current) meshRef.current.rotation.y += 0.01;
+  });
+
+  return (
+    <group
+      position={[position.x - 52.5, 0.35, position.y - 34]}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      <mesh ref={meshRef} castShadow>
+        <sphereGeometry args={[0.35, 32, 32]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.3} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.33, 0]}>
+        <circleGeometry args={[0.4, 32]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.3} />
+      </mesh>
+    </group>
+  );
+}
+
+function Scene3D({ objects, selectedObj, setSelectedObj, teamColors }) {
+  return (
+    <>
+      <PerspectiveCamera makeDefault position={[0, 32, 42]} fov={55} />
+      <OrbitControls target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.05} minDistance={12} maxDistance={75} />
+      <ambientLight intensity={0.7} />
+      <directionalLight position={[15, 30, 20]} intensity={1.2} castShadow />
+      <Pitch3D />
+      {objects.map((obj) => {
+        if (obj.type === 'player') {
+          const col = obj.customColor || (
+            obj.role === 'GK'
+              ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk)
+              : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
+          );
+          return (
+            <Player3D
+              key={obj.id}
+              position={{ x: obj.x, y: obj.y }}
+              color={col}
+              number={obj.number}
+              isSelected={selectedObj?.id === obj.id}
+              onClick={() => setSelectedObj(obj)}
+            />
+          );
+        }
+        if (obj.type === 'ball') {
+          return <Ball3D key={obj.id} position={{ x: obj.x, y: obj.y }} onClick={() => setSelectedObj(obj)} />;
+        }
+        return null;
+      })}
+    </>
+  );
+}
+
+// COMPONENTE PRINCIPAL
 export default function App() {
-  const [isPC, setIsPC] = useState(window.innerWidth > 768);
+  const [isPC, setIsPC] = useState(typeof window !== 'undefined' ? window.innerWidth > 768 : true);
+  const [viewMode, setViewMode] = useState('2d');
+
   useEffect(() => {
     const handleResize = () => setIsPC(window.innerWidth > 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  // Estados para paleta de camisetas y arqueros
-  const [showKitPalette, setShowKitPalette] = useState(false);
-  const [kitTarget, setKitTarget] = useState('blue');
+
   const [teamColors, setTeamColors] = useState({
     blue: '#2563eb',
     red: '#dc2626',
@@ -236,123 +285,10 @@ export default function App() {
     gk_away: '#16a34a'
   });
 
-  const officialKitColors = [
-    { name: 'Blanco', hex: '#ffffff' },
-    { name: 'Negro', hex: '#18181b' },
-    { name: 'Azul', hex: '#2563eb' },
-    { name: 'Rojo', hex: '#dc2626' },
-    { name: 'Amarillo', hex: '#eab308' },
-    { name: 'Verde', hex: '#16a34a' },
-    { name: 'Naranja', hex: '#f97316' },
-    { name: 'Celeste', hex: '#06b6d4' }
-  ];
-
-  const handleUpdateKitColor = (colorHex) => {
-    setTeamColors(prev => ({ ...prev, [kitTarget]: colorHex }));
-    setObjects(prev => prev.map(obj => {
-      if (obj.type !== 'player') return obj;
-      if (kitTarget === 'gk' && obj.role === 'GK' && (obj.team === 'gk' || obj.team === 'blue')) {
-        return { ...obj, customColor: colorHex };
-      }
-      if (kitTarget === 'gk_away' && obj.role === 'GK' && (obj.team === 'gk_away' || obj.team === 'red')) {
-        return { ...obj, customColor: colorHex };
-      }
-      if (kitTarget === 'blue' && obj.role !== 'GK' && obj.team === 'blue') {
-        return { ...obj, customColor: colorHex };
-      }
-      if (kitTarget === 'red' && obj.role !== 'GK' && obj.team === 'red') {
-        return { ...obj, customColor: colorHex };
-      }
-      return obj;
-    }));
-  };
-
-  const [deviceId] = useState(() => {
-    let id = localStorage.getItem('andez_device_id');
-    if (!id) {
-      id = 'dev-' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
-      localStorage.setItem('andez_device_id', id);
-    }
-    return id;
-  });
-
-  const [customPlans, setCustomPlans] = useState(() => {
-    const p = localStorage.getItem('andez_custom_plans');
-    return p ? JSON.parse(p) : DEFAULT_PLANS;
-  });
-  useEffect(() => {
-    localStorage.setItem('andez_custom_plans', JSON.stringify(customPlans));
-    sbSet('andez_custom_plans', customPlans);
-  }, [customPlans]);
-
-  const [adminLicenses, setAdminLicenses] = useState(() => {
-    const l = localStorage.getItem('andez_licenses');
-    return l ? JSON.parse(l) : [
-      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 4, devices: [], status: 'active', plan: 'Plan Plata (4 Dispositivos)', price: 25000, expiry: '2026-11-15' },
-      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, devices: [], status: 'active', plan: 'Plan Individual (2 Dispositivos)', price: 15000, expiry: '2026-11-10' }
-    ];
-  });
-
-  useEffect(() => {
-    sbGet('andez_licenses').then(data => {
-      if (data && Array.isArray(data)) setAdminLicenses(data);
-    });
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('andez_licenses', JSON.stringify(adminLicenses));
-    sbSet('andez_licenses', adminLicenses);
-  }, [adminLicenses]);
-
   const [authenticatedUser, setAuthenticatedUser] = useState(() => {
     const s = localStorage.getItem('andez_auth_session');
     return s ? JSON.parse(s) : null;
   });
-
-  const [categories, setCategories] = useState(() => {
-    const c = localStorage.getItem('andez_dynamic_categories');
-    return c ? JSON.parse(c) : DEFAULT_CATEGORIES;
-  });
-  useEffect(() => {
-    localStorage.setItem('andez_dynamic_categories', JSON.stringify(categories));
-    sbSet('andez_dynamic_categories', categories);
-  }, [categories]);
-
-  const [coachesList, setCoachesList] = useState(() => {
-    const c = localStorage.getItem('andez_coaches_staff');
-    return c ? JSON.parse(c) : [
-      { id: 'c1', name: 'Prof. Carlos Morales', role: 'DT Principal', categoryId: 'sub10', phone: '+56932100183', code: 'DT-101' }
-    ];
-  });
-  useEffect(() => {
-    localStorage.setItem('andez_coaches_staff', JSON.stringify(coachesList));
-    sbSet('andez_coaches_staff', coachesList);
-  }, [coachesList]);
-
-  const [rosters, setRosters] = useState(() => {
-    const r = localStorage.getItem('andez_category_rosters');
-    return r ? JSON.parse(r) : {
-      sub10: [{ id: 'p1', name: 'Lucas Valenzuela', rut: '24.123.456-7', birth: '2016-04-12', role: 'Delantero', phone: '+56932100183', paid: true }],
-      sub14: [{ id: 'p3', name: 'Martín Sepúlveda', rut: '22.345.678-9', birth: '2012-02-14', role: 'Portero', phone: '+56932100183', paid: false }],
-      sub18: [], senior: []
-    };
-  });
-  useEffect(() => {
-    localStorage.setItem('andez_category_rosters', JSON.stringify(rosters));
-    sbSet('andez_category_rosters', rosters);
-  }, [rosters]);
-
-  const [attendanceRecords, setAttendanceRecords] = useState(() => {
-    const a = localStorage.getItem('andez_attendance_records');
-    return a ? JSON.parse(a) : {};
-  });
-  useEffect(() => {
-    localStorage.setItem('andez_attendance_records', JSON.stringify(attendanceRecords));
-    sbSet('andez_attendance_records', attendanceRecords);
-  }, [attendanceRecords]);
-
-  const [billingDay, setBillingDay] = useState(() => localStorage.getItem('andez_billing_day') || '5');
-  const [billingMessageTemplate, setBillingMessageTemplate] = useState(() => localStorage.getItem('andez_billing_template') || 'Estimado(a) apoderado(a) de {ALUMNO}, le recordamos desde Andez Sports FC que la mensualidad correspondiente al mes en curso se encuentra pendiente. Agradecemos regularizar el pago.');
 
   const [inputLicenseCode, setInputLicenseCode] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -361,267 +297,91 @@ export default function App() {
     e.preventDefault();
     setLoginError('');
     const code = inputLicenseCode.trim().toUpperCase();
-
     if (code === 'ANDEZ2026') {
       const u = { role: 'owner', name: 'Administrador Maestro', club: 'Andez Sports FC Principal' };
       setAuthenticatedUser(u);
       localStorage.setItem('andez_auth_session', JSON.stringify(u));
       return;
     }
-
-    const coachUser = coachesList.find(c => c.code && c.code.toUpperCase() === code);
-    if (coachUser) {
-      const u = { role: 'coach', name: coachUser.name, categoryId: coachUser.categoryId, club: 'Escuela de Fútbol' };
-      setAuthenticatedUser(u);
-      localStorage.setItem('andez_auth_session', JSON.stringify(u));
-      return;
-    }
-
-    const cloudLic = await sbGet('andez_licenses');
-    const currentLics = cloudLic && Array.isArray(cloudLic) ? cloudLic : adminLicenses;
-    const found = currentLics.find(l => l.code.toUpperCase() === code);
-
-    if (!found) {
-      setLoginError('Código de activación no válido.');
-      return;
-    }
-    if (found.status === 'suspended') {
-      setLoginError('Suscripción suspendida. Contacta a soporte.');
-      return;
-    }
-
-    const activeDevices = found.devices || [];
-    if (!activeDevices.includes(deviceId)) {
-      if (activeDevices.length >= (found.seats || 2)) {
-        setLoginError(`Límite de dispositivos alcanzado (${found.seats} máx). Cierra sesión en otro equipo.`);
-        return;
-      }
-      found.devices = [...activeDevices, deviceId];
-      const updated = currentLics.map(l => l.id === found.id ? found : l);
-      setAdminLicenses(updated);
-      sbSet('andez_licenses', updated);
-    }
-
-    const dirUser = { role: 'director', ...found };
-    setAuthenticatedUser(dirUser);
-    localStorage.setItem('andez_auth_session', JSON.stringify(dirUser));
+    setLoginError('Código de activación no válido.');
   };
 
   const handleLogout = () => {
     if (confirm('¿Cerrar sesión en este equipo?')) {
-      if (authenticatedUser && authenticatedUser.role === 'director' && authenticatedUser.id) {
-        const updated = adminLicenses.map(l => {
-          if (l.id === authenticatedUser.id) {
-            return { ...l, devices: (l.devices || []).filter(d => d !== deviceId) };
-          }
-          return l;
-        });
-        setAdminLicenses(updated);
-        sbSet('andez_licenses', updated);
-      }
       setAuthenticatedUser(null);
       localStorage.removeItem('andez_auth_session');
     }
   };
 
-  // ESTADOS DE LA PIZARRA
   const [pitchMode, setPitchMode] = useState('full');
   const [showTrainingMenu, setShowTrainingMenu] = useState(false);
   const [showSystemsMenu, setShowSystemsMenu] = useState(false);
-  const [showLibraryModal, setShowLibraryModal] = useState(false);
-  const [activeTabLibrary, setActiveTabLibrary] = useState('sessions');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
-
-  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
-  const [showNewUserModal, setShowNewUserModal] = useState(false);
-  const [newCoachName, setNewCoachName] = useState('');
-  const [newCoachClub, setNewCoachClub] = useState('');
-  const [newCoachPlan, setNewCoachPlan] = useState('p-silver');
-  const [newCoachExpiry, setNewCoachExpiry] = useState(() => {
-    const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0];
-  });
-
-  const [customLogo, setCustomLogo] = useState(() => localStorage.getItem('andez_custom_club_logo') || null);
-  const handleLogoUpload = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setCustomLogo(ev.target.result);
-        localStorage.setItem('andez_custom_club_logo', ev.target.result);
-        sbSet('andez_custom_club_logo', ev.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // NÓMINAS Y GESTIÓN
-  const [newCatName, setNewCatName] = useState('');
-  const [editingCatId, setEditingCatId] = useState(null);
-  const [editingCatName, setEditingCatName] = useState('');
-
-  const [newCoachStaffName, setNewCoachStaffName] = useState('');
-  const [newCoachStaffRole, setNewCoachStaffRole] = useState('Director Técnico');
-  const [newCoachStaffCategory, setNewCoachStaffCategory] = useState(categories[0]?.id || 'sub10');
-  const [newCoachStaffPhone, setNewCoachStaffPhone] = useState('+569');
-  const [newCoachStaffCode, setNewCoachStaffCode] = useState('');
-  const [editingCoach, setEditingCoach] = useState(null);
-  const [newRosterName, setNewRosterName] = useState('');
-  const [newRosterRut, setNewRosterRut] = useState('');
-  const [newRosterBirth, setNewRosterBirth] = useState('');
-  const [newRosterRole, setNewRosterRole] = useState('Delantero');
-  const [newRosterPhone, setNewRosterPhone] = useState('+569');
-  const [newRosterBlood, setNewRosterBlood] = useState('O+');
-  const [newRosterAllergies, setNewRosterAllergies] = useState('');
-  const [newRosterEmergencyPhone, setNewRosterEmergencyPhone] = useState('+569');
-  const [editingStudent, setEditingStudent] = useState(null);
-  const [schoolMonthlyFee, setSchoolMonthlyFee] = useState(() => localStorage.getItem('andez_monthly_fee') || '25000');
-  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
-
-  // SESIONES
-  const [drillTitle, setDrillTitle] = useState('Salida y Progresión');
-  const [drillCategory, setDrillCategory] = useState(categories[0]?.id || 'sub14');
-  const [drillNotes, setDrillNotes] = useState('Transición rápida a 2 toques.');
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [customSystems, setCustomSystems] = useState(() => {
-    const s = localStorage.getItem('andez_custom_tactical_systems');
-    return s ? JSON.parse(s) : null;
-  });
-  const [newSystemNameInput, setNewSystemNameInput] = useState('');
- const [savedDrills, setSavedDrills] = useState(() => {
-    const d = localStorage.getItem('andez_saved_drills');
-    return d ? JSON.parse(d) : [];
-  });
-
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
-
-  // 1. PRIMERO DESCARGA DESDE SUPABASE
-  useEffect(() => {
-    async function hydrateFromCloud() {
-      try {
-        const [cloudPlans, cloudLics, cloudCats, cloudCoaches, cloudRosters, cloudAtt, cloudDrills, cloudLogo] = await Promise.all([
-          sbGet('andez_custom_plans'),
-          sbGet('andez_licenses'),
-          sbGet('andez_dynamic_categories'),
-          sbGet('andez_coaches_staff'),
-          sbGet('andez_category_rosters'),
-          sbGet('andez_attendance_records'),
-          sbGet('andez_saved_drills'),
-          sbGet('andez_custom_club_logo')
-        ]);
-
-        if (cloudPlans && Array.isArray(cloudPlans)) setCustomPlans(cloudPlans);
-        if (cloudLics && Array.isArray(cloudLics)) setAdminLicenses(cloudLics);
-        if (cloudCats && Array.isArray(cloudCats)) setCategories(cloudCats);
-        if (cloudCoaches && Array.isArray(cloudCoaches)) setCoachesList(cloudCoaches);
-        if (cloudRosters && typeof cloudRosters === 'object') setRosters(cloudRosters);
-        if (cloudAtt && typeof cloudAtt === 'object') setAttendanceRecords(cloudAtt);
-        if (cloudDrills && Array.isArray(cloudDrills)) setSavedDrills(cloudDrills);
-        if (cloudLogo) { setCustomLogo(cloudLogo); localStorage.setItem('andez_custom_club_logo', cloudLogo); }
-      } catch (err) {
-        console.error('Error al sincronizar con Supabase:', err);
-      } finally {
-        setIsDataLoaded(true);
-      }
-    }
-    hydrateFromCloud();
-  }, []);
-
-  // 2. SOLO GUARDA EN LA NUBE SI YA SE CARGARON LOS DATOS PREVIOS
-  useEffect(() => {
-    if (!isDataLoaded) return;
-    localStorage.setItem('andez_saved_drills', JSON.stringify(savedDrills));
-    sbSet('andez_saved_drills', savedDrills);
-  }, [savedDrills, isDataLoaded]);
-
+  const [showKitPalette, setShowKitPalette] = useState(false);
+  const [kitTarget, setKitTarget] = useState('blue');
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [selectedObj, setSelectedObj] = useState(null);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [playerCustomName, setPlayerCustomName] = useState('');
   const [playerCustomNumber, setPlayerCustomNumber] = useState('');
-  const [selectedMaterial, setSelectedMaterial] = useState(null);
 
-  // HERRAMIENTAS DE DIBUJO Y TEXTO
   const [tool, setTool] = useState('move');
   const [lineType, setLineType] = useState('arrow');
   const [lineColor, setLineColor] = useState('#ffffff');
   const [lineWidth, setLineWidth] = useState(1.4);
   const [showLinePalette, setShowLinePalette] = useState(false);
-
-  const [textBlocks, setTextBlocks] = useState([]);
-  const [textModalOpen, setTextModalOpen] = useState(false);
-  const [pendingTextPos, setPendingTextPos] = useState({ x: 50, y: 50 });
-  const [inputTextVal, setInputTextVal] = useState('');
-  const [selectedTextId, setSelectedTextId] = useState(null);
-  const [textColor, setTextColor] = useState('#ffffff');
-  const [textIsBold, setTextIsBold] = useState(true);
-  const [textIsUnderline, setTextIsUnderline] = useState(false);
-  const [textSize, setTextSize] = useState(2.8);
-
-  const [objects, setObjects] = useState(() => {
-    const sys = GET_TACTICAL_SYSTEMS(window.innerWidth > 768)['4-3-3'];
-    const pts = sys.map(p => ({ id: 'init-' + p.n, type: 'player', number: p.n, role: p.r, x: p.x, y: p.y, team: 'blue', name: '' }));
-    return [...pts, { id: 'ball-1', type: 'ball', x: window.innerWidth > 768 ? 52.5 : 34, y: window.innerWidth > 768 ? 34 : 52.5 }];
-  });
-
   const [drawings, setDrawings] = useState([]);
   const [currentLine, setCurrentLine] = useState(null);
+
+  const [objects, setObjects] = useState(() => {
+    const sys = GET_TACTICAL_SYSTEMS(isPC)['4-3-3'];
+    const pts = sys.map((p) => ({
+      id: 'init-' + p.n,
+      type: 'player',
+      number: p.n,
+      role: p.r,
+      x: p.x,
+      y: p.y,
+      team: 'blue',
+      name: ''
+    }));
+    return [
+      ...pts,
+      { id: 'ball-1', type: 'ball', x: isPC ? 52.5 : 34, y: isPC ? 34 : 52.5 }
+    ];
+  });
+
   const [history, setHistory] = useState([objects]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const svgRef = useRef(null);
   const isDraggingRef = useRef(false);
-  const [selectedObj, setSelectedObj] = useState(null);
-// FUNCIÓN PARA DESCARGAR LA PIZARRA COMO FOTO PNG
-  const exportBoardAsImage = () => {
-    if (!svgRef.current) return;
-    const svgElement = svgRef.current;
-    const svgString = new XMLSerializer().serializeToString(svgElement);
-    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-    const URLObject = window.URL || window.webkitURL || window;
-    const blobURL = URLObject.createObjectURL(svgBlob);
-    
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = isPC ? 1920 : 1080;
-      canvas.height = isPC ? 1080 : 1920;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-      
-      const pngURL = canvas.toDataURL('image/png');
-      const downloadLink = document.createElement('a');
-      downloadLink.href = pngURL;
-      downloadLink.download = `pizarra-${drillTitle.replace(/\s+/g, '_')}.png`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      URLObject.revokeObjectURL(blobURL);
-    };
-    image.src = blobURL;
-  };
-  // VIDEO & IA PROMPT
+
   const [isRecording, setIsRecording] = useState(false);
-  const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
 
   const startRecording = async () => {
-    setRecordedVideoUrl(null);
     recordedChunksRef.current = [];
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 } });
       const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
       mediaRecorderRef.current = mr;
-      mr.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+      };
       mr.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        setRecordedVideoUrl(URL.createObjectURL(blob));
-        stream.getTracks().forEach(t => t.stop());
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `jugada-andez-${Date.now()}.webm`;
+        a.click();
+        stream.getTracks().forEach((t) => t.stop());
         setIsRecording(false);
       };
       mr.start();
       setIsRecording(true);
     } catch (err) {
-      alert('Selecciona la ventana de la pizarra para grabar.');
       setIsRecording(false);
     }
   };
@@ -630,103 +390,28 @@ export default function App() {
     if (mediaRecorderRef.current && isRecording) mediaRecorderRef.current.stop();
   };
 
-  const [showPromptModal, setShowPromptModal] = useState(false);
-  const [promptText, setPromptText] = useState('');
-  
-  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
-
-  const handleGenerateTacticalPrompt = async (e) => {
-    e.preventDefault();
-    if (!promptText.trim() || isGeneratingPrompt) return;
-
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      alert("No se encontró la clave VITE_GEMINI_API_KEY en las variables de entorno.");
-      return;
-    }
-
-    setIsGeneratingPrompt(true);
-
-    const isHalf = pitchMode === 'half';
-    const systemInstruction = `Eres un DT y analista táctico profesional de fútbol.
-Convierte la solicitud del usuario en un array JSON con las posiciones exactas en el campo.
-
-GEOMETRÍA Y MEDIDAS OFICIALES (Eje X: 0 a 105 largo, Eje Y: 0 a 68 ancho):
-- Centro del campo: X=52.5, Y=34.
-- Portería Izquierda: X=2, Y=34.
-- Área Chica Izquierda: X va de 0 a 5.5, Y va de 24.8 a 43.2.
-- Área Grande Izquierda: X va de 0 a 16.5, Y va de 13.8 a 54.2. (Vértice superior Y=13.8, Vértice inferior Y=54.2, Borde frontal X=16.5).
-- Punto penal: X=11, Y=34.
-- Medialuna / Borde del área grande: X=18 a 22, Y entre 26 y 42.
-- Bandas / Laterales: Y=8 (banda superior) e Y=60 (banda inferior).
-- Modo actual: ${isHalf ? "Medio campo (X: 0 a 55)" : "Campo completo (X: 0 a 105)"}.
-
-FORMATO OBLIGATORIO DE ELEMENTOS EN EL JSON:
-- Jugador: {"id": "p_1", "type": "player", "number": "1", "name": "Arquero", "x": 3, "y": 34, "team": "blue"} (team: 'blue' o 'red')
-- Balón: {"id": "b_1", "type": "ball", "x": 6, "y": 34}
-- Maniquí: {"id": "m_1", "type": "dummy", "name": "Barrera", "x": 20, "y": 34, "rotation": 90}
-- Cono: {"id": "c_1", "type": "cone", "color": "#ea580c", "x": 30, "y": 34, "rotation": 0}
-- Mini portería: {"id": "mg_1", "type": "mini_goal", "x": 35, "y": 34, "rotation": 0}
-
-CRITERIOS TÁCTICOS Y DE VELOCIDAD:
-- Nombres de jugadores MUY CORTOS (máximo 8 caracteres, ej: "Arquero", "Central", "Lat Der", "Lat Izq", "Pivote", "Ext Der", "Ext Izq", "Delantero"). NUNCA uses nombres compuestos largos ni barras inclinadas.
-- No encimar fichas: arquero en X=2, defensores en X=10 a 14, delanteros rivales en X=18 a 24.
-- Genera el JSON compacto y directo.
-- Devuelve estricta y únicamente el array JSON: [{...}, {...}]`;
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: `Instrucción táctica: "${promptText}"` }]
-          }],
-          systemInstruction: {
-            parts: [{ text: systemInstruction }]
-          },
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.0,
-            maxOutputTokens: 800,
-            thinkingConfig: {
-              thinkingBudget: 0
-            }
-          }
-        })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Error al conectar con Gemini");
-      }
-
-      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-      const parsedObjects = JSON.parse(rawText);
-
-      if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
-        setObjects(parsedObjects);
-        recordHistory(parsedObjects);
-        setShowPromptModal(false);
-        setPromptText('');
-      } else {
-        alert("Gemini no devolvió elementos válidos.");
-      }
-    } catch (err) {
-      console.error("Error en Gemini:", err);
-      alert("Error al consultar Gemini: " + err.message);
-    } finally {
-      setIsGeneratingPrompt(false);
-    }
-  };
-  const maxX = isPC ? (pitchMode === 'half' ? 55 : 105) : 68;
-  const maxY = isPC ? 68 : (pitchMode === 'half' ? 85 : 105);
-
-  const getCoordinates = (e) => {
-    if (!svgRef.current) return { x: maxX / 2, y: maxY / 2 };
-    const pt = svgRef.current.createSVGPoint();
-    pt.x = e.touches ? e.touches[0].clientX : e.clientX;
-    pt.y = e.touches ? e.touches[0].clientY : e.clientY;
-    const c = pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
-    return { x: Math.max(1, Math.min(maxX - 1, c.x)), y: Math.max(1, Math.min(maxY - 1, c.y)) };
+  const exportBoardAsImage = () => {
+    if (!svgRef.current) return;
+    const svgElement = svgRef.current;
+    const svgString = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const URLObject = window.URL || window.webkitURL || window;
+    const blobURL = URLObject.createObjectURL(svgBlob);
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = isPC ? 1920 : 1080;
+      canvas.height = isPC ? 1080 : 1920;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const pngURL = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = pngURL;
+      downloadLink.download = `pizarra-andez-${Date.now()}.png`;
+      downloadLink.click();
+      URLObject.revokeObjectURL(blobURL);
+    };
+    image.src = blobURL;
   };
 
   const recordHistory = (objs) => {
@@ -736,11 +421,28 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
     setHistoryIndex(nextH.length - 1);
   };
 
+  const maxX = isPC ? (pitchMode === 'half' ? 55 : 105) : 68;
+  const maxY = isPC ? 68 : (pitchMode === 'half' ? 85 : 105);
+
+  const getCoordinates = (e) => {
+    if (!svgRef.current) return { x: maxX / 2, y: maxY / 2 };
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = e.touches ? e.touches[0].clientX : e.clientX;
+    pt.y = e.touches ? e.touches[0].clientY : e.clientY;
+    const c = pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
+    return {
+      x: Math.max(1, Math.min(maxX - 1, c.x)),
+      y: Math.max(1, Math.min(maxY - 1, c.y))
+    };
+  };
+
   const handlePointerDown = (e, obj) => {
     e.stopPropagation();
     if (tool === 'eraser') {
-      const f = objects.filter(o => o.id !== obj.id);
-      setObjects(f); recordHistory(f); return;
+      const f = objects.filter((o) => o.id !== obj.id);
+      setObjects(f);
+      recordHistory(f);
+      return;
     }
     if (tool !== 'move') return;
     setSelectedMaterial(obj.type !== 'player' && obj.type !== 'ball' ? obj : null);
@@ -750,1504 +452,659 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
 
   const handlePitchPointerDown = (e) => {
     const c = getCoordinates(e);
-    if (tool === 'text') {
-      setPendingTextPos(c);
-      setInputTextVal('');
-      setTextModalOpen(true);
-      return;
-    }
     if (tool === 'move' || tool === 'eraser') {
-      setSelectedObj(null); setSelectedMaterial(null); return;
+      setSelectedObj(null);
+      setSelectedMaterial(null);
+      return;
     }
     setCurrentLine({ id: Date.now(), start: c, end: c, type: lineType, color: lineColor, width: lineWidth });
   };
 
-  const handlePointerMove = (e) => {
+  const handlePointerMove = useCallback((e) => {
     if (isDraggingRef.current && selectedObj) {
       if (e.cancelable) e.preventDefault();
       const c = getCoordinates(e);
-      setObjects(prev => prev.map(o => o.id === selectedObj.id ? { ...o, x: c.x, y: c.y } : o));
-      setTextBlocks(prev => prev.map(t => t.id === selectedObj.id ? { ...t, x: c.x, y: c.y } : t));
+      setObjects((prev) => prev.map((o) => (o.id === selectedObj.id ? { ...o, x: c.x, y: c.y } : o)));
     } else if (currentLine) {
       if (e.cancelable) e.preventDefault();
       const c = getCoordinates(e);
-      setCurrentLine(prev => ({ ...prev, end: c }));
+      setCurrentLine((prev) => ({ ...prev, end: c }));
     }
-  };
+  }, [selectedObj, currentLine]);
 
-  const handlePointerUp = () => {
-    if (isDraggingRef.current) { isDraggingRef.current = false; recordHistory(objects); }
-    if (currentLine) { setDrawings(prev => [...prev, currentLine]); setCurrentLine(null); }
-  };
-
-  const rotateObject = (id) => {
-    const u = objects.map(o => o.id === id ? { ...o, rotation: ((o.rotation || 0) + 45) % 360 } : o);
-    setObjects(u); recordHistory(u);
-  };
+  const handlePointerUp = useCallback(() => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      recordHistory(objects);
+    }
+    if (currentLine) {
+      setDrawings((prev) => [...prev, currentLine]);
+      setCurrentLine(null);
+    }
+  }, [objects, currentLine]);
 
   const addElement = (itemType, extra = {}) => {
     const id = 'item-' + Date.now();
     const spawnX = isPC ? (pitchMode === 'half' ? 27.5 : 52.5) : 34;
     const spawnY = isPC ? 34 : (pitchMode === 'half' ? 42.5 : 52.5);
-    const count = objects.filter(o => o.type === 'player' && o.team === (extra.team || 'blue')).length + 1;
-    const item = { id, type: itemType, x: spawnX, y: spawnY, rotation: 0, name: '', number: String(extra.number || count), ...extra };
+    const count = objects.filter((o) => o.type === 'player' && o.team === (extra.team || 'blue')).length + 1;
+    const item = {
+      id,
+      type: itemType,
+      x: spawnX,
+      y: spawnY,
+      rotation: 0,
+      name: '',
+      number: String(extra.number || count),
+      ...extra
+    };
     const nextObjs = [...objects, item];
     setObjects(nextObjs);
     recordHistory(nextObjs);
   };
 
   const applyTacticalSystem = (sysKey) => {
-    const baseSystems = typeof GET_TACTICAL_SYSTEMS === 'function' ? GET_TACTICAL_SYSTEMS(isPC) : {};
-    const all = { ...baseSystems, ...(customSystems || {}) };
-    const sys = all[sysKey];
+    const baseSystems = GET_TACTICAL_SYSTEMS(isPC);
+    const sys = baseSystems[sysKey];
     if (!sys || !Array.isArray(sys)) return;
-
     const players = sys.map((p, idx) => ({
       id: 'sys-p-' + Date.now() + '-' + idx,
       type: 'player',
-      number: String(p.n ?? p.number ?? (idx === 0 ? '1' : idx + 1)),
-      role: p.r ?? p.role ?? (idx === 0 ? 'POR' : 'JUG'),
+      number: String(p.n ?? (idx === 0 ? '1' : idx + 1)),
+      role: p.r ?? (idx === 0 ? 'GK' : 'JUG'),
       x: Number(p.x),
       y: Number(p.y),
       team: p.team || (idx === 0 ? 'gk' : 'blue'),
-      name: p.name || ''
+      name: ''
     }));
-
-    const nonPlayers = objects.filter(o => o.type !== 'player');
+    const nonPlayers = objects.filter((o) => o.type !== 'player');
     const u = [...players, ...nonPlayers];
     setObjects(u);
     recordHistory(u);
     setShowSystemsMenu(false);
   };
-  const currentDisplayLogo = customLogo || '/logo-andez.png';
-  const totalRevenue = adminLicenses.filter(l => l.status === 'active').reduce((sum, l) => sum + (l.price || 0), 0);
 
-  // PANTALLA DE INGRESO
   if (!authenticatedUser) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-[#070b12] text-white p-4 font-sans select-none relative">
+      <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-[#070b12] text-white p-4 font-sans select-none">
         <div className="w-full max-w-md bg-zinc-950/90 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center">
-          <img src={currentDisplayLogo} alt="Logo" className="w-16 h-16 rounded-2xl mb-4 border border-amber-400 object-cover" />
-          <h1 className="text-2xl font-black text-white mb-1">ANDEZ SPORTS FC <span className="text-amber-400">PRO</span></h1>
-          <p className="text-xs text-zinc-400 mb-4">Ingreso de Director Técnico, Profesor o Administrador</p>
+          <div className="w-16 h-16 rounded-2xl mb-4 border border-amber-400 bg-zinc-900 flex items-center justify-center font-black text-amber-400 text-xl">
+            AZ
+          </div>
+          <h1 className="text-2xl font-black text-white mb-1">
+            ANDEZ SPORTS FC <span className="text-amber-400">PRO</span>
+          </h1>
+          <p className="text-xs text-zinc-400 mb-4">Ingreso de Director Técnico o Administrador</p>
           <form onSubmit={handleClientLogin} className="w-full space-y-3 my-2">
-            <input type="text" value={inputLicenseCode} onChange={e => setInputLicenseCode(e.target.value)} placeholder="Código (ej. ANDEZ2026 / AND-7821)" className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-sm text-center font-mono font-bold text-white uppercase focus:border-red-500 outline-none" required />
-            {loginError && <p className="text-xs text-red-400 font-bold bg-red-950/50 p-2 rounded-xl border border-red-800">{loginError}</p>}
-            <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase rounded-2xl shadow">Ingresar al Sistema</button>
+            <input
+              type="text"
+              value={inputLicenseCode}
+              onChange={(e) => setInputLicenseCode(e.target.value)}
+              placeholder="Código Maestro: ANDEZ2026"
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-sm text-center font-mono font-bold text-white uppercase focus:border-red-500 outline-none"
+              required
+            />
+            {loginError && (
+              <p className="text-xs text-red-400 font-bold bg-red-950/50 p-2 rounded-xl border border-red-800">
+                {loginError}
+              </p>
+            )}
+            <button
+              type="submit"
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase rounded-2xl shadow transition"
+            >
+              Ingresar al Sistema
+            </button>
           </form>
-          <a href="https://wa.me/56932100183?text=Hola%20Andez%20Sports%20FC,%20solicito%20acceso" target="_blank" rel="noopener noreferrer" className="w-full mt-3 py-3 bg-zinc-900 border border-zinc-800 hover:border-emerald-500 rounded-2xl text-xs font-bold text-zinc-300 flex items-center justify-center gap-2">
-            <MessageCircle className="w-4 h-4 text-emerald-400" /> Soporte Oficial (+56932100183)
-          </a>
         </div>
       </div>
     );
   }
 
-  const isTeacherRestricted = authenticatedUser.role === 'coach';
-  const currentCategoryContext = isTeacherRestricted ? authenticatedUser.categoryId : (selectedCategoryFilter === 'all' ? (categories[0]?.id || 'sub10') : selectedCategoryFilter);
-
   return (
-    <div className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black">
-      {/* HEADER */}
-      <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 no-print overflow-x-auto max-w-full">
+    <div className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans">
+      <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 overflow-x-auto max-w-full">
         <div className="flex items-center gap-2 sm:gap-3">
-          {isPC ? (
-            <label htmlFor="logo-up" className="cursor-pointer" title="Cambiar Logo Club">
-              <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
-              <input id="logo-up" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-            </label>
-          ) : (
-            <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
-          )}
-
-          <button onClick={() => setShowLibraryModal(true)} className="text-zinc-300 hover:text-amber-400" title="Biblioteca y Gestión"><Folder className="w-5 h-5" /></button>
-          <button onClick={() => setShowSystemsMenu(true)} className="text-zinc-300 hover:text-amber-400" title="Sistemas Tácticos"><Play className="w-5 h-5" /></button>
-          <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} title={`Vista: ${pitchMode === 'full' ? 'Media Cancha' : 'Cancha Entera'}`} className={`p-1 rounded transition ${pitchMode === 'half' ? 'bg-red-600 text-white px-1.5' : 'text-zinc-300 hover:text-amber-400'}`}><RotateCcw className="w-5 h-5" />{pitchMode === 'half' && <span className="text-xs font-bold ml-0.5">1/2</span>}</button>
-          <button onClick={() => setShowTrainingMenu(!showTrainingMenu)} className={`p-1 rounded ${showTrainingMenu ? 'bg-amber-500 text-black' : 'text-amber-400'}`}><span className="font-bold">▲</span></button>
-
-          <button onClick={() => setShowPromptModal(true)} className="flex items-center gap-1 bg-amber-500/20 border border-amber-400 text-amber-300 px-2 py-1 rounded-full text-[11px] font-bold shadow active:scale-95">
-            <Sparkles className="w-3.5 h-3.5" /> Prompt IA
+          <div className="w-8 h-8 rounded-full border-2 border-amber-400 bg-zinc-900 flex items-center justify-center font-black text-amber-400 text-xs">
+            AZ
+          </div>
+          <button onClick={() => setShowSystemsMenu(true)} className="text-zinc-300 hover:text-amber-400" title="Sistemas Tácticos">
+            <Play className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')}
+            className={`p-1 rounded transition ${pitchMode === 'half' ? 'bg-red-600 text-white px-1.5' : 'text-zinc-300 hover:text-amber-400'}`}
+          >
+            <RotateCcw className="w-5 h-5" />
+            {pitchMode === 'half' && <span className="text-xs font-bold ml-0.5">1/2</span>}
+          </button>
+          <button
+            onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')}
+            className="flex items-center gap-1 bg-blue-600/20 border border-blue-400 text-blue-300 px-2.5 py-1 rounded-full text-[11px] font-bold shadow active:scale-95"
+          >
+            <Shield className="w-3.5 h-3.5" /> {viewMode === '2d' ? '3D' : '2D'}
+          </button>
+          <button onClick={() => setShowTrainingMenu(!showTrainingMenu)} className={`p-1 rounded ${showTrainingMenu ? 'bg-amber-500 text-black' : 'text-amber-400'}`}>
+            <span className="font-bold">▲ Materiales</span>
           </button>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {selectedMaterial && (
-            <button onClick={() => rotateObject(selectedMaterial.id)} className="flex items-center gap-1 bg-amber-500 text-black px-2 py-1 rounded-full text-[10px] font-black"><RotateCw className="w-3.5 h-3.5" /> 45°</button>
-          )}
-
           {isRecording ? (
-            <button onClick={stopRecording} className="flex items-center gap-1.5 bg-red-600 text-white px-2.5 py-1 rounded-full text-[10px] font-black animate-pulse shadow">
+            <button
+              onClick={stopRecording}
+              className="flex items-center gap-1.5 bg-red-600 text-white px-2.5 py-1 rounded-full text-[10px] font-black animate-pulse shadow"
+            >
               <Square className="w-3.5 h-3.5" /> Detener
             </button>
           ) : (
-            <button onClick={startRecording} className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-700 text-zinc-300 hover:text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
+            <button
+              onClick={startRecording}
+              className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-700 text-zinc-300 hover:text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow"
+            >
               <Video className="w-3.5 h-3.5 text-red-500" /> Grabar
             </button>
           )}
-
-          <button onClick={() => window.print()} className="text-zinc-300 hover:text-amber-400"><Printer className="w-5 h-5" /></button>
-          <button onClick={() => setShowSaveModal(true)} className="text-zinc-300 hover:text-red-400"><Save className="w-5 h-5" /></button>
-
-          {authenticatedUser.role === 'owner' ? (
-            <button onClick={() => setShowAdminDashboard(true)} className="flex items-center gap-1 bg-zinc-900 border border-zinc-700 px-2.5 py-1 rounded-full text-[10px] font-black text-amber-400 uppercase tracking-wider">
-              <span>Super Admin</span> <Lock className="w-3 h-3 text-zinc-400" />
-            </button>
-          ) : (
-            <div className="bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-[10px] font-bold text-zinc-300 max-w-[120px] truncate">
-              {authenticatedUser.role === 'director' ? `Director: ${authenticatedUser.club}` : `Prof: ${authenticatedUser.name}`}
-            </div>
-          )}
-
-          <button onClick={handleLogout} className="text-zinc-400 hover:text-red-400"><LogOut className="w-4 h-4" /></button>
+          <button onClick={exportBoardAsImage} className="text-zinc-300 hover:text-amber-400" title="Exportar PNG">
+            <Download className="w-5 h-5" />
+          </button>
+          <button onClick={handleLogout} className="text-zinc-400 hover:text-red-400">
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
-{/* CANCHA CON SOPORTE TÁCTIL TOTAL */}
-      <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
-          <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePitchPointerDown}>
-          <defs>
-          <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" stroke="none" /></marker>
-          <marker id="arrow-red" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ef4444" stroke="none" /></marker>
-          <marker id="arrow-blue" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#3b82f6" stroke="none" /></marker>
-          <marker id="arrow-yellow" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#facc15" stroke="none" /></marker>
-          <marker id="arrow-black" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#000000" stroke="none" /></marker>
-          <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.5" markerHeight="3.5" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
-          {/* GRADIENTES Y SOMBREADO TIPO TACTICALPAD */}
-          <linearGradient id="metal-white" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="50%" stopColor="#e2e8f0" />
-            <stop offset="100%" stopColor="#94a3b8" />
-          </linearGradient>
-          <linearGradient id="tube-yellow" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#fef08a" />
-            <stop offset="45%" stopColor="#facc15" />
-            <stop offset="100%" stopColor="#ca8a04" />
-          </linearGradient>
-          <linearGradient id="cone-orange" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#fb923c" />
-            <stop offset="40%" stopColor="#f97316" />
-            <stop offset="100%" stopColor="#9a3412" />
-          </linearGradient>
-          <linearGradient id="rebound-wood" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#d97706" />
-            <stop offset="50%" stopColor="#b45309" />
-            <stop offset="100%" stopColor="#78350f" />
-          </linearGradient>
-          <radialGradient id="ring-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="70%" stopColor="#38bdf8" />
-            <stop offset="100%" stopColor="#0284c7" />
-          </radialGradient>  
-        </defs>
 
-          {/* CÉSPED PRO CALIBRADO AL RECTÁNGULO DE JUEGO */}
-          <rect width="500" height="500" x="-200" y="-200" fill="#15803d" />
-          <g opacity="0.13">
-            {Array.from({ length: 22 }).map((_, i) => (
+      <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]">
+        {viewMode === '2d' ? (
+          <svg
+            ref={svgRef}
+            viewBox={isPC ? (pitchMode === 'half' ? '0 0 55 68' : '0 0 105 68') : (pitchMode === 'half' ? '0 0 68 85' : '0 0 68 105')}
+            className="w-full h-full select-none drop-shadow-2xl touch-none"
+            onPointerDown={handlePitchPointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+          >
+            <defs>
+              <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" />
+              </marker>
+              <marker id="arrow-red" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ef4444" />
+              </marker>
+              <marker id="arrow-blue" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#3b82f6" />
+              </marker>
+              <marker id="arrow-yellow" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#facc15" />
+              </marker>
+              <marker id="arrow-black" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#000000" />
+              </marker>
+              <linearGradient id="grassMain" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#22c55e" />
+                <stop offset="50%" stopColor="#16a34a" />
+                <stop offset="100%" stopColor="#15803d" />
+              </linearGradient>
+              <linearGradient id="grassDark" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#16a34a" />
+                <stop offset="100%" stopColor="#14532d" />
+              </linearGradient>
+            </defs>
+
+            <rect width="500" height="500" x="-200" y="-200" fill="#0f2e1a" />
+            {Array.from({ length: isPC ? 14 : 10 }).map((_, i) => (
               <rect
-                key={i}
-                x={-9.2 + i * 5.61}
-                y="-50"
-                width="2.805"
-                height="220"
-                fill="#ffffff"
+                key={`stripe-${i}`}
+                x={i * 7.5}
+                y="0"
+                width={7.5}
+                height={isPC ? 68 : pitchMode === 'half' ? 85 : 105}
+                fill={i % 2 === 0 ? 'url(#grassMain)' : 'url(#grassDark)'}
               />
             ))}
-          </g>
-          {/* DIBUJO DE CANCHA, ARCOS Y ÁREAS */}
-          {isPC ? (
-            <g stroke="white" strokeWidth="0.8" fill="none">
-              <rect x="2" y="2" width={pitchMode === 'half' ? 51 : 101} height="64" />
-              <line x1={pitchMode === 'half' ? 53 : 52.5} y1="2" x2={pitchMode === 'half' ? 53 : 52.5} y2="66" />
-              <circle cx={pitchMode === 'half' ? 53 : 52.5} cy="34" r="9.15" />
-              <circle cx={pitchMode === 'half' ? 53 : 52.5} cy="34" r="0.8" fill="white" />
-              {/* Lado izquierdo */}
-              <rect x="2" y="13.8" width="16.5" height="40.4" />
-              <rect x="2" y="24.8" width="5.5" height="18.4" />
-              <rect x="-0.8" y="30.3" width="2.8" height="7.32" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
-              <path d="M 18.5 28 A 9.15 9.15 0 0 1 18.5 40" />
-              {/* Lado derecho */}
-              {!pitchMode.includes('half') && (
-                <>
-                  <rect x="86.5" y="13.8" width="16.5" height="40.4" />
-                  <rect x="97.5" y="24.8" width="5.5" height="18.4" />
-                  <rect x="103" y="30.3" width="2.8" height="7.32" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
-                  <path d="M 86.5 28 A 9.15 9.15 0 0 0 86.5 40" />
-                </>
-              )}
-            </g>
-          ) : (
-            <g stroke="white" strokeWidth="0.8" fill="none">
-              <rect x="2" y="2" width="64" height={pitchMode === 'half' ? 79 : 101} />
-              <line x1="2" y1={pitchMode === 'half' ? 81 : 52.5} x2="66" y2={pitchMode === 'half' ? 81 : 52.5} />
-              <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="9.15" />
-              <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="0.8" fill="white" />
-              {/* Portería norte */}
-              {!pitchMode.includes('half') && (
-                <>
-                  <rect x="13.8" y="2" width="40.4" height="16.5" />
-                  <rect x="24.8" y="2" width="18.4" height="5.5" />
-                  <rect x="30.3" y="-0.8" width="7.32" height="2.8" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
-                  <path d="M 28 18.5 A 9.15 9.15 0 0 0 40 18.5" />
-                </>
-              )}
-              {/* Portería sur */}
-              <rect x="13.8" y={pitchMode === 'half' ? 64.5 : 86.5} width="40.4" height="16.5" />
-              <rect x="24.8" y={pitchMode === 'half' ? 75.5 : 97.5} width="18.4" height="5.5" />
-              <rect x="30.3" y={pitchMode === 'half' ? 81 : 103} width="7.32" height="2.8" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
-              <path d={`M 28 ${pitchMode === 'half' ? 64.5 : 86.5} A 9.15 9.15 0 0 1 40 ${pitchMode === 'half' ? 64.5 : 86.5}`} />
-            </g>
-          )}
 
-          {/* DIBUJOS Y TRAZOS */}
-        {drawings.map(l => {
-          const markerId = l.type === 'straight' ? '' : (l.type === 'block' ? 'url(#block-mark)' : (l.color === '#ef4444' ? 'url(#arrow-red)' : l.color === '#3b82f6' ? 'url(#arrow-blue)' : l.color === '#facc15' ? 'url(#arrow-yellow)' : l.color === '#000000' ? 'url(#arrow-black)' : 'url(#arrow-white)'));
-          
-          const dx = l.end.x - l.start.x;
-          const dy = l.end.y - l.start.y;
-          const dist = Math.hypot(dx, dy) || 0.001;
-          const ux = dx / dist;
-          const uy = dy / dist;
+            {isPC ? (
+              <g stroke="white" strokeWidth="0.7" fill="none" strokeLinecap="round">
+                <rect x="2" y="2" width={pitchMode === 'half' ? 51 : 101} height="64" rx="0.2" />
+                <line x1={pitchMode === 'half' ? 53 : 52.5} y1="2" x2={pitchMode === 'half' ? 53 : 52.5} y2="66" />
+                <circle cx={pitchMode === 'half' ? 53 : 52.5} cy="34" r="9.15" />
+                <circle cx={pitchMode === 'half' ? 53 : 52.5} cy="34" r="0.7" fill="white" />
+                <rect x="2" y="13.8" width="16.5" height="40.4" />
+                <rect x="2" y="24.8" width="5.5" height="18.4" />
+                <circle cx="11" cy="34" r="0.6" fill="white" />
+                <path d="M 18.5 28 A 9.15 9.15 0 0 1 18.5 40" />
+                {pitchMode !== 'half' && (
+                  <>
+                    <rect x="86.5" y="13.8" width="16.5" height="40.4" />
+                    <rect x="97.5" y="24.8" width="5.5" height="18.4" />
+                    <circle cx="94" cy="34" r="0.6" fill="white" />
+                    <path d="M 86.5 28 A 9.15 9.15 0 0 0 86.5 40" />
+                  </>
+                )}
+              </g>
+            ) : (
+              <g stroke="white" strokeWidth="0.7" fill="none" strokeLinecap="round">
+                <rect x="2" y="2" width="64" height={pitchMode === 'half' ? 79 : 101} rx="0.2" />
+                <line x1="2" y1={pitchMode === 'half' ? 81 : 52.5} x2="66" y2={pitchMode === 'half' ? 81 : 52.5} />
+                <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="9.15" />
+                <circle cx="34" cy={pitchMode === 'half' ? 81 : 52.5} r="0.7" fill="white" />
+                {pitchMode !== 'half' && (
+                  <>
+                    <rect x="13.8" y="2" width="40.4" height="16.5" />
+                    <rect x="24.8" y="2" width="18.4" height="5.5" />
+                    <circle cx="34" cy="11" r="0.6" fill="white" />
+                    <path d="M 28 18.5 A 9.15 9.15 0 0 0 40 18.5" />
+                  </>
+                )}
+                <rect x="13.8" y={pitchMode === 'half' ? 64.5 : 86.5} width="40.4" height="16.5" />
+                <rect x="24.8" y={pitchMode === 'half' ? 75.5 : 97.5} width="18.4" height="5.5" />
+                <circle cx="34" cy={pitchMode === 'half' ? 70 : 94} r="0.6" fill="white" />
+                <path d={`M 28 ${pitchMode === 'half' ? 64.5 : 86.5} A 9.15 9.15 0 0 1 40 ${pitchMode === 'half' ? 64.5 : 86.5}`} />
+              </g>
+            )}
 
-          // Margen de retroceso para que la línea no pise la punta de la flecha
-          const isArrow = l.type !== 'straight' && l.type !== 'block';
-          const strokeW = l.width || 1.4;
-          const shortenDist = isArrow ? (strokeW * 3.2) : 0; // Se acorta la línea en proporción al grosor
-          
-          const endX = dist > shortenDist ? l.start.x + ux * (dist - shortenDist) : l.start.x;
-          const endY = dist > shortenDist ? l.start.y + uy * (dist - shortenDist) : l.start.y;
-          const effectiveDist = dist > shortenDist ? dist - shortenDist : 0.001;
-
-          let pathD = '';
-          if (l.type === 'wavy') {
-            const numWaves = Math.max(1, Math.round(effectiveDist / 8));
-            const waveLen = effectiveDist / numWaves;
-            const amp = 2.4;
-            const px = -uy;
-            const py = ux;
-
-            pathD = `M ${l.start.x} ${l.start.y}`;
-            for (let i = 0; i < numWaves; i++) {
-              const bX = l.start.x + ux * (i * waveLen);
-              const bY = l.start.y + uy * (i * waveLen);
-              const eX = l.start.x + ux * ((i + 1) * waveLen);
-              const eY = l.start.y + uy * ((i + 1) * waveLen);
-              const cp1X = bX + ux * (waveLen * 0.35) + px * amp;
-              const cp1Y = bY + uy * (waveLen * 0.35) + py * amp;
-              const cp2X = bX + ux * (waveLen * 0.65) - px * amp;
-              const cp2Y = bY + uy * (waveLen * 0.65) - py * amp;
-              pathD += ` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${eX} ${eY}`;
-            }
-          }
-
-          return (
-            <g key={l.id} onPointerDown={(e) => { if (tool === 'eraser') { e.stopPropagation(); setDrawings(prev => prev.filter(d => d.id !== l.id)); } }}>
-              {l.type === 'wavy' ? (
-                <path d={pathD} fill="none" stroke={l.color} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" markerEnd={markerId} />
-              ) : (
-                <line x1={l.start.x} y1={l.start.y} x2={endX} y2={endY} stroke={l.color} strokeWidth={strokeW} strokeLinecap="round" strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'} markerEnd={markerId} />
-              )}
-            </g>
-          );
-        })}
-
-        {currentLine && (
-          currentLine.type === 'wavy' ? (
-            (() => {
-              const dx = currentLine.end.x - currentLine.start.x;
-              const dy = currentLine.end.y - currentLine.start.y;
+            {drawings.map((l) => {
+              const markerId = l.type === 'straight' || l.type === 'dashed' ? '' : (
+                l.color === '#ef4444' ? 'url(#arrow-red)' :
+                l.color === '#3b82f6' ? 'url(#arrow-blue)' :
+                l.color === '#facc15' ? 'url(#arrow-yellow)' :
+                l.color === '#000000' ? 'url(#arrow-black)' : 'url(#arrow-white)'
+              );
+              const dx = l.end.x - l.start.x;
+              const dy = l.end.y - l.start.y;
               const dist = Math.hypot(dx, dy) || 0.001;
               const ux = dx / dist;
               const uy = dy / dist;
-              const strokeW = currentLine.width || 1.4;
-              const shortenDist = strokeW * 3.2;
-              const effectiveDist = dist > shortenDist ? dist - shortenDist : 0.001;
+              const strokeW = l.width || 1.4;
+              const isArrow = l.type !== 'straight' && l.type !== 'block';
+              const shortenDist = isArrow ? strokeW * 3.2 : 0;
+              const endX = dist > shortenDist ? l.start.x + ux * (dist - shortenDist) : l.start.x;
+              const endY = dist > shortenDist ? l.start.y + uy * (dist - shortenDist) : l.start.y;
 
-              const numWaves = Math.max(1, Math.round(effectiveDist / 8));
-              const waveLen = effectiveDist / numWaves;
-              const amp = 2.4;
-              const px = -uy;
-              const py = ux;
-
-              let d = `M ${currentLine.start.x} ${currentLine.start.y}`;
-              for (let i = 0; i < numWaves; i++) {
-                const bX = currentLine.start.x + ux * (i * waveLen);
-                const bY = currentLine.start.y + uy * (i * waveLen);
-                const eX = currentLine.start.x + ux * ((i + 1) * waveLen);
-                const eY = currentLine.start.y + uy * ((i + 1) * waveLen);
-                const cp1X = bX + ux * (waveLen * 0.35) + px * amp;
-                const cp1Y = bY + uy * (waveLen * 0.35) + py * amp;
-                const cp2X = bX + ux * (waveLen * 0.65) - px * amp;
-                const cp2Y = bY + uy * (waveLen * 0.65) - py * amp;
-                d += ` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${eX} ${eY}`;
-              }
-              return <path d={d} fill="none" stroke={currentLine.color} strokeWidth={strokeW} strokeLinecap="round" strokeDasharray="2,2" />;
-            })()
-          ) : (
-            (() => {
-              const dx = currentLine.end.x - currentLine.start.x;
-              const dy = currentLine.end.y - currentLine.start.y;
-              const dist = Math.hypot(dx, dy) || 0.001;
-              const ux = dx / dist;
-              const uy = dy / dist;
-              const strokeW = currentLine.width || 1.4;
-              const isArrow = currentLine.type !== 'straight' && currentLine.type !== 'block';
-              const shortenDist = isArrow ? (strokeW * 3.2) : 0;
-
-              const endX = dist > shortenDist ? currentLine.start.x + ux * (dist - shortenDist) : currentLine.start.x;
-              const endY = dist > shortenDist ? currentLine.start.y + uy * (dist - shortenDist) : currentLine.start.y;
-
-              return <line x1={currentLine.start.x} y1={currentLine.start.y} x2={endX} y2={endY} stroke={currentLine.color} strokeWidth={strokeW} strokeLinecap="round" strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'} />;
-            })()
-          )
-        )}
-          {/* TEXTOS TÁCTICOS FLOTANTES */}
-      {textBlocks.map(tb => {
-        const isSelected = selectedTextId === tb.id;
-        const rot = tb.rotation || 0;
-        const size = tb.size || 2.8;
-        const col = tb.color || '#ffffff';
-        const isBold = tb.isBold !== undefined ? tb.isBold : true;
-        const isUnder = Boolean(tb.isUnderline);
-
-        return (
-          <g
-            key={tb.id}
-            transform={`translate(${tb.x}, ${tb.y}) rotate(${rot})`}
-            className="cursor-move select-none"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              if (tool === 'eraser') {
-                setTextBlocks(prev => prev.filter(t => t.id !== tb.id));
-                return;
-              }
-              setSelectedTextId(isSelected ? null : tb.id);
-              setSelectedObj(tb);
-              isDraggingRef.current = true;
-            }}
-          >
-            {/* Marco invisible para arrastre; solo se dibuja línea punteada al seleccionarlo */}
-         <rect
-           x={-(tb.text.length * size * 0.35 + 2)}
-           y={-(size * 1.1)}
-           width={tb.text.length * size * 0.7 + 4}
-           height={size * 1.8}
-           rx={size * 0.4}
-           fill="transparent"
-           stroke={isSelected ? '#facc15' : 'transparent'}
-           strokeWidth={0.4}
-           strokeDasharray={isSelected ? '1,1' : 'none'}
-         />
-
-            {/* Texto táctico */}
-            <text
-              x={0}
-              y={size * 0.35}
-              textAnchor="middle"
-              fill={col}
-              fontSize={size}
-              fontWeight={isBold ? 'bold' : 'normal'}
-              textDecoration={isUnder ? 'underline' : 'none'}
-              style={{ filter: 'drop-shadow(0px 1px 2px rgba(0,0,0,0.9))' }}
-            >
-              {tb.text}
-            </text>
-
-            {/* Rotar a 45° */}
-            {isSelected && (
-              <g
-                transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${-size * 0.6})`}
-                className="cursor-pointer"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, rotation: ((t.rotation || 0) + 45) % 360 } : t));
-                }}
-              >
-                <circle r={2} fill="#eab308" />
-                <text x={0} y={0.8} textAnchor="middle" fontSize={1.8} fill="#000000" fontWeight="bold">↻</text>
-              </g>
-            )}
-
-            {/* Agrandar (+) */}
-            {isSelected && (
-              <g
-                transform={`translate(${tb.text.length * size * 0.35 + 3.5}, ${size * 0.6})`}
-                className="cursor-pointer"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.min((t.size || 2.8) + 0.4, 6.0) } : t));
-                }}
-              >
-                <circle r={1.8} fill="#22c55e" />
-                <text x={0} y={0.7} textAnchor="middle" fontSize={1.8} fill="#ffffff" fontWeight="bold">+</text>
-              </g>
-            )}
-
-            {/* Achicar (-) */}
-            {isSelected && (
-              <g
-                transform={`translate(${-(tb.text.length * size * 0.35 + 3.5)}, ${size * 0.6})`}
-                className="cursor-pointer"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setTextBlocks(prev => prev.map(t => t.id === tb.id ? { ...t, size: Math.max((t.size || 2.8) - 0.4, 1.6) } : t));
-                }}
-              >
-                <circle r={1.8} fill="#ef4444" />
-                <text x={0} y={0.6} textAnchor="middle" fontSize={1.8} fill="#ffffff" fontWeight="bold">-</text>
-              </g>
-            )}
-          </g>
-        );
-      })}
-          {/* OBJETOS Y JUGADORES */}
-          {objects.map(obj => {
-            if (obj.type === 'player') {
-              const hasName = obj.name && obj.name.trim().length > 0;
-              const w = Math.max(14, (obj.name || '').length * 1.5 + 4);
               return (
-                <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={e => handlePointerDown(e, obj)} onDoubleClick={() => { setEditingPlayer(obj); setPlayerCustomName(obj.name || ''); setPlayerCustomNumber(obj.number); }} className="cursor-grab active:cursor-grabbing touch-none select-none">
-                  <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'blue' ? teamColors.blue : teamColors.red))} stroke="#ffffff" strokeWidth="0.6" />
-                  <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" pointerEvents="none">{obj.number}</text>
-                  {hasName && (
-                    <g>
-                      <rect x={-w / 2} y="3.8" width={w} height="3.6" rx="1" fill="rgba(10, 10, 10, 0.88)" stroke="#27272a" strokeWidth="0.25" />
-                      <text x="0" y="6.3" textAnchor="middle" fontSize="1.9" fontWeight="bold" fill="#ffffff">{obj.name}</text>
-                    </g>
+                <g key={l.id} onPointerDown={(e) => {
+                  if (tool === 'eraser') {
+                    e.stopPropagation();
+                    setDrawings((prev) => prev.filter((d) => d.id !== l.id));
+                  }
+                }}>
+                  {l.type === 'wavy' ? (
+                    <path
+                      fill="none"
+                      stroke={l.color}
+                      strokeWidth={strokeW}
+                      strokeLinecap="round"
+                      markerEnd={markerId}
+                      d={(function () {
+                        const effectiveDist = dist > shortenDist ? dist - shortenDist : 0.001;
+                        const numWaves = Math.max(1, Math.round(effectiveDist / 8));
+                        const waveLen = effectiveDist / numWaves;
+                        const amp = 2.4;
+                        const px = -uy;
+                        const py = ux;
+                        let pathD = `M ${l.start.x} ${l.start.y}`;
+                        for (let i = 0; i < numWaves; i++) {
+                          const bX = l.start.x + ux * (i * waveLen);
+                          const bY = l.start.y + uy * (i * waveLen);
+                          const eX = l.start.x + ux * ((i + 1) * waveLen);
+                          const eY = l.start.y + uy * ((i + 1) * waveLen);
+                          const cp1X = bX + ux * (waveLen * 0.35) + px * amp;
+                          const cp1Y = bY + uy * (waveLen * 0.35) + py * amp;
+                          const cp2X = bX + ux * (waveLen * 0.65) - px * amp;
+                          const cp2Y = bY + uy * (waveLen * 0.65) - py * amp;
+                          pathD += ` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${eX} ${eY}`;
+                        }
+                        return pathD;
+                      })()}
+                    />
+                  ) : (
+                    <line
+                      x1={l.start.x}
+                      y1={l.start.y}
+                      x2={endX}
+                      y2={endY}
+                      stroke={l.color}
+                      strokeWidth={strokeW}
+                      strokeLinecap="round"
+                      strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'}
+                      markerEnd={markerId}
+                    />
                   )}
                 </g>
               );
-            }
-            if (obj.type === 'ball') return <SoccerBall key={obj.id} x={obj.x} y={obj.y} onPointerDown={e => handlePointerDown(e, obj)} />;
-            const isMatSelected = selectedMaterial?.id === obj.id;
-            const matScale = obj.scale || 1.0;
-            return (
-              <g key={obj.id}>
-                <TrainingMaterial
-                  obj={obj}
-                  onPointerDown={e => handlePointerDown(e, obj)}
-                  onDoubleClick={() => rotateObject(obj.id)}
-                />
-                {isMatSelected && (
-                  <g transform={`translate(${obj.x}, ${obj.y})`} className="select-none">
-                    {/* Aro punteado selector */}
-                    <circle
-                      r={6 * matScale + 2}
-                      fill="none"
-                      stroke="#facc15"
-                      strokeWidth="0.5"
-                      strokeDasharray="1.2,1.2"
-                    />
+            })}
 
-                    {/* Botón Rotar 45° (Arriba) */}
-                    <g
-                      transform={`translate(0, ${-(6 * matScale + 4)})`}
-                      className="cursor-pointer"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        rotateObject(obj.id);
-                      }}
-                    >
-                      <circle r={2.0} fill="#eab308" stroke="#000" strokeWidth="0.2" />
-                      <text x="0" y="0.8" textAnchor="middle" fontSize="1.8" fill="#000" fontWeight="bold">↻</text>
-                    </g>
+            {currentLine && (
+              <line
+                x1={currentLine.start.x}
+                y1={currentLine.start.y}
+                x2={currentLine.end.x}
+                y2={currentLine.end.y}
+                stroke={currentLine.color}
+                strokeWidth={currentLine.width}
+                strokeLinecap="round"
+                strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'}
+              />
+            )}
 
-                    {/* Botón Agrandar (+) (Derecha) */}
-                    <g
-                      transform={`translate(${6 * matScale + 4}, 0)`}
-                      className="cursor-pointer"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        const next = objects.map(o => o.id === obj.id ? { ...o, scale: Math.min(Number((o.scale || 1.0) + 0.2).toFixed(1), 3.0) } : o);
-                        setObjects(next);
-                        setSelectedMaterial(next.find(o => o.id === obj.id));
-                        recordHistory(next);
-                      }}
-                    >
-                      <circle r={2.0} fill="#22c55e" stroke="#000" strokeWidth="0.2" />
-                      <text x="0" y="0.8" textAnchor="middle" fontSize="2.0" fill="#ffffff" fontWeight="bold">+</text>
-                    </g>
-
-                    {/* Botón Achicar (-) (Izquierda) */}
-                    <g
-                      transform={`translate(${-(6 * matScale + 4)}, 0)`}
-                      className="cursor-pointer"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        const next = objects.map(o => o.id === obj.id ? { ...o, scale: Math.max(Number((o.scale || 1.0) - 0.2).toFixed(1), 0.4) } : o);
-                        setObjects(next);
-                        setSelectedMaterial(next.find(o => o.id === obj.id));
-                        recordHistory(next);
-                      }}
-                    >
-                      <circle r={2.0} fill="#ef4444" stroke="#000" strokeWidth="0.2" />
-                      <text x="0" y="0.7" textAnchor="middle" fontSize="2.0" fill="#ffffff" fontWeight="bold">-</text>
-                    </g>
-
-                    {/* Botón Eliminar (Abajo) */}
-                    <g
-                      transform={`translate(0, ${6 * matScale + 4})`}
-                      className="cursor-pointer"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        const next = objects.filter(o => o.id !== obj.id);
-                        setObjects(next);
-                        setSelectedMaterial(null);
-                        recordHistory(next);
-                      }}
-                    >
-                      <circle r={2.0} fill="#18181b" stroke="#ef4444" strokeWidth="0.3" />
-                      <text x="0" y="0.8" textAnchor="middle" fontSize="1.6" fill="#ef4444" fontWeight="bold">✕</text>
-                    </g>
-                  </g>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* MODAL AGREGAR TEXTO LIBRE */}
-      {textModalOpen && (
-        <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-xs p-4 shadow-2xl space-y-3">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-xs uppercase tracking-wide text-amber-400 flex items-center gap-1.5">
-                <Type className="w-4 h-4" /> Texto Táctico
-              </h3>
-              <button onClick={() => setTextModalOpen(false)} className="text-zinc-400 hover:text-white text-xs">✕</button>
-            </div>
-
-            <input
-              type="text"
-              autoFocus
-              value={inputTextVal}
-              onChange={e => setInputTextVal(e.target.value)}
-              placeholder="Ej: Presión alta / Salida rápida"
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400"
-            />
-
-            {/* Opciones de estilo: Negrita, Subrayado y Colores */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setTextIsBold(!textIsBold)}
-                  className={`w-7 h-7 rounded-lg font-black text-xs border transition ${textIsBold ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700'}`}
-                >
-                  B
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTextIsUnderline(!textIsUnderline)}
-                  className={`w-7 h-7 rounded-lg underline font-bold text-xs border transition ${textIsUnderline ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700'}`}
-                >
-                  U
-                </button>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                {['#ffffff', '#facc15', '#ef4444', '#38bdd8', '#000000'].map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setTextColor(c)}
-                    style={{ backgroundColor: c }}
-                    className={`w-5 h-5 rounded-full border ${textColor === c ? 'border-amber-400 scale-110 ring-2 ring-amber-400/50' : 'border-zinc-700'}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                if (inputTextVal.trim()) {
-                  setTextBlocks(prev => [
-                    ...prev,
-                    {
-                      id: 'txt-' + Date.now(),
-                      x: pendingTextPos.x,
-                      y: pendingTextPos.y,
-                      text: inputTextVal.trim(),
-                      color: textColor,
-                      isBold: textIsBold,
-                      isUnderline: textIsUnderline,
-                      size: textSize,
-                      rotation: 0
-                    }
-                  ]);
-                }
-                setTextModalOpen(false);
-                setTool('move');
-              }}
-              className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase rounded-xl transition"
-            >
-              Insertar en Cancha
-            </button>
-          </div>
-        </div>
-      )}
-
-        {/* MODAL PALETA DE TRAZOS Y LÍNEAS AVANZADA */}
-        {/* SUB-BARRA FLOTANTE DE TRAZOS Y LÍNEAS */}
-      {showLinePalette && (
-        <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print [&::-webkit-scrollbar]:hidden">
-          {/* Tipos de línea */}
-          <div className="flex items-center gap-1 shrink-0">
-            <button onClick={() => { setLineType('arrow'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'arrow' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>➔ Normal</button>
-            <button onClick={() => { setLineType('straight'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'straight' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>― Recta</button>
-            <button onClick={() => { setLineType('dashed'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'dashed' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>⤏ Discontinua</button>
-            <button onClick={() => { setLineType('block'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'block' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>┫ Bloqueo</button>
-            <button onClick={() => { setLineType('wavy'); setTool('draw'); }} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${lineType === 'wavy' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-white border-zinc-700'}`}>〰 Dribling</button>
-          </div>
-
-          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
-
-          {/* Colores */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {['#ffffff', '#ef4444', '#3b82f6', '#facc15', '#000000'].map(c => (
-              <button key={c} onClick={() => setLineColor(c)} style={{ backgroundColor: c }} className={`w-5 h-5 rounded-full border ${lineColor === c ? 'border-amber-400 scale-110 shadow-md ring-2 ring-amber-400/50' : 'border-zinc-700'}`} />
-            ))}
-          </div>
-
-          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
-
-          {/* Grosores */}
-          <div className="flex items-center gap-1 shrink-0">
-            {[
-              { label: 'Fino', val: 0.8 },
-              { label: 'Medio', val: 1.4 },
-              { label: 'Grueso', val: 2.2 }
-            ].map(g => (
-              <button key={g.val} onClick={() => setLineWidth(g.val)} className={`px-2 py-0.5 rounded text-[11px] font-bold border ${lineWidth === g.val ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-800'}`}>
-                {g.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-1" />
-
-          {/* Botón cerrar */}
-          <button onClick={() => setShowLinePalette(false)} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0">
-            Listo ✕
-          </button>
-        </div>
-      )}
-        {/* MODAL FICHA JUGADOR */}
-        {editingPlayer && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-[#121214] border border-zinc-800 rounded-3xl w-full max-w-xs p-6 shadow-2xl">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-sm text-white">✏️ Editar Ficha Jugador</h3>
-                <button onClick={() => setEditingPlayer(null)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
-              </div>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const u = objects.map(o => o.id === editingPlayer.id ? { ...o, number: playerCustomNumber || o.number, name: playerCustomName.trim() } : o);
-                setObjects(u); recordHistory(u); setEditingPlayer(null);
-              }} className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">NOMBRE O ROL</label>
-                  <input type="text" value={playerCustomName} onChange={e => setPlayerCustomName(e.target.value)} placeholder="Ej. Central" className="w-full bg-[#1c1c1f] border border-zinc-800 rounded-2xl px-4 py-2 text-xs text-white outline-none focus:border-red-500" autoFocus />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">DORSAL</label>
-                  <input type="text" value={playerCustomNumber} onChange={e => setPlayerCustomNumber(e.target.value)} placeholder="4" className="w-full bg-[#1c1c1f] border border-zinc-800 rounded-2xl px-4 py-2 text-xs text-white outline-none focus:border-red-500" required />
-                </div>
-                <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={() => {
-                    const u = objects.map(o => o.id === editingPlayer.id ? { ...o, name: '' } : o);
-                    setObjects(u); recordHistory(u); setEditingPlayer(null);
-                  }} className="flex-1 py-3 bg-[#242428] text-red-400 font-bold text-xs rounded-2xl">Borrar Nombre</button>
-                  <button type="submit" className="flex-1 py-3 bg-red-600 text-white font-bold text-xs rounded-2xl shadow">Guardar</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL PROMPT TÁCTICO */}
-        {showPromptModal && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-amber-400" /> Generador por Texto</h3>
-                <button onClick={() => setShowPromptModal(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
-              </div>
-              <form onSubmit={handleGenerateTacticalPrompt} className="space-y-3">
-                <textarea rows={3} value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Ej: Rondo 4v2 con conos y balón..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400 resize-none" autoFocus />
-                <button type="submit" disabled={isGeneratingPrompt} className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-black text-xs uppercase rounded-xl shadow">{isGeneratingPrompt ? 'Generando con Gemini...' : 'Crear en la Pizarra'}</button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL VIDEO */}
-        {recordedVideoUrl && (
-          <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md p-5 shadow-2xl flex flex-col items-center">
-              <div className="w-full flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Video className="w-4 h-4 text-red-500" /> Video Grabado</h3>
-                <button onClick={() => setRecordedVideoUrl(null)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
-              </div>
-              <video src={recordedVideoUrl} controls autoPlay className="w-full rounded-2xl mb-4 border border-zinc-800 max-h-60" />
-              <div className="w-full flex gap-2">
-                <a href={recordedVideoUrl} download={`ejercicio-${drillTitle.replace(/\s+/g, '_')}.webm`} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 shadow">
-                  <Download className="w-4 h-4" /> Descargar
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MENÚ DE MATERIALES - SUB-BARRA HORIZONTAL */}
-      {showTrainingMenu && (
-        <aside className="fixed top-12 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print [&::-webkit-scrollbar]:hidden">
-          <span className="text-[10px] font-bold text-amber-400 uppercase shrink-0 px-1">Materiales:</span>
-          
-          <button onClick={() => addElement('mini_goal')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🥅 Mini Portería</button>
-          <button onClick={() => addElement('ladder')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🪜 Escalera</button>
-          <button onClick={() => addElement('dummy')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🧍 Maniquí</button>
-          <button onClick={() => addElement('hurdle')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🚧 Valla</button>
-          <button onClick={() => addElement('cone', { color: '#ea580c' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-orange-500">▲</span> Cono Naranja</button>
-          <button onClick={() => addElement('cone', { color: '#2563eb' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-blue-500">▲</span> Cono Azul</button>
-          <button onClick={() => addElement('cone', { color: '#eab308' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-yellow-400">▲</span> Cono Amarillo</button>
-          <button onClick={() => addElement('saucer', { color: '#facc15' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🟡 Plato Chino</button>
-          <button onClick={() => addElement('ring', { color: '#38bdd8' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">⭕ Aro</button>
-          <button onClick={() => addElement('pole', { color: '#facc15' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🏒 Estaca</button>
-          
-          <button onClick={() => setShowTrainingMenu(false)} className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0 ml-1">
-            ✕
-          </button>
-        </aside>
-      )}
-
-        {/* MENÚ SISTEMAS TÁCTICOS DINÁMICOS */}
-        {showSystemsMenu && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl flex flex-col max-h-[85vh]">
-              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Play className="w-4 h-4 text-amber-400" /> Sistemas Tácticos</h3>
-                <button onClick={() => setShowSystemsMenu(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
-              </div>
-
-              {/* Guardar formación actual de la cancha */}
-              <div className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-2xl mb-3 space-y-2">
-                <span className="text-[10px] font-bold text-amber-400 block">GUARDAR POSICIONES ACTUALES</span>
-                <div className="flex gap-1.5">
-                  <input 
-                    type="text" 
-                    placeholder="Nombre (ej: 3-4-3 Ofensivo)" 
-                    value={newSystemNameInput} 
-                    onChange={e => setNewSystemNameInput(e.target.value)} 
-                    className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" 
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      const name = newSystemNameInput.trim();
-                      if (!name) return;
-                      const playersOnly = (objects || [])
-                        .filter(o => o && o.type === 'player')
-                        .map((p, i) => ({
-                         n: p.number || p.n || (i === 0 ? '1' : String(i + 1)),
-                         r: p.role || p.r || (i === 0 ? 'POR' : 'JUG'),
-                         x: typeof p.x === 'number' ? p.x : parseFloat(p.x) || 50,
-                         y: typeof p.y === 'number' ? p.y : parseFloat(p.y) || 50,
-                         team: p.team || (i === 0 ? 'gk' : 'blue'),
-                         name: p.name || ''
-                       }));
-                      if (playersOnly.length === 0) { 
-                        alert('Ubica primero jugadores en la cancha.'); 
-                        return; 
-                      }
-                      const updated = { ...(customSystems || {}), [name]: playersOnly };
-                      setCustomSystems(updated);
-                      localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(updated));
-                      setNewSystemNameInput('');
-                    }} 
-                    className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3 py-1 rounded-xl shadow flex items-center gap-1 shrink-0 cursor-pointer"
-                  >
-                    + Guardar
-                  </button>
-                </div>
-              </div>
-
-              
-              <div className="flex-1 overflow-y-auto space-y-1.5">
-            {Object.keys({ ...(GET_TACTICAL_SYSTEMS(isPC)), ...(customSystems || {}) }).map(sysKey => (
-              <div key={sysKey} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl hover:border-amber-500/50 transition overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => applyTacticalSystem(sysKey)}
-                  className="w-full text-left font-bold text-xs text-white hover:text-amber-400 p-2.5 flex-1 cursor-pointer"
-                >
-                  Formación {sysKey}
-                </button>
-                {customSystems && customSystems[sysKey] && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`¿Eliminar el sistema "${sysKey}"?`)) {
-                        const copy = { ...customSystems };
-                        delete copy[sysKey];
-                        setCustomSystems(copy);
-                        localStorage.setItem('andez_custom_tactical_systems', JSON.stringify(copy));
-                      }
+            {objects.map((obj) => {
+              if (obj.type === 'player') {
+                const playerColor = obj.customColor || (
+                  obj.role === 'GK'
+                    ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk)
+                    : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
+                );
+                return (
+                  <g
+                    key={obj.id}
+                    transform={`translate(${obj.x}, ${obj.y})`}
+                    onPointerDown={(e) => handlePointerDown(e, obj)}
+                    onDoubleClick={() => {
+                      setEditingPlayer(obj);
+                      setPlayerCustomName(obj.name || '');
+                      setPlayerCustomNumber(obj.number);
                     }}
-                    className="p-2 text-zinc-500 hover:text-red-400 hover:bg-zinc-800/80 transition cursor-pointer"
-                    title="Eliminar formación"
+                    className="cursor-grab active:cursor-grabbing touch-none select-none"
                   >
-                    🗑️
-                  </button>
-                )}
-              </div>
-            ))}
-            </div>
-          </div>
-        </div>
-      )}
-        {/* MODAL GESTIÓN: SESIONES, ALUMNOS, ASISTENCIA, PAGOS Y PROFESORES */}
-        {showLibraryModal && (
-          <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-3xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
-              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
-                <div className="flex gap-1.5 flex-wrap">
-                  <button onClick={() => setActiveTabLibrary('sessions')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'sessions' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📁 Sesiones</button>
-                  <button onClick={() => setActiveTabLibrary('roster')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'roster' ? 'bg-red-600 text-white' : 'text-zinc-400'}`}>📋 Alumnos</button>
-                  <button onClick={() => setActiveTabLibrary('attendance')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'attendance' ? 'bg-emerald-600 text-white' : 'text-zinc-400'}`}>✅ Asistencia</button>
-                  {!isTeacherRestricted && (
-                    <>
-                      <button onClick={() => setActiveTabLibrary('billing')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'billing' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`}>💰 Mensualidades</button>
-                      <button onClick={() => setActiveTabLibrary('coaches')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'coaches' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}>🧑‍🏫 Profesores</button>
-                      <button onClick={() => setActiveTabLibrary('categories')} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${activeTabLibrary === 'categories' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}>⚙️ Categorías</button>
-                    </>
-                  )}
-                </div>
-                <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
-              </div>
-
-              {/* SESIONES */}
-              {activeTabLibrary === 'sessions' && (
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {savedDrills.length === 0 ? <p className="text-xs text-zinc-500 text-center py-8">No hay sesiones guardadas aún.</p> : savedDrills.map(d => (
-                    <div key={d.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex justify-between items-center">
-                      <div>
-                        <div className="font-bold text-xs text-white">{d.title}</div>
-                        <div className="text-[10px] text-zinc-400">{d.date} • {categories.find(c => c.id === d.category)?.name || d.category}</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => { setObjects(d.objects); setDrawings(d.drawings || []); setDrillTitle(d.title); setShowLibraryModal(false); }} className="px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-lg shadow">Cargar</button>
-                        <button onClick={() => setSavedDrills(savedDrills.filter(x => x.id !== d.id))} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* ALUMNOS */}
-              {activeTabLibrary === 'roster' && (
-                <div className="flex-1 flex flex-col min-h-0">
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!newRosterName.trim()) return;
-                    if (editingStudent) {
-                      const updated = (rosters[currentCategoryContext] || []).map(p => 
-                        p.id === editingStudent.id 
-                          ? { ...p, name: newRosterName.trim(), rut: newRosterRut || 'Sin RUT', birth: newRosterBirth || '2012-01-01', role: newRosterRole, phone: newRosterPhone.trim(), blood: newRosterBlood, allergies: newRosterAllergies.trim(), emergencyPhone: newRosterEmergencyPhone.trim() } 
-                          : p
-                      );
-                      setRosters({ ...rosters, [currentCategoryContext]: updated });
-                      setEditingStudent(null);
-                    } else {
-                      const newP = { 
-                        id: 'ros-' + Date.now(), 
-                        name: newRosterName.trim(), 
-                        rut: newRosterRut || 'Sin RUT', 
-                        birth: newRosterBirth || '2012-01-01', 
-                        role: newRosterRole, 
-                        phone: newRosterPhone.trim() || '+56932100183', 
-                        blood: newRosterBlood,
-                        allergies: newRosterAllergies.trim(),
-                        emergencyPhone: newRosterEmergencyPhone.trim(),
-                        paid: false 
-                      };
-                      setRosters({ ...rosters, [currentCategoryContext]: [...(rosters[currentCategoryContext] || []), newP] });
-                    }
-                    setNewRosterName(''); setNewRosterRut(''); setNewRosterBirth(''); setNewRosterPhone('+569'); setNewRosterAllergies(''); setNewRosterEmergencyPhone('+569');
-                  }} className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl mb-3 shrink-0 space-y-2">
-                    <div className="flex justify-between items-center pb-1 border-b border-zinc-800">
-                      <span className="text-[11px] font-bold text-amber-400">{editingStudent ? '✏️ Editando Ficha de Alumno' : '➕ Ficha Integral de Alumno (Técnica y Médica)'}</span>
-                      {editingStudent && (
-                        <button type="button" onClick={() => { setEditingStudent(null); setNewRosterName(''); setNewRosterRut(''); setNewRosterBirth(''); setNewRosterPhone('+569'); setNewRosterAllergies(''); setNewRosterEmergencyPhone('+569'); }} className="text-[10px] text-zinc-400 hover:text-white">Cancelar Edición</button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                      <input type="text" placeholder="Nombre Completo" value={newRosterName} onChange={e => setNewRosterName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
-                      <input type="text" placeholder="RUT / Pasaporte" value={newRosterRut} onChange={e => setNewRosterRut(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
-                      <input type="date" value={newRosterBirth} onChange={e => setNewRosterBirth(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
-                      <select value={newRosterRole} onChange={e => setNewRosterRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none">
-                        <option value="Portero">Portero (GK)</option>
-                        <option value="Defensa Central">Defensa Central</option>
-                        <option value="Lateral">Lateral</option>
-                        <option value="Mediocampista">Mediocampista</option>
-                        <option value="Extremo">Extremo</option>
-                        <option value="Delantero">Delantero</option>
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                      <input type="tel" placeholder="WhatsApp Alumno/Apoderado" value={newRosterPhone} onChange={e => setNewRosterPhone(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
-                      <select value={newRosterBlood} onChange={e => setNewRosterBlood(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none">
-                        <option value="O+">Grupo Sanguíneo: O+</option>
-                        <option value="O-">Grupo Sanguíneo: O-</option>
-                        <option value="A+">Grupo Sanguíneo: A+</option>
-                        <option value="A-">Grupo Sanguíneo: A-</option>
-                        <option value="B+">Grupo Sanguíneo: B+</option>
-                        <option value="B-">Grupo Sanguíneo: B-</option>
-                        <option value="AB+">Grupo Sanguíneo: AB+</option>
-                        <option value="AB-">Grupo Sanguíneo: AB-</option>
-                      </select>
-                      <input type="text" placeholder="Alergias / Ficha Médica" value={newRosterAllergies} onChange={e => setNewRosterAllergies(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
-                      <div className="flex gap-1.5">
-                        <input type="tel" placeholder="Urgencias SOS" value={newRosterEmergencyPhone} onChange={e => setNewRosterEmergencyPhone(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
-                        <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl px-3 py-1.5 shadow flex items-center justify-center gap-1 shrink-0">
-                          {editingStudent ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                          <span>{editingStudent ? 'Actualizar' : 'Guardar'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-
-                  <div className="flex-1 overflow-y-auto space-y-2">
-                    {(rosters[currentCategoryContext] || []).length === 0 ? (
-                      <p className="text-xs text-zinc-500 text-center py-8">No hay alumnos registrados en esta categoría.</p>
-                    ) : (
-                      (rosters[currentCategoryContext] || []).map(p => (
-                        <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs text-white">{p.name}</span>
-                              <span className="text-[10px] bg-zinc-800 text-amber-400 px-2 py-0.5 rounded-full font-semibold">{p.role}</span>
-                              {p.blood && <span className="text-[9px] bg-red-950/80 border border-red-800 text-red-300 px-1.5 py-0.2 rounded font-mono font-bold">🩸 {p.blood}</span>}
-                            </div>
-                            <div className="text-[10px] text-zinc-400 mt-0.5">
-                              RUT: {p.rut} • Nac: {p.birth} {p.allergies ? `• ⚠️ ${p.allergies}` : ''}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 self-end sm:self-center">
-                            <WhatsAppButton phone={p.phone} name={p.name} label="WhatsApp" />
-                            {p.emergencyPhone && p.emergencyPhone !== '+569' && (
-                              <WhatsAppButton phone={p.emergencyPhone} name={p.name} label="SOS" customMessage={`URGENCIA: Nos comunicamos desde Andez Sports FC respecto al alumno ${p.name}.`} />
-                            )}
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                setEditingStudent(p);
-                                setNewRosterName(p.name);
-                                setNewRosterRut(p.rut || '');
-                                setNewRosterBirth(p.birth || '');
-                                setNewRosterRole(p.role || 'Delantero');
-                                setNewRosterPhone(p.phone || '+569');
-                                setNewRosterBlood(p.blood || 'O+');
-                                setNewRosterAllergies(p.allergies || '');
-                                setNewRosterEmergencyPhone(p.emergencyPhone || '+569');
-                              }}
-                              className="p-1.5 bg-zinc-800 hover:bg-amber-500 hover:text-black text-zinc-300 rounded-lg transition"
-                              title="Editar Ficha Alumno"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button 
-                              onClick={() => {
-                                if (confirm(`¿Eliminar a ${p.name}?`)) {
-                                  setRosters({ ...rosters, [currentCategoryContext]: rosters[currentCategoryContext].filter(x => x.id !== p.id) });
-                                }
-                              }} 
-                              className="p-1.5 text-zinc-500 hover:text-red-400"
-                              title="Eliminar Alumno"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
+                    <ellipse cx="0.15" cy="3.2" rx="2.6" ry="1.1" fill="rgba(0,0,0,0.22)" />
+                    <circle
+                      r="3.0"
+                      fill={playerColor}
+                      stroke={selectedObj?.id === obj.id ? '#facc15' : '#ffffff'}
+                      strokeWidth={selectedObj?.id === obj.id ? 0.7 : 0.4}
+                    />
+                    <text textAnchor="middle" dy="1.1" fontSize="2.4" fontWeight="900" fill="#ffffff" pointerEvents="none">
+                      {obj.number}
+                    </text>
+                    {obj.name && (
+                      <g>
+                        <rect x={-10} y="3.8" width={20} height="3.6" rx="1" fill="rgba(10,10,10,0.88)" />
+                        <text x="0" y="6.3" textAnchor="middle" fontSize="1.9" fontWeight="bold" fill="#ffffff">
+                          {obj.name}
+                        </text>
+                      </g>
                     )}
-                  </div>
-                </div>
-              )}
-              {/* ASISTENCIA */}
-              {activeTabLibrary === 'attendance' && (
-                <div className="flex-1 flex flex-col min-h-0">
-                  <div className="flex items-center justify-between mb-3 bg-zinc-900 p-2.5 rounded-xl border border-zinc-800">
-                    <span className="text-xs font-bold text-white">Fecha de Entrenamiento:</span>
-                    <input type="date" value={attendanceDate} onChange={e => setAttendanceDate(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" />
-                  </div>
-                  <div className="flex-1 overflow-y-auto space-y-2">
-                    {(rosters[currentCategoryContext] || []).map(p => {
-                      const attKey = `${currentCategoryContext}_${attendanceDate}`;
-                      const currentStatus = attendanceRecords[attKey]?.[p.id] || 'pending';
-                      return (
-                        <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
-                          <span className="font-bold text-xs text-white">{p.name}</span>
-                          <div className="flex gap-1.5">
-                            <button onClick={() => {
-                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'present' } };
-                              setAttendanceRecords(updated);
-                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'present' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}>Presente</button>
-                            <button onClick={() => {
-                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'absent' } };
-                              setAttendanceRecords(updated);
-                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'absent' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}>Ausente</button>
-                            <button onClick={() => {
-                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'excused' } };
-                              setAttendanceRecords(updated);
-                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'excused' ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-400'}`}>Justificado</button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* COBRANZA Y MENSUALIDADES (DIRECTOR) */}
-              {activeTabLibrary === 'billing' && !isTeacherRestricted && (
-                <div className="flex-1 flex flex-col min-h-0">
-                 {/* CONFIGURACIÓN Y BALANCE FINANCIERO */}
-                  {(() => {
-                    const allStudents = Object.values(rosters).flat();
-                    const totalStudents = allStudents.length;
-                    const paidCount = allStudents.filter(s => s.paid).length;
-                    const fee = Number(schoolMonthlyFee) || 0;
-                    const totalCollected = paidCount * fee;
-                    const totalPending = (totalStudents - paidCount) * fee;
-
-                    return (
-                      <div className="space-y-2 mb-3 shrink-0">
-                        <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="text-xs font-bold text-white block">Cuota Mensual Escuela:</span>
-                              <span className="text-[10px] text-zinc-400">Valor CLP por alumno</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-zinc-400 font-bold">$</span>
-                              <input 
-                                type="number" 
-                                value={schoolMonthlyFee} 
-                                onChange={e => { setSchoolMonthlyFee(e.target.value); localStorage.setItem('andez_monthly_fee', e.target.value); }} 
-                                className="w-24 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-right text-emerald-400 font-bold outline-none" 
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="text-xs font-bold text-white block">Día de Cobro:</span>
-                              <span className="text-[10px] text-zinc-400">Día límite del mes</span>
-                            </div>
-                            <input 
-                              type="number" 
-                              min="1" 
-                              max="31" 
-                              value={billingDay} 
-                              onChange={e => { setBillingDay(e.target.value); localStorage.setItem('andez_billing_day', e.target.value); }} 
-                              className="w-14 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white font-bold outline-none" 
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl">
-                            <span className="text-[10px] text-zinc-400 block font-bold">Total Recaudado</span>
-                            <span className="text-sm sm:text-base font-black text-emerald-400">${totalCollected.toLocaleString('es-CL')} CLP</span>
-                          </div>
-                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl">
-                            <span className="text-[10px] text-zinc-400 block font-bold">Por Recaudar</span>
-                            <span className="text-sm sm:text-base font-black text-amber-400">${totalPending.toLocaleString('es-CL')} CLP</span>
-                          </div>
-                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl col-span-2 sm:col-span-1">
-                            <span className="text-[10px] text-zinc-400 block font-bold">Estado General</span>
-                            <span className="text-xs font-bold text-white">{paidCount} al día / {totalStudents - paidCount} morosos</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  <div className="flex-1 overflow-y-auto space-y-2">
-                    {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => {
-                      const msg = billingMessageTemplate.replace('{ALUMNO}', p.name);
-                      return (
-                        <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
-                          <div>
-                            <div className="font-bold text-xs text-white">{p.name} <span className="text-[10px] text-zinc-400">({categories.find(c => c.id === p.catKey)?.name || p.catKey})</span></div>
-                            <div className="text-[10px] flex items-center gap-1.5 mt-0.5">
-                              {p.paid ? <span className="text-emerald-400 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Al Día</span> : <span className="text-red-400 font-bold flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Pendiente de Pago</span>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => {
-                              const updatedList = rosters[p.catKey].map(x => x.id === p.id ? { ...x, paid: !x.paid } : x);
-                              setRosters({ ...rosters, [p.catKey]: updatedList });
-                            }} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${p.paid ? 'bg-zinc-800 text-zinc-400' : 'bg-emerald-600 text-white'}`}>
-                              {p.paid ? 'Marcar Pendiente' : 'Recibir Pago'}
-                            </button>
-                            {!p.paid && <WhatsAppButton phone={p.phone} name={p.name} label="Avisar Cobro" customMessage={msg} />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* PROFESORES */}
-              {activeTabLibrary === 'coaches' && !isTeacherRestricted && (
-                <div className="flex-1 flex flex-col min-h-0">
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!newCoachStaffName.trim()) return;
-                    const code = newCoachStaffCode.trim() || 'DT-' + Math.floor(100 + Math.random() * 900);
-                    if (editingCoach) {
-                      const updated = coachesList.map(c => 
-                        c.id === editingCoach.id 
-                          ? { ...c, name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim(), code } 
-                          : c
-                      );
-                      setCoachesList(updated);
-                      setEditingCoach(null);
-                    } else {
-                      setCoachesList([...coachesList, { id: 'c-' + Date.now(), name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim(), code }]);
-                    }
-                    setNewCoachStaffName(''); setNewCoachStaffRole('Director Técnico'); setNewCoachStaffPhone('+569'); setNewCoachStaffCode('');
-                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-2xl mb-3 shrink-0 space-y-2">
-                    <div className="flex justify-between items-center pb-1 border-b border-zinc-800">
-                      <span className="text-[11px] font-bold text-amber-400">{editingCoach ? '✏️ Editando Profesor / DT' : '➕ Registrar Nuevo Profesor / DT'}</span>
-                      {editingCoach && (
-                        <button type="button" onClick={() => { setEditingCoach(null); setNewCoachStaffName(''); setNewCoachStaffRole('Director Técnico'); setNewCoachStaffPhone('+569'); setNewCoachStaffCode(''); }} className="text-[10px] text-zinc-400 hover:text-white">Cancelar Edición</button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                      <input type="text" placeholder="Nombre Profesor" value={newCoachStaffName} onChange={e => setNewCoachStaffName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" required />
-                      <input type="text" placeholder="Cargo (DT, PF)" value={newCoachStaffRole} onChange={e => setNewCoachStaffRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" />
-                      <select value={newCoachStaffCategory} onChange={e => setNewCoachStaffCategory(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none">
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                      <input type="tel" placeholder="WhatsApp" value={newCoachStaffPhone} onChange={e => setNewCoachStaffPhone(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" />
-                      <div className="flex gap-1.5">
-                        <input type="text" placeholder="Clave DT" value={newCoachStaffCode} onChange={e => setNewCoachStaffCode(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none uppercase font-mono focus:border-amber-400" />
-                        <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl px-3 py-1 shadow flex items-center justify-center gap-1 shrink-0">
-                          {editingCoach ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                          <span>{editingCoach ? 'Actualizar' : 'Agregar'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                  <div className="flex-1 overflow-y-auto space-y-2">
-                    {coachesList.map(c => (
-                      <div key={c.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-2xl flex justify-between items-center">
-                        <div>
-                          <div className="font-bold text-xs text-white">{c.name} <span className="text-amber-400 font-semibold text-[10px]">({c.role})</span></div>
-                          <div className="text-[10px] text-zinc-400">Categoría: {categories.find(x => x.id === c.categoryId)?.name || 'Sin asignar'} • Clave: <span className="font-mono text-white font-bold">{c.code}</span></div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <WhatsAppButton phone={c.phone} name={c.name} label="WhatsApp DT" />
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              setEditingCoach(c);
-                              setNewCoachStaffName(c.name);
-                              setNewCoachStaffRole(c.role || 'Director Técnico');
-                              setNewCoachStaffCategory(c.categoryId || categories[0]?.id || 'sub10');
-                              setNewCoachStaffPhone(c.phone || '+569');
-                              setNewCoachStaffCode(c.code || '');
-                            }}
-                            className="p-1.5 bg-zinc-800 hover:bg-amber-500 hover:text-black text-zinc-300 rounded-lg transition"
-                            title="Editar Datos Profesor"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => { if (confirm(`¿Eliminar al profesor ${c.name}?`)) setCoachesList(coachesList.filter(x => x.id !== c.id)); }} className="p-1.5 text-zinc-500 hover:text-red-400" title="Eliminar Profesor">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* CATEGORÍAS */}
-              {activeTabLibrary === 'categories' && !isTeacherRestricted && (
-                <div className="flex-1 flex flex-col min-h-0">
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!newCatName.trim()) return;
-                    setCategories([...categories, { id: 'cat-' + Date.now(), name: newCatName.trim() }]);
-                    setNewCatName('');
-                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 flex gap-2">
-                    <input type="text" placeholder="Nueva Categoría (Ej: Sub-6, Femenino)" value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
-                    <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-lg shadow flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Crear</button>
-                  </form>
-                  <div className="flex-1 overflow-y-auto space-y-2">
-                    {categories.map(cat => (
-                      <div key={cat.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
-                        {editingCatId === cat.id ? (
-                          <div className="flex gap-2 flex-1 mr-2">
-                            <input type="text" value={editingCatName} onChange={e => setEditingCatName(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-xs text-white" autoFocus />
-                            <button onClick={() => { setCategories(categories.map(c => c.id === cat.id ? { ...c, name: editingCatName.trim() } : c)); setEditingCatId(null); }} className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar</button>
-                            <button onClick={() => setEditingCatId(null)} className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">Cancelar</button>
-                          </div>
-                        ) : (
-                          <span className="font-bold text-xs text-white">{cat.name}</span>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => { setEditingCatId(cat.id); setEditingCatName(cat.name); }} className="p-1 text-zinc-400 hover:text-amber-400"><Edit2 className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => { if (confirm('¿Eliminar categoría?')) setCategories(categories.filter(c => c.id !== cat.id)); }} className="p-1 text-zinc-400 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* MODAL PANEL DE DUEÑO: PLANES DINÁMICOS Y LICENCIAS */}
-        {showAdminDashboard && (
-          <div className="absolute inset-0 bg-black/90 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
-              <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
-                <div>
-                  <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">SUPERADMINISTRADOR</span>
-                  <h3 className="font-black text-base text-white mt-1">Gestión de Planes y Licencias</h3>
-                </div>
-                <button onClick={() => setShowAdminDashboard(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
-              </div>
-
-              {/* EDITOR DE PRECIOS Y CUPOS */}
-              <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl mb-3">
-                <span className="text-[11px] font-black text-amber-400 uppercase block mb-2">Configurar Planes Comerciales</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {customPlans.map(pl => (
-                    <div key={pl.id} className="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col gap-1">
-                      <span className="text-[10px] font-bold text-white truncate">{pl.name}</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] text-zinc-400">\$</span>
-                        <input type="number" value={pl.price} onChange={e => {
-                          const val = Number(e.target.value);
-                          setCustomPlans(customPlans.map(p => p.id === pl.id ? { ...p, price: val } : p));
-                        }} className="w-20 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-0.5 text-[11px] font-bold text-emerald-400" />
-                        <span className="text-[10px] text-zinc-400">Cupos:</span>
-                        <input type="number" value={pl.seats} onChange={e => {
-                          const val = Number(e.target.value);
-                          setCustomPlans(customPlans.map(p => p.id === pl.id ? { ...p, seats: val } : p));
-                        }} className="w-12 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-0.5 text-[11px] font-bold text-white" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800">
-                  <span className="text-[10px] text-zinc-400 block font-bold">Ingresos Totales</span>
-                  <span className="text-lg font-black text-emerald-400">\${totalRevenue.toLocaleString('es-CL')} CLP</span>
-                </div>
-                <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-zinc-400 block font-bold">Clubes Activos</span>
-                    <span className="text-lg font-black text-white">{adminLicenses.filter(l => l.status === 'active').length}</span>
-                  </div>
-                  <button onClick={() => setShowNewUserModal(true)} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow">
-                    <Plus className="w-4 h-4" /> Nuevo Club
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-2">
-                {adminLicenses.map(lic => (
-                  <div key={lic.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex justify-between items-center">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-xs text-white">{lic.coach}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-amber-400 font-mono font-bold border border-zinc-700">{lic.code}</span>
-                      </div>
-                      <div className="text-[10px] text-zinc-400">{lic.club} • {lic.plan}</div>
-                      <div className="text-[9px] text-zinc-500">Equipos conectados: {(lic.devices || []).length} / {lic.seats} máx</div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => {
-                        const updated = adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l);
-                        setAdminLicenses(updated);
-                      }} className={`px-2 py-1 rounded text-xs font-bold ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}>
-                        {lic.status === 'active' ? 'Suspender' : 'Reactivar'}
-                      </button>
-                      <button onClick={() => { if (confirm('¿Eliminar licencia?')) setAdminLicenses(adminLicenses.filter(l => l.id !== lic.id)); }} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL CREAR NUEVA LICENCIA */}
-        {showNewUserModal && (
-          <div className="absolute inset-0 bg-black/95 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1"><Plus className="w-4 h-4 text-red-500" /> Crear Licencia de Club</h3>
-                <button onClick={() => setShowNewUserModal(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
-              </div>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                if (!newCoachName.trim()) return;
-                const code = 'AND-' + Math.floor(1000 + Math.random() * 9000);
-                const chosenPlan = customPlans.find(p => p.id === newCoachPlan) || customPlans[0];
-                setAdminLicenses([{ id: 'lic-' + Date.now(), coach: newCoachName.trim(), club: newCoachClub.trim() || 'Club Deportivo', code, seats: chosenPlan.seats, devices: [], status: 'active', plan: chosenPlan.name, price: chosenPlan.price, expiry: newCoachExpiry }, ...adminLicenses]);
-                setShowNewUserModal(false); setNewCoachName(''); setNewCoachClub('');
-                alert(`¡Club Creado!\nClave: ${code}\nDispositivos: ${chosenPlan.seats}`);
-              }} className="space-y-3">
-                <input type="text" placeholder="Director del Club" value={newCoachName} onChange={e => setNewCoachName(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
-                <input type="text" placeholder="Nombre de la Escuela / Club" value={newCoachClub} onChange={e => setNewCoachClub(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
-                <select value={newCoachPlan} onChange={e => setNewCoachPlan(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
-                  {customPlans.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} - \${p.price.toLocaleString('es-CL')}</option>
-                  ))}
-                </select>
-                <input type="date" value={newCoachExpiry} onChange={e => setNewCoachExpiry(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
-                <button type="submit" className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase rounded-xl text-white shadow">Generar Acceso</button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL GUARDAR SESIÓN */}
-        {showSaveModal && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-3">
-              <h3 className="font-bold text-sm text-white">Guardar Ejercicio</h3>
-              <input type="text" value={drillTitle} onChange={e => setDrillTitle(e.target.value)} placeholder="Título" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
-              <select value={drillCategory} onChange={e => setDrillCategory(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <textarea value={drillNotes} onChange={e => setDrillNotes(e.target.value)} rows={3} placeholder="Consignas y variantes..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none resize-none" />
-              <button onClick={() => {
-                const n = { id: 'd-' + Date.now(), title: drillTitle, notes: drillNotes, category: drillCategory, date: new Date().toISOString().split('T')[0], objects, drawings };
-                setSavedDrills([n, ...savedDrills]); setShowSaveModal(false); alert('¡Sesión guardada!');
-              }} className="w-full py-2 bg-red-600 font-bold text-xs rounded-xl text-white shadow">Confirmar Guardado</button>
-            </div>
-          </div>
+                  </g>
+                );
+              }
+              if (obj.type === 'ball') {
+                return (
+                  <g
+                    key={obj.id}
+                    transform={`translate(${obj.x}, ${obj.y})`}
+                    onPointerDown={(e) => handlePointerDown(e, obj)}
+                    className="cursor-grab active:cursor-grabbing touch-none select-none"
+                  >
+                    <ellipse cx="0.2" cy="0.5" rx="2.4" ry="1.0" fill="rgba(0,0,0,0.25)" />
+                    <circle r="2.6" fill="#ffffff" stroke="#0f172a" strokeWidth="0.4" />
+                    <polygon points="0,-0.9 0.85,-0.28 0.53,0.73 -0.53,0.73 -0.85,-0.28" fill="#0f172a" />
+                  </g>
+                );
+              }
+              if (obj.type === 'cone') {
+                return (
+                  <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => handlePointerDown(e, obj)}>
+                    <polygon points="0,-2.5 -2.2,2.5 2.2,2.5" fill="#ea580c" stroke="#ffffff" strokeWidth="0.3" />
+                  </g>
+                );
+              }
+              return null;
+            })}
+          </svg>
+        ) : (
+          <Suspense fallback={<div className="text-white font-bold text-sm">Cargando motor 3D...</div>}>
+            <Canvas shadows className="w-full h-full">
+              <Scene3D objects={objects} selectedObj={selectedObj} setSelectedObj={setSelectedObj} teamColors={teamColors} />
+            </Canvas>
+          </Suspense>
         )}
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 no-print overflow-x-auto max-w-full">
+      <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 overflow-x-auto max-w-full">
         <div className="flex items-center gap-2">
-          <button onClick={() => { if (historyIndex > 0) { setHistoryIndex(historyIndex - 1); setObjects(history[historyIndex - 1]); } }} disabled={historyIndex <= 0} className="p-1.5 text-zinc-300 disabled:opacity-30"><Undo2 className="w-5 h-5" /></button>
-          <button onClick={() => { if (historyIndex < history.length - 1) { setHistoryIndex(historyIndex + 1); setObjects(history[historyIndex + 1]); } }} disabled={historyIndex >= history.length - 1} className="p-1.5 text-zinc-300 disabled:opacity-30"><Redo2 className="w-5 h-5" /></button>
+          <button
+            onClick={() => {
+              if (historyIndex > 0) {
+                setHistoryIndex(historyIndex - 1);
+                setObjects(history[historyIndex - 1]);
+              }
+            }}
+            disabled={historyIndex <= 0}
+            className="p-1.5 text-zinc-300 disabled:opacity-30"
+          >
+            <Undo2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => {
+              if (historyIndex < history.length - 1) {
+                setHistoryIndex(historyIndex + 1);
+                setObjects(history[historyIndex + 1]);
+              }
+            }}
+            disabled={historyIndex >= history.length - 1}
+            className="p-1.5 text-zinc-300 disabled:opacity-30"
+          >
+            <Redo2 className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* SUB-BARRA FLOTANTE DE CAMISETAS Y ARQUEROS */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => setShowKitPalette((prev) => !prev)}
+            className={`px-2 py-1 rounded-xl text-xs font-bold border transition ${
+              showKitPalette ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700'
+            }`}
+          >
+            Camisetas
+          </button>
+          <button
+            onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk' })}
+            style={{ backgroundColor: teamColors.gk }}
+            className="w-8 h-8 rounded-full border-2 border-white text-white font-black text-xs shadow"
+          >
+            1
+          </button>
+          <button
+            onClick={() => addElement('player', { team: 'blue' })}
+            style={{ backgroundColor: teamColors.blue }}
+            className="w-8 h-8 rounded-full border-2 border-white text-white font-bold text-xs shadow"
+          >
+            11
+          </button>
+          <button
+            onClick={() => addElement('player', { team: 'red' })}
+            style={{ backgroundColor: teamColors.red }}
+            className="w-8 h-8 rounded-full border-2 border-white text-white font-bold text-xs shadow"
+          >
+            11
+          </button>
+          <button onClick={() => addElement('ball')} className="w-8 h-8 rounded-full bg-white text-black font-black text-xs shadow">
+            ⚽
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')}
+            className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400'}`}
+          >
+            <Eraser className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => {
+              if (confirm('¿Vaciar toda la pizarra?')) {
+                setObjects([]);
+                setDrawings([]);
+                recordHistory([]);
+              }
+            }}
+            className="p-1.5 text-red-400"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowLinePalette(true)}
+            className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300'}`}
+          >
+            <PenTool className="w-5 h-5" />
+          </button>
+        </div>
+      </footer>
+
+      {showSystemsMenu && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-5 max-w-xs w-full text-white">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-bold text-sm">Sistemas Tácticos</h3>
+              <button onClick={() => setShowSystemsMenu(false)} className="text-zinc-400 hover:text-white">✕</button>
+            </div>
+            <div className="space-y-2">
+              {['4-3-3', '4-4-2', '3-5-2'].map((sys) => (
+                <button
+                  key={sys}
+                  onClick={() => applyTacticalSystem(sys)}
+                  className="w-full py-2 bg-zinc-900 border border-zinc-800 hover:border-amber-400 rounded-xl text-xs font-bold text-left px-3"
+                >
+                  Sistema {sys}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTrainingMenu && (
+        <div className="fixed bottom-16 left-4 bg-zinc-950 border border-zinc-800 rounded-2xl p-2 z-40 flex gap-2">
+          <button
+            onClick={() => {
+              addElement('cone');
+              setShowTrainingMenu(false);
+            }}
+            className="px-3 py-1 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 border border-zinc-700"
+          >
+            ▲ Cono
+          </button>
+        </div>
+      )}
+
       {showKitPalette && (
-        <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-2.5 shadow-2xl flex items-center gap-3 overflow-x-auto z-40 animate-fade-in no-print">
-          {/* Selector de ficha objetivo */}
-          <div className="flex items-center gap-1 shrink-0">
+        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-2xl p-2.5 shadow-2xl flex items-center gap-3 z-40">
+          <div className="flex items-center gap-1">
             {[
               { id: 'blue', label: 'Eq. 1' },
               { id: 'red', label: 'Eq. 2' },
               { id: 'gk', label: 'Arq. 1' },
               { id: 'gk_away', label: 'Arq. 2' }
-            ].map(target => (
+            ].map((t) => (
               <button
-                key={target.id}
-                onClick={() => setKitTarget(target.id)}
-                className={`px-2 py-1 rounded-lg text-xs font-bold transition ${kitTarget === target.id ? 'bg-amber-500 text-black shadow' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
+                key={t.id}
+                onClick={() => setKitTarget(t.id)}
+                className={`px-2 py-1 rounded-lg text-xs font-bold ${kitTarget === t.id ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300'}`}
               >
-                {target.label}
+                {t.label}
               </button>
             ))}
           </div>
-
-          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-0.5" />
-
-          {/* 8 Colores deportivos oficiales */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {officialKitColors.map(c => (
+          <div className="flex items-center gap-1.5">
+            {['#ffffff', '#18181b', '#2563eb', '#dc2626', '#eab308', '#16a34a', '#f97316', '#06b6d4'].map((c) => (
               <button
-                key={c.hex}
-                title={c.name}
-                onClick={() => handleUpdateKitColor(c.hex)}
-                style={{ backgroundColor: c.hex }}
-                className={`w-6 h-6 rounded-full border border-black/30 transition-transform ${teamColors[kitTarget] === c.hex ? 'scale-125 ring-2 ring-amber-400 ring-offset-2 ring-offset-black' : 'hover:scale-110'}`}
+                key={c}
+                onClick={() => {
+                  setTeamColors((prev) => ({ ...prev, [kitTarget]: c }));
+                }}
+                style={{ backgroundColor: c }}
+                className="w-5 h-5 rounded-full border border-zinc-700"
               />
             ))}
           </div>
-
-          <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-0.5" />
-
-          <button
-            onClick={() => setShowKitPalette(false)}
-            className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0"
-          >
-            Listo ✕
+          <button onClick={() => setShowKitPalette(false)} className="px-2 py-1 bg-red-600 text-white rounded-lg text-xs font-bold">
+            ✕
           </button>
         </div>
       )}
 
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Botón para abrir la paleta */}
-        <button
-          onClick={() => setShowKitPalette(prev => !prev)}
-          className={`px-2 py-1 rounded-xl text-xs font-bold border transition ${showKitPalette ? 'bg-amber-500 text-black border-amber-400 shadow-md' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'}`}
-          title="Personalizar colores de camisetas y arqueros"
-        >
-          🎨 Camisetas
-        </button>
-
-        {/* Fichas con color en vivo */}
-        <button
-          onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk', customColor: teamColors.gk })}
-          style={{ backgroundColor: teamColors.gk }}
-          className="w-9 h-9 rounded-full border-2 border-white text-white font-black text-xs shadow hover:scale-105 transition-transform"
-          title="Arquero Local"
-        >
-          1
-        </button>
-        <button
-          onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk_away', customColor: teamColors.gk_away })}
-          style={{ backgroundColor: teamColors.gk_away }}
-          className="w-9 h-9 rounded-full border-2 border-white text-white font-black text-xs shadow hover:scale-105 transition-transform"
-          title="Arquero Visitante"
-        >
-          1
-        </button>
-        <button
-          onClick={() => addElement('player', { team: 'blue', customColor: teamColors.blue })}
-          style={{ backgroundColor: teamColors.blue }}
-          className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform"
-          title="Jugador Equipo 1"
-        >
-          11
-        </button>
-        <button
-          onClick={() => addElement('player', { team: 'red', customColor: teamColors.red })}
-          style={{ backgroundColor: teamColors.red }}
-          className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform"
-          title="Jugador Equipo 2"
-        >
-          11
-        </button>
-        <button onClick={() => addElement('ball')} className="w-9 h-9 rounded-full bg-white text-sm shadow hover:scale-105 transition-transform">⚽</button>
-      </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`} title="Texto Explicativo"><Type className="w-5 h-5" /></button>
-          <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400'}`} title="Goma de Borrar"><Eraser className="w-5 h-5" /></button>
-          
-          <button onClick={() => { if (confirm('¿Vaciar toda la pizarra (jugadores, balones y materiales)?')) { setObjects([]); setDrawings([]); setTextBlocks([]); recordHistory([]); } }} className="p-1.5 text-red-400 hover:text-red-300" title="Vaciar Cancha Completa"><Trash2 className="w-5 h-5" /></button>
-          <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300'}`} title="Trazados y Flechas"><PenTool className="w-5 h-5" /></button>
+      {showLinePalette && (
+        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-2xl p-2 shadow-2xl z-40 flex items-center gap-2">
+          <button
+            onClick={() => {
+              setLineType('arrow');
+              setTool('draw');
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold ${lineType === 'arrow' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-white'}`}
+          >
+            ➔ Normal
+          </button>
+          <button
+            onClick={() => {
+              setLineType('dashed');
+              setTool('draw');
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold ${lineType === 'dashed' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-white'}`}
+          >
+            ⤏ Discontinua
+          </button>
+          <button
+            onClick={() => {
+              setLineType('wavy');
+              setTool('draw');
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold ${lineType === 'wavy' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-white'}`}
+          >
+            〰 Dribling
+          </button>
+          <div className="flex items-center gap-1">
+            {['#ffffff', '#ef4444', '#3b82f6', '#facc15'].map((c) => (
+              <button
+                key={c}
+                onClick={() => setLineColor(c)}
+                style={{ backgroundColor: c }}
+                className="w-4 h-4 rounded-full border border-zinc-700"
+              />
+            ))}
+          </div>
+          <button onClick={() => setShowLinePalette(false)} className="px-2 py-1 bg-red-600 text-white rounded-lg text-xs font-bold">
+            ✕
+          </button>
         </div>
-      </footer>
+      )}
+
+      {editingPlayer && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-5 max-w-xs w-full text-white">
+            <h3 className="font-bold text-sm mb-3">Editar Jugador</h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={playerCustomName}
+                onChange={(e) => setPlayerCustomName(e.target.value)}
+                placeholder="Nombre / Rol"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none"
+              />
+              <input
+                type="text"
+                value={playerCustomNumber}
+                onChange={(e) => setPlayerCustomNumber(e.target.value)}
+                placeholder="Dorsal"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none"
+              />
+              <button
+                onClick={() => {
+                  setObjects((prev) =>
+                    prev.map((o) =>
+                      o.id === editingPlayer.id ? { ...o, name: playerCustomName.trim(), number: playerCustomNumber || o.number } : o
+                    )
+                  );
+                  setEditingPlayer(null);
+                }}
+                className="w-full py-2 bg-red-600 rounded-xl text-xs font-bold shadow"
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
