@@ -82,173 +82,175 @@ function SoccerBall({ x, y, onPointerDown }) {
 function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   const rot = obj.rotation || 0;
   const s = obj.scale || 1.0;
-  let body = null;
+  let content = null;
 
   if (obj.type === 'mini_goal') {
-    // Mini portería isométrica 2.5D idéntica a TacticalPad
-    body = (
-      <>
-        {/* Sombra de proyección en el césped */}
-        <path d="M -5.2 2.2 L 5.2 2.2 L 6.6 0.2 L -3.8 0.2 Z" fill="rgba(0,0,0,0.35)" />
-        {/* Red de fondo y techo con caída tensada */}
-        <path d="M -4.6 -2.4 L 4.6 -2.4 L 6.0 0.4 L -3.2 0.4 Z" fill="rgba(241, 245, 249, 0.4)" stroke="#94a3b8" strokeWidth="0.15" strokeDasharray="0.35,0.35" />
-        <path d="M 4.6 -2.4 L 6.0 0.4 L 6.0 1.6 L 4.6 0.8 Z" fill="rgba(203, 213, 225, 0.35)" stroke="#94a3b8" strokeWidth="0.15" strokeDasharray="0.35,0.35" />
-        <path d="M -4.6 -2.4 L -3.2 0.4 L -3.2 1.6 L -4.6 0.8 Z" fill="rgba(148, 163, 184, 0.25)" stroke="#94a3b8" strokeWidth="0.15" strokeDasharray="0.35,0.35" />
-        {/* Tirantes traseros de acero */}
-        <line x1="-4.6" y1="-2.4" x2="-3.2" y2="0.4" stroke="#64748b" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="4.6" y1="-2.4" x2="6.0" y2="0.4" stroke="#64748b" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="-3.2" y1="0.4" x2="6.0" y2="0.4" stroke="#475569" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="-3.2" y1="0.4" x2="-3.2" y2="1.6" stroke="#475569" strokeWidth="0.3" />
-        <line x1="6.0" y1="0.4" x2="6.0" y2="1.6" stroke="#475569" strokeWidth="0.3" />
-        {/* Poste base inferior */}
-        <line x1="-4.6" y1="0.8" x2="4.6" y2="0.8" stroke="#cbd5e1" strokeWidth="0.4" strokeLinecap="round" />
-        {/* Marco frontal tubular blanco puro con iluminación */}
-        <line x1="-4.6" y1="0.8" x2="-4.6" y2="-2.4" stroke="#ffffff" strokeWidth="0.6" strokeLinecap="round" />
-        <line x1="4.6" y1="0.8" x2="4.6" y2="-2.4" stroke="#e2e8f0" strokeWidth="0.6" strokeLinecap="round" />
-        <line x1="-4.6" y1="-2.4" x2="4.6" y2="-2.4" stroke="#ffffff" strokeWidth="0.65" strokeLinecap="round" />
-        {/* Escuadras en las esquinas */}
-        <circle cx="-4.6" cy="-2.4" r="0.4" fill="#ffffff" />
-        <circle cx="4.6" cy="-2.4" r="0.4" fill="#e2e8f0" />
-      </>
+    // Mini portería oficial 2.5D de alta resolución (red micro-trama y tubos de aluminio)
+    content = (
+      <svg viewBox="0 0 100 60" width="14" height="8.4" x="-7" y="-4.2" overflow="visible">
+        {/* Sombra de proyección en el pasto */}
+        <polygon points="4,48 96,48 106,30 14,30" fill="rgba(0,0,0,0.32)" />
+        {/* Malla lateral izquierda */}
+        <polygon points="10,12 24,30 24,46 10,40" fill="rgba(241,245,249,0.3)" stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3,3" />
+        {/* Malla trasera y techo de la portería */}
+        <polygon points="10,12 90,12 104,30 24,30" fill="rgba(255,255,255,0.4)" stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3,3" />
+        {/* Malla lateral derecha */}
+        <polygon points="90,12 104,30 104,46 90,40" fill="rgba(203,213,225,0.35)" stroke="#94a3b8" strokeWidth="1.2" strokeDasharray="3,3" />
+        {/* Estructura tubular trasera de fijación */}
+        <line x1="24" y1="30" x2="104" y2="30" stroke="#64748b" strokeWidth="2.4" strokeLinecap="round" />
+        <line x1="24" y1="30" x2="24" y2="46" stroke="#475569" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="104" y1="30" x2="104" y2="46" stroke="#475569" strokeWidth="2.2" strokeLinecap="round" />
+        {/* Marco frontal blanco brillante */}
+        <line x1="10" y1="40" x2="90" y2="40" stroke="#e2e8f0" strokeWidth="3.2" strokeLinecap="round" />
+        <line x1="10" y1="40" x2="10" y2="12" stroke="#ffffff" strokeWidth="3.8" strokeLinecap="round" />
+        <line x1="90" y1="40" x2="90" y2="12" stroke="#ffffff" strokeWidth="3.8" strokeLinecap="round" />
+        <line x1="10" y1="12" x2="90" y2="12" stroke="#ffffff" strokeWidth="4.2" strokeLinecap="round" />
+        {/* Codos de unión en esquinas superiores */}
+        <circle cx="10" cy="12" r="2.4" fill="#f8fafc" />
+        <circle cx="90" cy="12" r="2.4" fill="#f8fafc" />
+      </svg>
     );
   } else if (obj.type === 'dummy') {
-    // Maniquí de entrenamiento tipo TacticalPad: estructura tubular esbelta con base en cruz
-    body = (
-      <>
-        {/* Sombra de la base en cruz y silueta en el pasto */}
-        <ellipse cx="2.2" cy="4.2" rx="2.5" ry="0.6" fill="rgba(0,0,0,0.32)" transform="rotate(-15, 2.2, 4.2)" />
-        <ellipse cx="0" cy="3.6" rx="1.6" ry="0.5" fill="rgba(0,0,0,0.3)" />
-        {/* Base metálica inferior de fijación con resortes */}
-        <line x1="-1.4" y1="3.6" x2="1.4" y2="3.6" stroke="#1e293b" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="0" y1="3.0" x2="0" y2="4.2" stroke="#1e293b" strokeWidth="0.35" strokeLinecap="round" />
-        {/* Postes dobles de soporte vertical */}
-        <line x1="-0.7" y1="1.8" x2="-0.7" y2="3.6" stroke="#475569" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="0.7" y1="1.8" x2="0.7" y2="3.6" stroke="#475569" strokeWidth="0.35" strokeLinecap="round" />
-        {/* Silueta exterior de tubo amarillo flúor */}
-        <path d="M -1.6 -2.4 C -1.8 -0.8 -1.2 0.8 -0.8 1.8 L 0.8 1.8 C 1.2 0.8 1.8 -0.8 1.6 -2.4 C 1.2 -3.0 -1.2 -3.0 -1.6 -2.4 Z" fill="rgba(250, 204, 21, 0.12)" stroke="#eab308" strokeWidth="0.5" strokeLinejoin="round" />
-        {/* Costillas tubulares horizontales */}
-        <line x1="-1.3" y1="-1.6" x2="1.3" y2="-1.6" stroke="#facc15" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="-1.4" y1="-0.8" x2="1.4" y2="-0.8" stroke="#facc15" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="-1.3" y1="0.0" x2="1.3" y2="0.0" stroke="#facc15" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="-1.1" y1="0.8" x2="1.1" y2="0.8" stroke="#facc15" strokeWidth="0.35" strokeLinecap="round" />
-        {/* Eje central de refuerzo */}
-        <line x1="0" y1="-2.8" x2="0" y2="1.8" stroke="#ca8a04" strokeWidth="0.4" />
-        {/* Cabeza estilizada de alambre tubular ovalada */}
-        <ellipse cx="0" cy="-4.0" rx="0.85" ry="1.05" fill="rgba(250, 204, 21, 0.15)" stroke="#eab308" strokeWidth="0.45" />
-        <line x1="0" y1="-2.9" x2="0" y2="-2.6" stroke="#ca8a04" strokeWidth="0.4" />
-      </>
+    // Maniquí oficial de barrera estilo TacticalPad (silueta anatómica enrejada esbelta)
+    content = (
+      <svg viewBox="0 0 60 120" width="5.5" height="11" x="-2.75" y="-5.5" overflow="visible">
+        {/* Sombra de proyección suave */}
+        <ellipse cx="38" cy="112" rx="22" ry="7" fill="rgba(0,0,0,0.35)" transform="rotate(-12, 38, 112)" />
+        {/* Varillas dobles de acero clavadas al piso */}
+        <line x1="24" y1="94" x2="24" y2="114" stroke="#334155" strokeWidth="2.8" strokeLinecap="round" />
+        <line x1="36" y1="94" x2="36" y2="114" stroke="#334155" strokeWidth="2.8" strokeLinecap="round" />
+        <circle cx="24" cy="114" r="2.2" fill="#0f172a" />
+        <circle cx="36" cy="114" r="2.2" fill="#0f172a" />
+        {/* Contorno tubular amarillo fluorescente */}
+        <path d="M 17,26 C 14,48 20,78 24,94 L 36,94 C 40,78 46,48 43,26 C 39,20 21,20 17,26 Z" fill="rgba(250,204,21,0.18)" stroke="#eab308" strokeWidth="3.2" strokeLinejoin="round" />
+        {/* Varillas horizontales del pecho */}
+        <line x1="19" y1="36" x2="41" y2="36" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
+        <line x1="18" y1="50" x2="42" y2="50" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
+        <line x1="20" y1="64" x2="40" y2="64" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
+        <line x1="22" y1="78" x2="38" y2="78" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
+        {/* Columna central */}
+        <line x1="30" y1="22" x2="30" y2="94" stroke="#ca8a04" strokeWidth="2.6" />
+        {/* Cuello y cabeza estilizada con anillo tubular */}
+        <line x1="30" y1="22" x2="30" y2="16" stroke="#ca8a04" strokeWidth="3" />
+        <ellipse cx="30" cy="10" rx="7.5" ry="9.5" fill="rgba(254,240,138,0.3)" stroke="#eab308" strokeWidth="2.8" />
+      </svg>
     );
   } else if (obj.type === 'hurdle') {
-    // Valla de salto técnica isométrica
-    body = (
-      <>
-        <ellipse cx="-2.5" cy="1.6" rx="1.1" ry="0.35" fill="rgba(0,0,0,0.28)" />
-        <ellipse cx="2.5" cy="1.6" rx="1.1" ry="0.35" fill="rgba(0,0,0,0.28)" />
-        <line x1="-3.2" y1="1.8" x2="-1.8" y2="1.4" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
-        <line x1="1.8" y1="1.8" x2="3.2" y2="1.4" stroke="#ca8a04" strokeWidth="0.45" strokeLinecap="round" />
-        <line x1="-2.5" y1="1.6" x2="-2.5" y2="-1.6" stroke="#facc15" strokeWidth="0.5" strokeLinecap="round" />
-        <line x1="2.5" y1="1.6" x2="2.5" y2="-1.6" stroke="#ca8a04" strokeWidth="0.5" strokeLinecap="round" />
-        <rect x="-2.8" y="-2.0" width="5.6" height="0.6" rx="0.2" fill="#facc15" stroke="#ca8a04" strokeWidth="0.15" />
-        <line x1="-2.8" y1="-1.7" x2="2.8" y2="-1.7" stroke="#ffffff" strokeWidth="0.2" opacity="0.8" />
-      </>
-    );
-  } else if (obj.type === 'ladder') {
-    // Escalera de agilidad
-    body = (
-      <>
-        <polygon points="-1.8,-7.2 2.2,-7.2 2.4,7.4 -1.6,7.4" fill="rgba(0,0,0,0.18)" />
-        <line x1="-1.9" y1="-7.2" x2="-1.7" y2="7.2" stroke="#0f172a" strokeWidth="0.4" strokeLinecap="round" />
-        <line x1="1.7" y1="-7.2" x2="1.9" y2="7.2" stroke="#0f172a" strokeWidth="0.4" strokeLinecap="round" />
-        {[-6.0, -4.0, -2.0, 0, 2.0, 4.0, 6.0].map(pos => (
-          <line key={pos} x1="-1.9" y1={pos} x2="1.9" y2={pos} stroke="#facc15" strokeWidth="0.6" strokeLinecap="round" />
-        ))}
-      </>
+    // Valla de salto técnica
+    content = (
+      <svg viewBox="0 0 80 40" width="8" height="4" x="-4" y="-2" overflow="visible">
+        <ellipse cx="16" cy="34" rx="14" ry="4.5" fill="rgba(0,0,0,0.28)" />
+        <ellipse cx="64" cy="34" rx="14" ry="4.5" fill="rgba(0,0,0,0.28)" />
+        <line x1="6" y1="36" x2="26" y2="32" stroke="#ca8a04" strokeWidth="3.2" strokeLinecap="round" />
+        <line x1="54" y1="36" x2="74" y2="32" stroke="#ca8a04" strokeWidth="3.2" strokeLinecap="round" />
+        <line x1="16" y1="34" x2="16" y2="6" stroke="#facc15" strokeWidth="3.5" strokeLinecap="round" />
+        <line x1="64" y1="34" x2="64" y2="6" stroke="#ca8a04" strokeWidth="3.5" strokeLinecap="round" />
+        <rect x="12" y="2" width="56" height="6.5" rx="2" fill="#facc15" stroke="#ca8a04" strokeWidth="1.2" />
+        <line x1="13" y1="5.2" x2="67" y2="5.2" stroke="#ffffff" strokeWidth="1.6" opacity="0.8" />
+      </svg>
     );
   } else if (obj.type === 'cone') {
-    // Cono de delimitación 2.5D
+    // Cono de delimitación con base octogonal y sombra nítida
     const isCustom = obj.color && obj.color !== '#ea580c';
-    const cFill = isCustom ? obj.color : '#ea580c';
-    const bFill = isCustom ? obj.color : '#c2410c';
-    body = (
-      <>
-        <ellipse cx="1.1" cy="1.2" rx="1.8" ry="0.65" fill="rgba(0,0,0,0.3)" />
-        <polygon points="-1.6,0.5 1.4,0.5 1.8,1.2 -1.2,1.2" fill="#7c2d12" />
-        <polygon points="-1.6,0.5 1.4,0.5 1.2,0.1 -1.4,0.1" fill={bFill} />
-        <polygon points="-1.3,0.4 1.1,0.4 0.1,-2.8 -0.2,-2.8" fill={cFill} stroke="#7c2d12" strokeWidth="0.18" />
-        <polygon points="-0.7,-0.5 0.6,-0.5 0.4,-1.3 -0.5,-1.3" fill="#ffffff" />
-        <circle cx="-0.05" cy="-2.8" r="0.3" fill={cFill} />
-      </>
+    const fillCol = isCustom ? obj.color : '#f97316';
+    const darkCol = isCustom ? obj.color : '#c2410c';
+    content = (
+      <svg viewBox="0 0 50 50" width="4.5" height="4.5" x="-2.25" y="-2.25" overflow="visible">
+        <ellipse cx="32" cy="38" rx="16" ry="7" fill="rgba(0,0,0,0.35)" />
+        <polygon points="8,35 42,35 38,41 4,41" fill="#7c2d12" />
+        <polygon points="8,35 42,35 39,30 11,30" fill={darkCol} />
+        <polygon points="12,32 38,32 26,4 24,4" fill={fillCol} stroke="#7c2d12" strokeWidth="0.8" />
+        <polygon points="17,23 33,23 30,15 20,15" fill="#ffffff" />
+        <circle cx="25" cy="4" r="2.4" fill={fillCol} />
+      </svg>
     );
   } else if (obj.type === 'saucer') {
     // Plato chino / lenteja
     const c = obj.color || '#facc15';
-    body = (
-      <>
-        <ellipse cx="0.5" cy="0.6" rx="1.8" ry="0.6" fill="rgba(0,0,0,0.25)" />
-        <ellipse cx="0" cy="0.3" rx="1.7" ry="0.6" fill={c} stroke="rgba(0,0,0,0.2)" strokeWidth="0.18" />
-        <ellipse cx="0" cy="0.15" rx="0.9" ry="0.35" fill="#fef08a" />
-        <ellipse cx="0" cy="0.15" rx="0.4" ry="0.15" fill="#0f172a" />
-      </>
-    );
-  } else if (obj.type === 'ring') {
-    // Aro de suelo
-    const c = obj.color || '#38bdf8';
-    body = (
-      <>
-        <ellipse cx="0.4" cy="0.4" rx="2.4" ry="1.7" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="0.45" />
-        <ellipse cx="0" cy="0" rx="2.4" ry="1.7" fill="none" stroke={c} strokeWidth="0.55" />
-      </>
+    content = (
+      <svg viewBox="0 0 40 30" width="3.6" height="2.7" x="-1.8" y="-1.35" overflow="visible">
+        <ellipse cx="23" cy="22" rx="15" ry="6" fill="rgba(0,0,0,0.28)" />
+        <ellipse cx="20" cy="18" rx="16" ry="6.5" fill={c} stroke="rgba(0,0,0,0.25)" strokeWidth="1" />
+        <ellipse cx="20" cy="16" rx="9" ry="3.5" fill="#fef08a" />
+        <ellipse cx="20" cy="16" rx="3.5" ry="1.5" fill="#0f172a" />
+      </svg>
     );
   } else if (obj.type === 'pole') {
-    // Estaca de eslalon
+    // Estaca de eslalon fina con tope de goma
     const c = obj.color || '#facc15';
-    body = (
-      <>
-        <polygon points="0,2.6 0.3,2.6 5.8,-0.9 5.5,-0.9" fill="rgba(0,0,0,0.26)" />
-        <circle cx="0" cy="2.6" r="0.5" fill="rgba(0,0,0,0.3)" />
-        <rect x="-0.4" y="1.2" width="0.8" height="1.4" rx="0.2" fill="#1e293b" />
-        <rect x="-0.25" y="-6.8" width="0.5" height="8.0" rx="0.2" fill={c} stroke="#ca8a04" strokeWidth="0.15" />
-        <circle cx="0" cy="-6.8" r="0.6" fill="#ef4444" stroke="#991b1b" strokeWidth="0.15" />
-      </>
+    content = (
+      <svg viewBox="0 0 30 90" width="2.4" height="7.2" x="-1.2" y="-3.6" overflow="visible">
+        <polygon points="15,84 18,84 30,55 27,55" fill="rgba(0,0,0,0.28)" />
+        <circle cx="15" cy="84" r="3.2" fill="rgba(0,0,0,0.35)" />
+        <rect x="12" y="72" width="6" height="12" rx="1.5" fill="#1e293b" />
+        <rect x="13.5" y="10" width="3" height="66" rx="1.2" fill={c} stroke="#ca8a04" strokeWidth="0.8" />
+        <circle cx="15" cy="8" r="4.2" fill="#ef4444" stroke="#991b1b" strokeWidth="1" />
+      </svg>
+    );
+  } else if (obj.type === 'ladder') {
+    // Escalera de coordinación
+    content = (
+      <svg viewBox="0 0 30 120" width="3" height="12" x="-1.5" y="-6" overflow="visible">
+        <polygon points="2,2 28,2 30,118 4,118" fill="rgba(0,0,0,0.16)" />
+        <line x1="4" y1="2" x2="4" y2="118" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="26" y1="2" x2="26" y2="118" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" />
+        {[10, 26, 42, 58, 74, 90, 106].map(pos => (
+          <line key={pos} x1="4" y1={pos} x2="26" y2={pos} stroke="#facc15" strokeWidth="3.2" strokeLinecap="round" />
+        ))}
+      </svg>
+    );
+  } else if (obj.type === 'ring') {
+    // Aro de agilidad
+    const c = obj.color || '#38bdf8';
+    content = (
+      <svg viewBox="0 0 50 50" width="4.5" height="4.5" x="-2.25" y="-2.25" overflow="visible">
+        <ellipse cx="27" cy="27" rx="20" ry="14" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="3.5" />
+        <ellipse cx="25" cy="25" rx="20" ry="14" fill="none" stroke={c} strokeWidth="4.5" />
+      </svg>
     );
   } else if (obj.type === 'rebounder') {
-    // Banco sueco / panel de pase
-    body = (
-      <>
-        <polygon points="-3.6,1.8 3.6,1.8 4.2,0.6 -3.0,0.6" fill="rgba(0,0,0,0.28)" />
-        <line x1="-2.6" y1="0.6" x2="-2.6" y2="-1.0" stroke="#334155" strokeWidth="0.45" />
-        <line x1="2.6" y1="0.6" x2="2.6" y2="-1.0" stroke="#334155" strokeWidth="0.45" />
-        <polygon points="-3.6,-1.0 3.6,-1.0 3.6,1.4 -3.6,1.4" fill="#d97706" stroke="#78350f" strokeWidth="0.3" />
-        <line x1="-3.2" y1="0.2" x2="3.2" y2="0.2" stroke="#451a03" strokeWidth="0.25" strokeDasharray="1.2,1.2" />
-      </>
+    // Panel de pases
+    content = (
+      <svg viewBox="0 0 80 40" width="8" height="4" x="-4" y="-2" overflow="visible">
+        <polygon points="6,36 74,36 78,24 10,24" fill="rgba(0,0,0,0.3)" />
+        <line x1="16" y1="24" x2="16" y2="6" stroke="#334155" strokeWidth="3.5" />
+        <line x1="64" y1="24" x2="64" y2="6" stroke="#334155" strokeWidth="3.5" />
+        <polygon points="6,6 74,6 74,30 6,30" fill="#d97706" stroke="#78350f" strokeWidth="1.8" />
+        <line x1="10" y1="18" x2="70" y2="18" stroke="#451a03" strokeWidth="1.6" strokeDasharray="6,6" />
+      </svg>
     );
   } else if (obj.type === 'trampoline') {
-    // Cama elástica / trampolín
-    body = (
-      <>
-        <ellipse cx="0.6" cy="0.8" rx="2.8" ry="1.7" fill="rgba(0,0,0,0.28)" />
-        {[-1.8, 0, 1.8].map(xP => (
-          <line key={xP} x1={xP} y1="0.4" x2={xP} y2="1.6" stroke="#475569" strokeWidth="0.45" strokeLinecap="round" />
+    // Trampolín de reacción
+    content = (
+      <svg viewBox="0 0 60 40" width="6" height="4" x="-3" y="-2" overflow="visible">
+        <ellipse cx="33" cy="24" rx="24" ry="13" fill="rgba(0,0,0,0.3)" />
+        {[-14, 0, 14].map(xP => (
+          <line key={xP} x1={30 + xP} y1="18" x2={30 + xP} y2="30" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
         ))}
-        <ellipse cx="0" cy="0.4" rx="2.6" ry="1.4" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.5" />
-        <ellipse cx="0" cy="0.4" rx="1.9" ry="0.95" fill="#0284c7" stroke="#bae6fd" strokeWidth="0.2" strokeDasharray="0.6,0.6" />
-      </>
+        <ellipse cx="30" cy="18" rx="23" ry="12" fill="#0f172a" stroke="#38bdf8" strokeWidth="3.5" />
+        <ellipse cx="30" cy="18" rx="16" ry="8" fill="#0284c7" stroke="#bae6fd" strokeWidth="1.5" strokeDasharray="4,4" />
+      </svg>
     );
   } else if (obj.type === 'mat') {
     // Colchoneta
-    body = (
-      <>
-        <polygon points="-3.6,1.6 3.6,1.6 4.2,-0.2 -3.0,-0.2" fill="rgba(0,0,0,0.22)" />
-        <polygon points="-3.4,1.4 3.4,1.4 3.8,-0.1 -3.0,-0.1" fill="#2563eb" stroke="#1d4ed8" strokeWidth="0.2" />
-        <polygon points="-3.4,1.4 3.4,1.4 3.4,1.8 -3.4,1.8" fill="#1e40af" />
-        <polygon points="3.4,1.4 3.8,-0.1 3.8,0.3 3.4,1.8" fill="#1e3a8a" />
-      </>
+    content = (
+      <svg viewBox="0 0 80 40" width="8" height="4" x="-4" y="-2" overflow="visible">
+        <polygon points="6,34 74,34 78,18 10,18" fill="rgba(0,0,0,0.25)" />
+        <polygon points="8,32 72,32 76,19 12,19" fill="#2563eb" stroke="#1d4ed8" strokeWidth="1.2" />
+        <polygon points="8,32 72,32 72,36 8,36" fill="#1e40af" />
+        <polygon points="72,32 76,19 76,23 72,36" fill="#1e3a8a" />
+      </svg>
     );
   }
 
   return (
-    <g transform={`translate(${obj.x}, ${obj.y}) rotate(${rot}) scale(${s})`} onPointerDown={onPointerDown} onDoubleClick={onDoubleClick} className="cursor-grab active:cursor-grabbing touch-none select-none">
-      {body}
+    <g
+      transform={`translate(${obj.x}, ${obj.y}) rotate(${rot}) scale(${s})`}
+      onPointerDown={onPointerDown}
+      onDoubleClick={onDoubleClick}
+      className="cursor-grab active:cursor-grabbing touch-none select-none"
+    >
+      {content}
     </g>
   );
 }
@@ -985,8 +987,15 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
           </radialGradient>  
         </defs>
 
-          <rect width="300" height="300" x="-100" y="-100" fill="#228b22" />
-
+          {/* CÉSPED PRO CON FRANJAS ALTERNADAS ESTILO ESTADIO */}
+          <rect width="300" height="300" x="-100" y="-100" fill="#15803d" />
+          <g opacity="0.14">
+            {Array.from({ length: 15 }).map((_, i) => (
+              <rect key={i} x={i * 7} y="0" width="3.5" height="68" fill="#ffffff" />
+            ))}
+          </g>
+          {/* Línea perimetral de contraste */}
+          <rect x="0" y="0" width="105" height="68" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="0.6" />
           {/* DIBUJO DE CANCHA, ARCOS Y ÁREAS */}
           {isPC ? (
             <g stroke="white" strokeWidth="0.8" fill="none">
