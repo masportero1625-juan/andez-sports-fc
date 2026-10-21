@@ -979,15 +979,13 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
           </radialGradient>  
         </defs>
 
-          {/* CÉSPED PRO CON FRANJAS ALTERNADAS ESTILO ESTADIO */}
-          <rect width="300" height="300" x="-100" y="-100" fill="#15803d" />
-          <g opacity="0.14">
-            {Array.from({ length: 15 }).map((_, i) => (
-              <rect key={i} x={i * 7} y="0" width="3.5" height="68" fill="#ffffff" />
+          {/* CÉSPED PRO UNIVERSAL (PC, TABLET Y MÓVIL) */}
+          <rect width="400" height="400" x="-150" y="-150" fill="#15803d" />
+          <g opacity="0.13">
+            {Array.from({ length: 24 }).map((_, i) => (
+              <rect key={i} x={-20 + i * 6} y="-40" width="3" height="200" fill="#ffffff" />
             ))}
           </g>
-          {/* Línea perimetral de contraste */}
-          <rect x="0" y="0" width="105" height="68" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="0.6" />
           {/* DIBUJO DE CANCHA, ARCOS Y ÁREAS */}
           {isPC ? (
             <g stroke="white" strokeWidth="0.8" fill="none">
