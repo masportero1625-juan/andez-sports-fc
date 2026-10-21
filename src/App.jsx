@@ -9,7 +9,9 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
+// ==============================================
 // CREDENCIALES SUPABASE
+// ==============================================
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
 
@@ -240,24 +242,44 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   );
 }
 
-// COMPONENTES 3D
+// ==============================================
+// MOTOR 3D PROFESIONAL
+// ==============================================
 function Pitch3D() {
   return (
     <group>
+      {/* Césped dimensional */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[105, 68]} />
-        <meshStandardMaterial color="#16a34a" roughness={0.8} />
+        <meshStandardMaterial color="#15803d" roughness={0.8} />
       </mesh>
+      {/* Franjas de corte de césped */}
       {Array.from({ length: 14 }).map((_, i) => (
-        <mesh key={`stripe-3d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[-52.5 + i * 7.5 + 3.75, 0.01, 0]} receiveShadow>
+        <mesh key={`stripe-3d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[-52.5 + i * 7.5 + 3.75, 0.01, 0]}>
           <planeGeometry args={[7.4, 66]} />
-          <meshStandardMaterial color={i % 2 === 0 ? '#15803d' : '#16a34a'} roughness={0.8} />
+          <meshStandardMaterial color={i % 2 === 0 ? '#16a34a' : '#15803d'} roughness={0.8} />
         </mesh>
       ))}
+      {/* Líneas perimetrales y círculo central */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <ringGeometry args={[9.1, 9.25, 64]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
+      {/* Línea media */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <planeGeometry args={[0.2, 66]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+      {/* Áreas Grandes 3D */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-44.25, 0.02, 0]}>
+        <planeGeometry args={[16.5, 40.4]} />
+        <meshBasicMaterial color="#ffffff" wireframe />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[44.25, 0.02, 0]}>
+        <planeGeometry args={[16.5, 40.4]} />
+        <meshBasicMaterial color="#ffffff" wireframe />
+      </mesh>
+      {/* Arcos 3D reglamentarios */}
       <mesh position={[-51, 1.22, 0]}>
         <boxGeometry args={[0.4, 2.44, 7.32]} />
         <meshStandardMaterial color="#ffffff" metalness={0.2} roughness={0.4} />
@@ -364,6 +386,9 @@ function Scene3D({ objects, selectedObj, setSelectedObj, teamColors, cameraLocke
   );
 }
 
+// ==============================================
+// COMPONENTE PRINCIPAL
+// ==============================================
 export default function App() {
   const [isPC, setIsPC] = useState(window.innerWidth > 768);
   const [viewMode, setViewMode] = useState('2d');
@@ -984,7 +1009,6 @@ Devuelve estricta y únicamente el array JSON.`;
           <button onClick={() => setShowSystemsMenu(true)} className="text-zinc-300 hover:text-amber-400" title="Sistemas Tácticos"><Play className="w-5 h-5" /></button>
           <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} title={`Vista: ${pitchMode === 'full' ? 'Media Cancha' : 'Cancha Entera'}`} className={`p-1 rounded transition ${pitchMode === 'half' ? 'bg-red-600 text-white px-1.5' : 'text-zinc-300 hover:text-amber-400'}`}><RotateCcw className="w-5 h-5" />{pitchMode === 'half' && <span className="text-xs font-bold ml-0.5">1/2</span>}</button>
           
-          {/* BOTÓN 2D / 3D */}
           <button
             onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')}
             className="flex items-center gap-1 bg-blue-600/20 border border-blue-400 text-blue-300 px-2.5 py-1 rounded-full text-[11px] font-bold shadow active:scale-95"
@@ -1014,7 +1038,7 @@ Devuelve estricta y únicamente el array JSON.`;
             </button>
           )}
 
-          <button onClick={exportBoardAsImage} className="text-zinc-300 hover:text-amber-400" title="Descargar Imagen PNG"><Download className="w-5 h-5" /></button>
+          <button onClick={exportBoardAsImage} className="text-zinc-300 hover:text-amber-400" title="Descargar PNG"><Download className="w-5 h-5" /></button>
           <button onClick={() => window.print()} className="text-zinc-300 hover:text-amber-400"><Printer className="w-5 h-5" /></button>
           <button onClick={() => setShowSaveModal(true)} className="text-zinc-300 hover:text-red-400"><Save className="w-5 h-5" /></button>
 
@@ -1032,7 +1056,7 @@ Devuelve estricta y únicamente el array JSON.`;
         </div>
       </header>
 
-      {/* CANCHA CON SOPORTE TÁCTIL TOTAL O VISOR 3D AISLADO */}
+      {/* CANCHA CON SOPORTE TÁCTIL TOTAL O VISOR 3D */}
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]">
         {viewMode === '2d' ? (
           <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePitchPointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
@@ -1045,7 +1069,7 @@ Devuelve estricta y únicamente el array JSON.`;
               <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.5" markerHeight="3.5" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
             </defs>
 
-            {/* CÉSPED PRO ORIGINAL */}
+            {/* CÉSPED PRO ORIGINAL CON 22 FRANJAS */}
             <rect width="500" height="500" x="-200" y="-200" fill="#15803d" />
             <g opacity="0.13">
               {Array.from({ length: 22 }).map((_, i) => (
@@ -1053,7 +1077,7 @@ Devuelve estricta y únicamente el array JSON.`;
               ))}
             </g>
 
-            {/* DIBUJO DE LÍNEAS REGLAMENTARIAS Y ARCOS */}
+            {/* LÍNEAS REGLAMENTARIAS Y ARCOS */}
             {isPC ? (
               <g stroke="white" strokeWidth="0.8" fill="none">
                 <rect x="2" y="2" width={pitchMode === 'half' ? 51 : 101} height="64" />
@@ -1118,14 +1142,14 @@ Devuelve estricta y únicamente el array JSON.`;
               <line x1={currentLine.start.x} y1={currentLine.start.y} x2={currentLine.end.x} y2={currentLine.end.y} stroke={currentLine.color} strokeWidth={currentLine.width} strokeLinecap="round" strokeDasharray={currentLine.type === 'dashed' ? '3,2' : 'none'} />
             )}
 
-            {/* TEXTOS */}
+            {/* TEXTOS TÁCTICOS */}
             {textBlocks.map(tb => (
               <g key={tb.id} transform={`translate(${tb.x}, ${tb.y})`} onPointerDown={(e) => { e.stopPropagation(); setSelectedObj(tb); isDraggingRef.current = true; }}>
                 <text x={0} y={0} textAnchor="middle" fill={tb.color || '#ffffff'} fontSize={tb.size || 2.8} fontWeight={tb.isBold ? 'bold' : 'normal'}>{tb.text}</text>
               </g>
             ))}
 
-            {/* JUGADORES, BALÓN Y TODOS TUS MATERIALES ORIGINALES */}
+            {/* JUGADORES, BALÓN Y MATERIALES */}
             {objects.map(obj => {
               if (obj.type === 'player') {
                 const hasName = obj.name && obj.name.trim().length > 0;
@@ -1153,10 +1177,34 @@ Devuelve estricta y únicamente el array JSON.`;
                   {isMatSelected && (
                     <g transform={`translate(${obj.x}, ${obj.y})`} className="select-none">
                       <circle r={6 * matScale + 2} fill="none" stroke="#facc15" strokeWidth="0.5" strokeDasharray="1.2,1.2" />
+                      {/* Rotar Arriba */}
                       <g transform={`translate(0, ${-(6 * matScale + 4)})`} className="cursor-pointer" onPointerDown={(e) => { e.stopPropagation(); rotateObject(obj.id); }}>
                         <circle r={2.0} fill="#eab308" stroke="#000" strokeWidth="0.2" />
                         <text x="0" y="0.8" textAnchor="middle" fontSize="1.8" fill="#000" fontWeight="bold">↻</text>
                       </g>
+                      {/* Agrandar Derecha */}
+                      <g transform={`translate(${6 * matScale + 4}, 0)`} className="cursor-pointer" onPointerDown={(e) => {
+                        e.stopPropagation();
+                        const next = objects.map(o => o.id === obj.id ? { ...o, scale: Math.min(Number((o.scale || 1.0) + 0.2).toFixed(1), 3.0) } : o);
+                        setObjects(next);
+                        setSelectedMaterial(next.find(o => o.id === obj.id));
+                        recordHistory(next);
+                      }}>
+                        <circle r={2.0} fill="#22c55e" stroke="#000" strokeWidth="0.2" />
+                        <text x="0" y="0.8" textAnchor="middle" fontSize="2.0" fill="#ffffff" fontWeight="bold">+</text>
+                      </g>
+                      {/* Achicar Izquierda */}
+                      <g transform={`translate(${-(6 * matScale + 4)}, 0)`} className="cursor-pointer" onPointerDown={(e) => {
+                        e.stopPropagation();
+                        const next = objects.map(o => o.id === obj.id ? { ...o, scale: Math.max(Number((o.scale || 1.0) - 0.2).toFixed(1), 0.4) } : o);
+                        setObjects(next);
+                        setSelectedMaterial(next.find(o => o.id === obj.id));
+                        recordHistory(next);
+                      }}>
+                        <circle r={2.0} fill="#ef4444" stroke="#000" strokeWidth="0.2" />
+                        <text x="0" y="0.7" textAnchor="middle" fontSize="2.0" fill="#ffffff" fontWeight="bold">-</text>
+                      </g>
+                      {/* Borrar Abajo */}
                       <g transform={`translate(0, ${6 * matScale + 4})`} className="cursor-pointer" onPointerDown={(e) => { e.stopPropagation(); const next = objects.filter(o => o.id !== obj.id); setObjects(next); setSelectedMaterial(null); recordHistory(next); }}>
                         <circle r={2.0} fill="#18181b" stroke="#ef4444" strokeWidth="0.3" />
                         <text x="0" y="0.8" textAnchor="middle" fontSize="1.6" fill="#ef4444" fontWeight="bold">✕</text>
@@ -1169,7 +1217,6 @@ Devuelve estricta y únicamente el array JSON.`;
           </svg>
         ) : (
           <div className="relative w-full h-full">
-            {/* CONTROL DE CÁMARA 3D AISLADO */}
             <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl p-2 shadow-2xl flex items-center gap-2">
               <button
                 onClick={() => setCameraLocked(!cameraLocked)}
@@ -1189,7 +1236,40 @@ Devuelve estricta y únicamente el array JSON.`;
           </div>
         )}
 
-        {/* SUB-BARRA HORIZONTAL DE MATERIALES ORIGINALES */}
+        {/* MODAL INSERTAR TEXTO TÁCTICO */}
+        {textModalOpen && (
+          <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-xs p-4 shadow-2xl space-y-3">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-xs uppercase text-amber-400 flex items-center gap-1.5"><Type className="w-4 h-4" /> Texto Táctico</h3>
+                <button onClick={() => setTextModalOpen(false)} className="text-zinc-400 hover:text-white text-xs">✕</button>
+              </div>
+              <input
+                type="text" autoFocus value={inputTextVal} onChange={e => setInputTextVal(e.target.value)}
+                placeholder="Ej: Presión alta" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-400"
+              />
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800">
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={() => setTextIsBold(!textIsBold)} className={`w-7 h-7 rounded-lg font-black text-xs border ${textIsBold ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700'}`}>B</button>
+                  <button type="button" onClick={() => setTextIsUnderline(!textIsUnderline)} className={`w-7 h-7 rounded-lg underline font-bold text-xs border ${textIsUnderline ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700'}`}>U</button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {['#ffffff', '#facc15', '#ef4444', '#38bdf8', '#000000'].map(c => (
+                    <button key={c} type="button" onClick={() => setTextColor(c)} style={{ backgroundColor: c }} className={`w-5 h-5 rounded-full border ${textColor === c ? 'border-amber-400 scale-110' : 'border-zinc-700'}`} />
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => {
+                if (inputTextVal.trim()) {
+                  setTextBlocks(prev => [...prev, { id: 'txt-' + Date.now(), x: pendingTextPos.x, y: pendingTextPos.y, text: inputTextVal.trim(), color: textColor, isBold: textIsBold, isUnderline: textIsUnderline, size: textSize }]);
+                }
+                setTextModalOpen(false); setTool('move');
+              }} className="w-full py-2 bg-amber-500 text-black font-bold text-xs uppercase rounded-xl">Insertar</button>
+            </div>
+          </div>
+        )}
+
+        {/* SUB-BARRA DE MATERIALES HORIZONTAL */}
         {showTrainingMenu && (
           <aside className="fixed top-12 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print [&::-webkit-scrollbar]:hidden">
             <span className="text-[10px] font-bold text-amber-400 uppercase shrink-0 px-1">Materiales:</span>
@@ -1291,25 +1371,7 @@ Devuelve estricta y únicamente el array JSON.`;
           </div>
         )}
 
-        {/* MODAL VIDEO */}
-        {recordedVideoUrl && (
-          <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md p-5 shadow-2xl flex flex-col items-center">
-              <div className="w-full flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Video className="w-4 h-4 text-red-500" /> Video Grabado</h3>
-                <button onClick={() => setRecordedVideoUrl(null)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
-              </div>
-              <video src={recordedVideoUrl} controls autoPlay className="w-full rounded-2xl mb-4 border border-zinc-800 max-h-60" />
-              <div className="w-full flex gap-2">
-                <a href={recordedVideoUrl} download={`ejercicio-${drillTitle.replace(/\s+/g, '_')}.webm`} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 shadow">
-                  <Download className="w-4 h-4" /> Descargar
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL GESTIÓN: SESIONES, ALUMNOS, ASISTENCIA, PAGOS Y PROFESORES */}
+        {/* MODAL GESTIÓN COMPLETA: SESIONES, ALUMNOS, ASISTENCIA, PAGOS Y PROFESORES */}
         {showLibraryModal && (
           <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-3xl p-5 shadow-2xl flex flex-col max-h-[92vh]">
@@ -1329,6 +1391,7 @@ Devuelve estricta y únicamente el array JSON.`;
                 <button onClick={() => setShowLibraryModal(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
 
+              {/* SESIONES */}
               {activeTabLibrary === 'sessions' && (
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {savedDrills.length === 0 ? <p className="text-xs text-zinc-500 text-center py-8">No hay sesiones guardadas aún.</p> : savedDrills.map(d => (
@@ -1346,19 +1409,129 @@ Devuelve estricta y únicamente el array JSON.`;
                 </div>
               )}
 
+              {/* ALUMNOS */}
               {activeTabLibrary === 'roster' && (
                 <div className="flex-1 flex flex-col min-h-0">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newRosterName.trim()) return;
+                    if (editingStudent) {
+                      const updated = (rosters[currentCategoryContext] || []).map(p => 
+                        p.id === editingStudent.id 
+                          ? { ...p, name: newRosterName.trim(), rut: newRosterRut || 'Sin RUT', birth: newRosterBirth || '2012-01-01', role: newRosterRole, phone: newRosterPhone.trim(), blood: newRosterBlood, allergies: newRosterAllergies.trim(), emergencyPhone: newRosterEmergencyPhone.trim() } 
+                          : p
+                      );
+                      setRosters({ ...rosters, [currentCategoryContext]: updated });
+                      setEditingStudent(null);
+                    } else {
+                      const newP = { 
+                        id: 'ros-' + Date.now(), 
+                        name: newRosterName.trim(), 
+                        rut: newRosterRut || 'Sin RUT', 
+                        birth: newRosterBirth || '2012-01-01', 
+                        role: newRosterRole, 
+                        phone: newRosterPhone.trim() || '+56932100183', 
+                        blood: newRosterBlood,
+                        allergies: newRosterAllergies.trim(),
+                        emergencyPhone: newRosterEmergencyPhone.trim(),
+                        paid: false 
+                      };
+                      setRosters({ ...rosters, [currentCategoryContext]: [...(rosters[currentCategoryContext] || []), newP] });
+                    }
+                    setNewRosterName(''); setNewRosterRut(''); setNewRosterBirth(''); setNewRosterPhone('+569'); setNewRosterAllergies(''); setNewRosterEmergencyPhone('+569');
+                  }} className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl mb-3 shrink-0 space-y-2">
+                    <div className="flex justify-between items-center pb-1 border-b border-zinc-800">
+                      <span className="text-[11px] font-bold text-amber-400">{editingStudent ? '✏️ Editando Ficha de Alumno' : '➕ Ficha Integral de Alumno (Técnica y Médica)'}</span>
+                      {editingStudent && (
+                        <button type="button" onClick={() => { setEditingStudent(null); setNewRosterName(''); setNewRosterRut(''); setNewRosterBirth(''); setNewRosterPhone('+569'); setNewRosterAllergies(''); setNewRosterEmergencyPhone('+569'); }} className="text-[10px] text-zinc-400 hover:text-white">Cancelar Edición</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <input type="text" placeholder="Nombre Completo" value={newRosterName} onChange={e => setNewRosterName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
+                      <input type="text" placeholder="RUT / Pasaporte" value={newRosterRut} onChange={e => setNewRosterRut(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                      <input type="date" value={newRosterBirth} onChange={e => setNewRosterBirth(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                      <select value={newRosterRole} onChange={e => setNewRosterRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none">
+                        <option value="Portero">Portero (GK)</option>
+                        <option value="Defensa Central">Defensa Central</option>
+                        <option value="Lateral">Lateral</option>
+                        <option value="Mediocampista">Mediocampista</option>
+                        <option value="Extremo">Extremo</option>
+                        <option value="Delantero">Delantero</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <input type="tel" placeholder="WhatsApp Alumno/Apoderado" value={newRosterPhone} onChange={e => setNewRosterPhone(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
+                      <select value={newRosterBlood} onChange={e => setNewRosterBlood(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none">
+                        <option value="O+">Grupo Sanguíneo: O+</option>
+                        <option value="O-">Grupo Sanguíneo: O-</option>
+                        <option value="A+">Grupo Sanguíneo: A+</option>
+                        <option value="A-">Grupo Sanguíneo: A-</option>
+                        <option value="B+">Grupo Sanguíneo: B+</option>
+                        <option value="B-">Grupo Sanguíneo: B-</option>
+                        <option value="AB+">Grupo Sanguíneo: AB+</option>
+                        <option value="AB-">Grupo Sanguíneo: AB-</option>
+                      </select>
+                      <input type="text" placeholder="Alergias / Ficha Médica" value={newRosterAllergies} onChange={e => setNewRosterAllergies(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                      <div className="flex gap-1.5">
+                        <input type="tel" placeholder="Urgencias SOS" value={newRosterEmergencyPhone} onChange={e => setNewRosterEmergencyPhone(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-amber-400" />
+                        <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl px-3 py-1.5 shadow flex items-center justify-center gap-1 shrink-0">
+                          {editingStudent ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                          <span>{editingStudent ? 'Actualizar' : 'Guardar'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+
                   <div className="flex-1 overflow-y-auto space-y-2">
                     {(rosters[currentCategoryContext] || []).map(p => (
-                      <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl flex justify-between items-center">
-                        <span className="font-bold text-xs text-white">{p.name} ({p.role})</span>
-                        <WhatsAppButton phone={p.phone} name={p.name} label="WhatsApp" />
+                      <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xs text-white">{p.name}</span>
+                            <span className="text-[10px] bg-zinc-800 text-amber-400 px-2 py-0.5 rounded-full font-semibold">{p.role}</span>
+                            {p.blood && <span className="text-[9px] bg-red-950/80 border border-red-800 text-red-300 px-1.5 py-0.2 rounded font-mono font-bold">🩸 {p.blood}</span>}
+                          </div>
+                          <div className="text-[10px] text-zinc-400 mt-0.5">
+                            RUT: {p.rut} • Nac: {p.birth} {p.allergies ? `• ⚠️ ${p.allergies}` : ''}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 self-end sm:self-center">
+                          <WhatsAppButton phone={p.phone} name={p.name} label="WhatsApp" />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setEditingStudent(p);
+                              setNewRosterName(p.name);
+                              setNewRosterRut(p.rut || '');
+                              setNewRosterBirth(p.birth || '');
+                              setNewRosterRole(p.role || 'Delantero');
+                              setNewRosterPhone(p.phone || '+569');
+                              setNewRosterBlood(p.blood || 'O+');
+                              setNewRosterAllergies(p.allergies || '');
+                              setNewRosterEmergencyPhone(p.emergencyPhone || '+569');
+                            }}
+                            className="p-1.5 bg-zinc-800 hover:bg-amber-500 hover:text-black text-zinc-300 rounded-lg transition"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (confirm(`¿Eliminar a ${p.name}?`)) {
+                                setRosters({ ...rosters, [currentCategoryContext]: rosters[currentCategoryContext].filter(x => x.id !== p.id) });
+                              }
+                            }} 
+                            className="p-1.5 text-zinc-500 hover:text-red-400"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* ASISTENCIA */}
               {activeTabLibrary === 'attendance' && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <div className="flex items-center justify-between mb-3 bg-zinc-900 p-2.5 rounded-xl border border-zinc-800">
@@ -1366,53 +1539,340 @@ Devuelve estricta y únicamente el array JSON.`;
                     <input type="date" value={attendanceDate} onChange={e => setAttendanceDate(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-white outline-none" />
                   </div>
                   <div className="flex-1 overflow-y-auto space-y-2">
-                    {(rosters[currentCategoryContext] || []).map(p => (
-                      <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
-                        <span className="font-bold text-xs text-white">{p.name}</span>
-                        <span className="text-[10px] text-zinc-400">Registrado</span>
+                    {(rosters[currentCategoryContext] || []).map(p => {
+                      const attKey = `${currentCategoryContext}_${attendanceDate}`;
+                      const currentStatus = attendanceRecords[attKey]?.[p.id] || 'pending';
+                      return (
+                        <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                          <span className="font-bold text-xs text-white">{p.name}</span>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => {
+                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'present' } };
+                              setAttendanceRecords(updated);
+                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'present' ? 'bg-emerald-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}>Presente</button>
+                            <button onClick={() => {
+                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'absent' } };
+                              setAttendanceRecords(updated);
+                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'absent' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}>Ausente</button>
+                            <button onClick={() => {
+                              const updated = { ...attendanceRecords, [attKey]: { ...(attendanceRecords[attKey] || {}), [p.id]: 'excused' } };
+                              setAttendanceRecords(updated);
+                            }} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${currentStatus === 'excused' ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-400'}`}>Justificado</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* COBRANZA Y MENSUALIDADES (DIRECTOR) */}
+              {activeTabLibrary === 'billing' && !isTeacherRestricted && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  {(() => {
+                    const allStudents = Object.values(rosters).flat();
+                    const totalStudents = allStudents.length;
+                    const paidCount = allStudents.filter(s => s.paid).length;
+                    const fee = Number(schoolMonthlyFee) || 0;
+                    const totalCollected = paidCount * fee;
+                    const totalPending = (totalStudents - paidCount) * fee;
+
+                    return (
+                      <div className="space-y-2 mb-3 shrink-0">
+                        <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs font-bold text-white block">Cuota Mensual Escuela:</span>
+                              <span className="text-[10px] text-zinc-400">Valor CLP por alumno</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-zinc-400 font-bold">$</span>
+                              <input 
+                                type="number" 
+                                value={schoolMonthlyFee} 
+                                onChange={e => { setSchoolMonthlyFee(e.target.value); localStorage.setItem('andez_monthly_fee', e.target.value); }} 
+                                className="w-24 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-right text-emerald-400 font-bold outline-none" 
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs font-bold text-white block">Día de Cobro:</span>
+                              <span className="text-[10px] text-zinc-400">Día límite del mes</span>
+                            </div>
+                            <input 
+                              type="number" 
+                              min="1" 
+                              max="31" 
+                              value={billingDay} 
+                              onChange={e => { setBillingDay(e.target.value); localStorage.setItem('andez_billing_day', e.target.value); }} 
+                              className="w-14 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-center text-white font-bold outline-none" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl">
+                            <span className="text-[10px] text-zinc-400 block font-bold">Total Recaudado</span>
+                            <span className="text-sm sm:text-base font-black text-emerald-400">${totalCollected.toLocaleString('es-CL')} CLP</span>
+                          </div>
+                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl">
+                            <span className="text-[10px] text-zinc-400 block font-bold">Por Recaudar</span>
+                            <span className="text-sm sm:text-base font-black text-amber-400">${totalPending.toLocaleString('es-CL')} CLP</span>
+                          </div>
+                          <div className="bg-zinc-900/90 border border-zinc-800 p-2.5 rounded-xl col-span-2 sm:col-span-1">
+                            <span className="text-[10px] text-zinc-400 block font-bold">Estado General</span>
+                            <span className="text-xs font-bold text-white">{paidCount} al día / {totalStudents - paidCount} morosos</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => {
+                      const msg = billingMessageTemplate.replace('{ALUMNO}', p.name);
+                      return (
+                        <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                          <div>
+                            <div className="font-bold text-xs text-white">{p.name} <span className="text-[10px] text-zinc-400">({categories.find(c => c.id === p.catKey)?.name || p.catKey})</span></div>
+                            <div className="text-[10px] flex items-center gap-1.5 mt-0.5">
+                              {p.paid ? <span className="text-emerald-400 font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Al Día</span> : <span className="text-red-400 font-bold flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Pendiente de Pago</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => {
+                              const updatedList = rosters[p.catKey].map(x => x.id === p.id ? { ...x, paid: !x.paid } : x);
+                              setRosters({ ...rosters, [p.catKey]: updatedList });
+                            }} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${p.paid ? 'bg-zinc-800 text-zinc-400' : 'bg-emerald-600 text-white'}`}>
+                              {p.paid ? 'Marcar Pendiente' : 'Recibir Pago'}
+                            </button>
+                            {!p.paid && <WhatsAppButton phone={p.phone} name={p.name} label="Avisar Cobro" customMessage={msg} />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* PROFESORES */}
+              {activeTabLibrary === 'coaches' && !isTeacherRestricted && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newCoachStaffName.trim()) return;
+                    const code = newCoachStaffCode.trim() || 'DT-' + Math.floor(100 + Math.random() * 900);
+                    if (editingCoach) {
+                      const updated = coachesList.map(c => 
+                        c.id === editingCoach.id 
+                          ? { ...c, name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim(), code } 
+                          : c
+                      );
+                      setCoachesList(updated);
+                      setEditingCoach(null);
+                    } else {
+                      setCoachesList([...coachesList, { id: 'c-' + Date.now(), name: newCoachStaffName.trim(), role: newCoachStaffRole.trim(), categoryId: newCoachStaffCategory, phone: newCoachStaffPhone.trim(), code }]);
+                    }
+                    setNewCoachStaffName(''); setNewCoachStaffRole('Director Técnico'); setNewCoachStaffPhone('+569'); setNewCoachStaffCode('');
+                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-2xl mb-3 shrink-0 space-y-2">
+                    <div className="flex justify-between items-center pb-1 border-b border-zinc-800">
+                      <span className="text-[11px] font-bold text-amber-400">{editingCoach ? '✏️ Editando Profesor / DT' : '➕ Registrar Nuevo Profesor / DT'}</span>
+                      {editingCoach && (
+                        <button type="button" onClick={() => { setEditingCoach(null); setNewCoachStaffName(''); setNewCoachStaffRole('Director Técnico'); setNewCoachStaffPhone('+569'); setNewCoachStaffCode(''); }} className="text-[10px] text-zinc-400 hover:text-white">Cancelar Edición</button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                      <input type="text" placeholder="Nombre Profesor" value={newCoachStaffName} onChange={e => setNewCoachStaffName(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" required />
+                      <input type="text" placeholder="Cargo (DT, PF)" value={newCoachStaffRole} onChange={e => setNewCoachStaffRole(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" />
+                      <select value={newCoachStaffCategory} onChange={e => setNewCoachStaffCategory(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none">
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                      <input type="tel" placeholder="WhatsApp" value={newCoachStaffPhone} onChange={e => setNewCoachStaffPhone(e.target.value)} className="bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-amber-400" />
+                      <div className="flex gap-1.5">
+                        <input type="text" placeholder="Clave DT" value={newCoachStaffCode} onChange={e => setNewCoachStaffCode(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-xl px-2.5 py-1 text-xs text-white outline-none uppercase font-mono focus:border-amber-400" />
+                        <button type="submit" className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl px-3 py-1 shadow flex items-center justify-center gap-1 shrink-0">
+                          {editingCoach ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                          <span>{editingCoach ? 'Actualizar' : 'Agregar'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {coachesList.map(c => (
+                      <div key={c.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-2xl flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-xs text-white">{c.name} <span className="text-amber-400 font-semibold text-[10px]">({c.role})</span></div>
+                          <div className="text-[10px] text-zinc-400">Categoría: {categories.find(x => x.id === c.categoryId)?.name || 'Sin asignar'} • Clave: <span className="font-mono text-white font-bold">{c.code}</span></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <WhatsAppButton phone={c.phone} name={c.name} label="WhatsApp DT" />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setEditingCoach(c);
+                              setNewCoachStaffName(c.name);
+                              setNewCoachStaffRole(c.role || 'Director Técnico');
+                              setNewCoachStaffCategory(c.categoryId || categories[0]?.id || 'sub10');
+                              setNewCoachStaffPhone(c.phone || '+569');
+                              setNewCoachStaffCode(c.code || '');
+                            }}
+                            className="p-1.5 bg-zinc-800 hover:bg-amber-500 hover:text-black text-zinc-300 rounded-lg transition"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => { if (confirm(`¿Eliminar al profesor ${c.name}?`)) setCoachesList(coachesList.filter(x => x.id !== c.id)); }} className="p-1.5 text-zinc-500 hover:text-red-400">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {activeTabLibrary === 'billing' && !isTeacherRestricted && (
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {Object.entries(rosters).flatMap(([catKey, list]) => (list || []).map(p => ({ ...p, catKey }))).map(p => (
-                    <div key={p.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
-                      <span className="font-bold text-xs text-white">{p.name}</span>
-                      <button onClick={() => {
-                        const updated = rosters[p.catKey].map(x => x.id === p.id ? { ...x, paid: !x.paid } : x);
-                        setRosters({ ...rosters, [p.catKey]: updated });
-                      }} className={`px-2.5 py-1 rounded-lg text-xs font-bold ${p.paid ? 'bg-zinc-800 text-zinc-400' : 'bg-emerald-600 text-white'}`}>
-                        {p.paid ? 'Al Día' : 'Marcar Pagado'}
-                      </button>
-                    </div>
-                  ))}
+              {/* CATEGORÍAS */}
+              {activeTabLibrary === 'categories' && !isTeacherRestricted && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newCatName.trim()) return;
+                    setCategories([...categories, { id: 'cat-' + Date.now(), name: newCatName.trim() }]);
+                    setNewCatName('');
+                  }} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl mb-3 shrink-0 flex gap-2">
+                    <input type="text" placeholder="Nueva Categoría (Ej: Sub-6, Femenino)" value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-amber-400" required />
+                    <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-black font-black text-xs px-3 py-1.5 rounded-lg shadow flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Crear</button>
+                  </form>
+                  <div className="flex-1 overflow-y-auto space-y-2">
+                    {categories.map(cat => (
+                      <div key={cat.id} className="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl flex justify-between items-center">
+                        {editingCatId === cat.id ? (
+                          <div className="flex gap-2 flex-1 mr-2">
+                            <input type="text" value={editingCatName} onChange={e => setEditingCatName(e.target.value)} className="flex-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-xs text-white" autoFocus />
+                            <button onClick={() => { setCategories(categories.map(c => c.id === cat.id ? { ...c, name: editingCatName.trim() } : c)); setEditingCatId(null); }} className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-bold">Guardar</button>
+                            <button onClick={() => setEditingCatId(null)} className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded text-xs">Cancelar</button>
+                          </div>
+                        ) : (
+                          <span className="font-bold text-xs text-white">{cat.name}</span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => { setEditingCatId(cat.id); setEditingCatName(cat.name); }} className="p-1 text-zinc-400 hover:text-amber-400"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => { if (confirm('¿Eliminar categoría?')) setCategories(categories.filter(c => c.id !== cat.id)); }} className="p-1 text-zinc-400 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* MODAL SUPERADMIN */}
+        {/* MODAL PANEL DE DUEÑO SUPERADMINISTRADOR COMPLETO */}
         {showAdminDashboard && (
           <div className="absolute inset-0 bg-black/90 flex items-center justify-center p-4 z-50 no-print">
             <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
               <div className="flex justify-between items-center mb-3 border-b border-zinc-800 pb-2">
-                <h3 className="font-black text-base text-white">Panel Super Administrador</h3>
+                <div>
+                  <span className="bg-red-600 text-[9px] font-black px-1.5 py-0.5 rounded text-white">SUPERADMINISTRADOR</span>
+                  <h3 className="font-black text-base text-white mt-1">Gestión de Planes y Licencias</h3>
+                </div>
                 <button onClick={() => setShowAdminDashboard(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
+
+              {/* EDITOR DE PRECIOS Y CUPOS */}
+              <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl mb-3">
+                <span className="text-[11px] font-black text-amber-400 uppercase block mb-2">Configurar Planes Comerciales</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {customPlans.map(pl => (
+                    <div key={pl.id} className="bg-zinc-950 p-2 rounded-xl border border-zinc-800 flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-white truncate">{pl.name}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-zinc-400">$</span>
+                        <input type="number" value={pl.price} onChange={e => {
+                          const val = Number(e.target.value);
+                          setCustomPlans(customPlans.map(p => p.id === pl.id ? { ...p, price: val } : p));
+                        }} className="w-20 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-0.5 text-[11px] font-bold text-emerald-400" />
+                        <span className="text-[10px] text-zinc-400">Cupos:</span>
+                        <input type="number" value={pl.seats} onChange={e => {
+                          const val = Number(e.target.value);
+                          setCustomPlans(customPlans.map(p => p.id === pl.id ? { ...p, seats: val } : p));
+                        }} className="w-12 bg-zinc-900 border border-zinc-700 rounded px-1.5 py-0.5 text-[11px] font-bold text-white" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                  <span className="text-[10px] text-zinc-400 block font-bold">Ingresos Totales</span>
+                  <span className="text-lg font-black text-emerald-400">${totalRevenue.toLocaleString('es-CL')} CLP</span>
+                </div>
+                <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-zinc-400 block font-bold">Clubes Activos</span>
+                    <span className="text-lg font-black text-white">{adminLicenses.filter(l => l.status === 'active').length}</span>
+                  </div>
+                  <button onClick={() => setShowNewUserModal(true)} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+                    <Plus className="w-4 h-4" /> Nuevo Club
+                  </button>
+                </div>
+              </div>
+
               <div className="flex-1 overflow-y-auto space-y-2">
                 {adminLicenses.map(lic => (
                   <div key={lic.id} className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex justify-between items-center">
                     <div>
-                      <div className="font-bold text-xs text-white">{lic.coach} ({lic.code})</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-white">{lic.coach}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-amber-400 font-mono font-bold border border-zinc-700">{lic.code}</span>
+                      </div>
                       <div className="text-[10px] text-zinc-400">{lic.club} • {lic.plan}</div>
+                      <div className="text-[9px] text-zinc-500">Equipos conectados: {(lic.devices || []).length} / {lic.seats} máx</div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => {
+                        const updated = adminLicenses.map(l => l.id === lic.id ? { ...l, status: l.status === 'active' ? 'suspended' : 'active' } : l);
+                        setAdminLicenses(updated);
+                      }} className={`px-2 py-1 rounded text-xs font-bold ${lic.status === 'active' ? 'bg-red-950 text-red-400 border border-red-800' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}>
+                        {lic.status === 'active' ? 'Suspender' : 'Reactivar'}
+                      </button>
+                      <button onClick={() => { if (confirm('¿Eliminar licencia?')) setAdminLicenses(adminLicenses.filter(l => l.id !== lic.id)); }} className="p-1 text-zinc-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CREAR NUEVA LICENCIA */}
+        {showNewUserModal && (
+          <div className="absolute inset-0 bg-black/95 flex items-center justify-center p-4 z-50 no-print">
+            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-sm p-5 shadow-2xl">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-sm text-white flex items-center gap-1"><Plus className="w-4 h-4 text-red-500" /> Crear Licencia de Club</h3>
+                <button onClick={() => setShowNewUserModal(false)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!newCoachName.trim()) return;
+                const code = 'AND-' + Math.floor(1000 + Math.random() * 9000);
+                const chosenPlan = customPlans.find(p => p.id === newCoachPlan) || customPlans[0];
+                setAdminLicenses([{ id: 'lic-' + Date.now(), coach: newCoachName.trim(), club: newCoachClub.trim() || 'Club Deportivo', code, seats: chosenPlan.seats, devices: [], status: 'active', plan: chosenPlan.name, price: chosenPlan.price, expiry: newCoachExpiry }, ...adminLicenses]);
+                setShowNewUserModal(false); setNewCoachName(''); setNewCoachClub('');
+                alert(`¡Club Creado!\nClave: ${code}\nDispositivos: ${chosenPlan.seats}`);
+              }} className="space-y-3">
+                <input type="text" placeholder="Director del Club" value={newCoachName} onChange={e => setNewCoachName(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
+                <input type="text" placeholder="Nombre de la Escuela / Club" value={newCoachClub} onChange={e => setNewCoachClub(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+                <select value={newCoachPlan} onChange={e => setNewCoachPlan(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                  {customPlans.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} - ${p.price.toLocaleString('es-CL')}</option>
+                  ))}
+                </select>
+                <input type="date" value={newCoachExpiry} onChange={e => setNewCoachExpiry(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
+                <button type="submit" className="w-full py-2.5 bg-red-600 hover:bg-red-500 font-bold text-xs uppercase rounded-xl text-white shadow">Generar Acceso</button>
+              </form>
             </div>
           </div>
         )}
@@ -1423,6 +1883,10 @@ Devuelve estricta y únicamente el array JSON.`;
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-3">
               <h3 className="font-bold text-sm text-white">Guardar Ejercicio</h3>
               <input type="text" value={drillTitle} onChange={e => setDrillTitle(e.target.value)} placeholder="Título" className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+              <select value={drillCategory} onChange={e => setDrillCategory(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <textarea value={drillNotes} onChange={e => setDrillNotes(e.target.value)} rows={3} placeholder="Consignas y variantes..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white outline-none resize-none" />
               <button onClick={() => {
                 const n = { id: 'd-' + Date.now(), title: drillTitle, notes: drillNotes, category: drillCategory, date: new Date().toISOString().split('T')[0], objects, drawings };
                 setSavedDrills([n, ...savedDrills]); setShowSaveModal(false); alert('¡Sesión guardada!');
@@ -1493,6 +1957,7 @@ Devuelve estricta y únicamente el array JSON.`;
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`} title="Texto Explicativo"><Type className="w-5 h-5" /></button>
           <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400'}`} title="Goma de Borrar"><Eraser className="w-5 h-5" /></button>
           <button onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); recordHistory([]); } }} className="p-1.5 text-red-400 hover:text-red-300" title="Vaciar Cancha Completa"><Trash2 className="w-5 h-5" /></button>
           <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300'}`} title="Trazados y Flechas"><PenTool className="w-5 h-5" /></button>
