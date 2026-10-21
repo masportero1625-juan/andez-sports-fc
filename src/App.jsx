@@ -126,15 +126,15 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
           </g>
         );
       case 'cone': {
-        const cFill = obj.color && obj.color !== '#ea580c' ? obj.color : '#ea580c';
+        const cFill = obj.color && obj.color !== '#ea580c' ? obj.color : '#f97316';
         return (
           <g>
-            <ellipse cx="0.5" cy="0.5" rx="1.7" ry="1.0" fill="rgba(0,0,0,0.3)" />
-            <rect x="-1.3" y="-1.3" width="2.6" height="2.6" rx="0.35" fill="#9a3412" stroke="#7c2d12" strokeWidth="0.15" />
-            <rect x="-1.1" y="-1.1" width="2.2" height="2.2" rx="0.25" fill="#c2410c" />
-            <circle cx="0" cy="0" r="0.95" fill={cFill} />
-            <circle cx="0" cy="0" r="0.45" fill="#ffffff" />
-            <circle cx="0" cy="0" r="0.22" fill={cFill} />
+            <ellipse cx="0.5" cy="0.6" rx="1.8" ry="1.0" fill="rgba(0,0,0,0.35)" />
+            <rect x="-1.5" y="-1.5" width="3.0" height="3.0" rx="0.3" fill="#7c2d12" stroke="#000000" strokeWidth="0.2" />
+            <rect x="-1.3" y="-1.3" width="2.6" height="2.6" rx="0.2" fill={cFill} />
+            <circle cx="0" cy="0" r="1.1" fill="#ea580c" stroke="#000000" strokeWidth="0.15" />
+            <circle cx="0" cy="0" r="0.75" fill="#ffffff" stroke="#000000" strokeWidth="0.1" />
+            <circle cx="0" cy="0" r="0.35" fill={cFill} />
           </g>
         );
       }
@@ -142,34 +142,10 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
         const c = obj.color || '#facc15';
         return (
           <g>
-            <ellipse cx="0.35" cy="0.35" rx="1.5" ry="0.95" fill="rgba(0,0,0,0.25)" />
-            <circle cx="0" cy="0" r="1.35" fill={c} stroke="rgba(0,0,0,0.3)" strokeWidth="0.15" />
-            <circle cx="0" cy="-0.08" r="0.9" fill="#fef08a" opacity="0.8" />
-            <circle cx="0" cy="0" r="0.32" fill="#0f172a" />
-          </g>
-        );
-      }
-      case 'ladder':
-        return (
-          <g>
-            <rect x="-1.9" y="-7.3" width="3.8" height="14.6" rx="0.3" fill="rgba(0,0,0,0.18)" />
-            <line x1="-1.6" y1="-7.1" x2="-1.6" y2="7.1" stroke="#09090b" strokeWidth="0.35" strokeLinecap="round" />
-            <line x1="1.6" y1="-7.1" x2="1.6" y2="7.1" stroke="#09090b" strokeWidth="0.35" strokeLinecap="round" />
-            {[-6.0, -4.0, -2.0, 0, 2.0, 4.0, 6.0].map((pos) => (
-              <g key={pos}>
-                <line x1="-1.7" y1={pos} x2="1.7" y2={pos} stroke="#ca8a04" strokeWidth="0.55" strokeLinecap="round" />
-                <line x1="-1.7" y1={pos - 0.08} x2="1.7" y2={pos - 0.08} stroke="#fef08a" strokeWidth="0.25" strokeLinecap="round" />
-              </g>
-            ))}
-          </g>
-        );
-      case 'ring': {
-        const c = obj.color || '#38bdf8';
-        return (
-          <g>
-            <ellipse cx="0.35" cy="0.35" rx="2.3" ry="2.3" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="0.45" />
-            <circle cx="0" cy="0" r="2.3" fill="none" stroke="#0284c7" strokeWidth="0.6" />
-            <circle cx="0" cy="0" r="2.3" fill="none" stroke={c} strokeWidth="0.4" />
+            <ellipse cx="0.4" cy="0.4" rx="1.7" ry="1.0" fill="rgba(0,0,0,0.3)" />
+            <circle cx="0" cy="0" r="1.5" fill={c} stroke="#000000" strokeWidth="0.25" />
+            <circle cx="0" cy="-0.1" r="1.0" fill="#ffffff" opacity="0.35" />
+            <circle cx="0" cy="0" r="0.4" fill="#0f172a" stroke="#000000" strokeWidth="0.1" />
           </g>
         );
       }
@@ -177,11 +153,11 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
         const c = obj.color || '#facc15';
         return (
           <g>
-            <ellipse cx="1.3" cy="1.3" rx="2.2" ry="0.65" fill="rgba(0,0,0,0.3)" transform="rotate(-30, 1.3, 1.3)" />
-            <circle cx="0" cy="0" r="1.0" fill="#1e293b" stroke="#0f172a" strokeWidth="0.15" />
-            <circle cx="0" cy="0" r="0.65" fill="#334155" />
-            <circle cx="0" cy="0" r="0.35" fill={c} stroke="#ca8a04" strokeWidth="0.1" />
-            <circle cx="0" cy="0" r="0.12" fill="#ef4444" />
+            <line x1="0" y1="0" x2="3.2" y2="3.2" stroke="rgba(0,0,0,0.35)" strokeWidth="0.6" strokeLinecap="round" />
+            <circle cx="0" cy="0" r="1.3" fill="#09090b" stroke="#000000" strokeWidth="0.2" />
+            <circle cx="0" cy="0" r="0.8" fill="#27272a" />
+            <circle cx="0" cy="0" r="0.45" fill={c} stroke="#000000" strokeWidth="0.15" />
+            <circle cx="0" cy="0" r="0.15" fill="#ffffff" />
           </g>
         );
       }
@@ -962,13 +938,13 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
           </radialGradient>  
         </defs>
 
-          {/* CÉSPED PRO UNIVERSAL (PC, TABLET Y MÓVIL) */}
-    <rect width="450" height="450" x="-150" y="-150" fill="#15803d" />
-    <g opacity="0.13">
-      {Array.from({ length: 26 }).map((_, i) => (
-        <rect key={i} x={-20 + i * 7} y="-50" width="3.5" height="220" fill="#ffffff" />
-      ))}
-    </g>
+          {/* CÉSPED PRO CALIBRADO UNIVERSAL (PC, TABLET, MOVIL) */}
+          <rect width="450" height="450" x="-150" y="-150" fill="#15803d" />
+          <g opacity="0.14">
+            {Array.from({ length: 26 }).map((_, i) => (
+              <rect key={i} x={-35 + i * 7} y="-50" width="3.5" height="220" fill="#ffffff" />
+            ))}
+          </g>
           {/* DIBUJO DE CANCHA, ARCOS Y ÁREAS */}
           {isPC ? (
             <g stroke="white" strokeWidth="0.8" fill="none">
