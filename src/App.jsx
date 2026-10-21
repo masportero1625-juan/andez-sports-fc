@@ -3,7 +3,7 @@ import {
   Folder, Play, RotateCcw, Save, Undo2, Redo2, Trash2, PenTool, X,
   Eraser, Lock, Plus, AlertTriangle, RotateCw, LogOut, MessageCircle,
   Upload, Printer, Edit2, Video, Square, Download, Sparkles, Gift,
-  CheckCircle2, Clock, Users, DollarSign, Type, Shield, Image as ImageIcon
+  CheckCircle2, Clock, Users, DollarSign, Type, Shield, Eye, Move
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Html } from '@react-three/drei';
@@ -207,11 +207,6 @@ function Player3D({ position, color, number, isSelected, onClick }) {
 }
 
 function Ball3D({ position, onClick }) {
-  const meshRef = useRef();
-  useFrame(() => {
-    if (meshRef.current) meshRef.current.rotation.y += 0.01;
-  });
-
   return (
     <group
       position={[position.x - 52.5, 0.35, position.y - 34]}
@@ -220,7 +215,7 @@ function Ball3D({ position, onClick }) {
         onClick();
       }}
     >
-      <mesh ref={meshRef} castShadow>
+      <mesh castShadow>
         <sphereGeometry args={[0.35, 32, 32]} />
         <meshStandardMaterial color="#ffffff" roughness={0.3} />
       </mesh>
@@ -232,11 +227,17 @@ function Ball3D({ position, onClick }) {
   );
 }
 
-function Scene3D({ objects, selectedObj, setSelectedObj, teamColors }) {
+function Scene3D({ objects, selectedObj, setSelectedObj, teamColors, cameraLocked }) {
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 32, 42]} fov={55} />
-      <OrbitControls target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.05} minDistance={12} maxDistance={75} />
+      <OrbitControls
+        enabled={!cameraLocked}
+        target={[0, 0, 0]}
+        maxPolarAngle={Math.PI / 2.05}
+        minDistance={12}
+        maxDistance={75}
+      />
       <ambientLight intensity={0.7} />
       <directionalLight position={[15, 30, 20]} intensity={1.2} castShadow />
       <Pitch3D />
@@ -267,10 +268,24 @@ function Scene3D({ objects, selectedObj, setSelectedObj, teamColors }) {
   );
 }
 
-// COMPONENTE PRINCIPAL
+// MATERIALES DISPONIBLES
+const TRAINING_ITEMS = [
+  { id: 'mini_goal', name: 'Mini Portería', icon: '🥅' },
+  { id: 'ladder', name: 'Escalera', icon: '🪜' },
+  { id: 'dummy', name: 'Maniquí', icon: '🧍' },
+  { id: 'hurdle', name: 'Valla', icon: '🚧' },
+  { id: 'cone_orange', name: 'Cono Naranja', icon: '▲', color: '#ea580c' },
+  { id: 'cone_blue', name: 'Cono Azul', icon: '▲', color: '#2563eb' },
+  { id: 'cone_yellow', name: 'Cono Amarillo', icon: '▲', color: '#eab308' },
+  { id: 'disc', name: 'Plato Chino', icon: '🟡' },
+  { id: 'ring', name: 'Aro', icon: '⭕' },
+  { id: 'pole', name: 'Estaca', icon: '🥢' }
+];
+
 export default function App() {
   const [isPC, setIsPC] = useState(typeof window !== 'undefined' ? window.innerWidth > 768 : true);
   const [viewMode, setViewMode] = useState('2d');
+  const [cameraLocked, setCameraLocked] = useState(true);
 
   useEffect(() => {
     const handleResize = () => setIsPC(window.innerWidth > 768);
@@ -324,6 +339,12 @@ export default function App() {
   const [playerCustomName, setPlayerCustomName] = useState('');
   const [playerCustomNumber, setPlayerCustomNumber] = useState('');
 
+  // IA Gemini
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [promptText, setPromptText] = useState('');
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
+
+  // Trazados
   const [tool, setTool] = useState('move');
   const [lineType, setLineType] = useState('arrow');
   const [lineColor, setLineColor] = useState('#ffffff');
@@ -341,7 +362,7 @@ export default function App() {
       role: p.r,
       x: p.x,
       y: p.y,
-      team: 'blue',
+      team: p.r === 'GK' ? 'gk' : 'blue',
       name: ''
     }));
     return [
@@ -374,7 +395,7 @@ export default function App() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `jugada-andez-${Date.now()}.webm`;
+        a.download = `pizarra-andez-${Date.now()}.webm`;
         a.click();
         stream.getTracks().forEach((t) => t.stop());
         setIsRecording(false);
@@ -483,6 +504,14 @@ export default function App() {
     }
   }, [objects, currentLine]);
 
+  const rotateObject = (id) => {
+    const u = objects.map((o) =>
+      o.id === id ? { ...o, rotation: ((o.rotation || 0) + 45) % 360 } : o
+    );
+    setObjects(u);
+    recordHistory(u);
+  };
+
   const addElement = (itemType, extra = {}) => {
     const id = 'item-' + Date.now();
     const spawnX = isPC ? (pitchMode === 'half' ? 27.5 : 52.5) : 34;
@@ -524,6 +553,49 @@ export default function App() {
     setShowSystemsMenu(false);
   };
 
+  const handleGenerateTacticalPrompt = async (e) => {
+    e.preventDefault();
+    if (!promptText.trim() || isGeneratingPrompt) return;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      alert('Clave VITE_GEMINI_API_KEY no detectada.');
+      return;
+    }
+    setIsGeneratingPrompt(true);
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `Instrucción táctica: "${promptText}"` }] }],
+            systemInstruction: {
+              parts: [{
+                text: `Eres DT profesional. Devuelve exclusivamente un array JSON válido con coordenadas (X de 0 a 105, Y de 0 a 68).
+Formato: [{"id":"p_1","type":"player","number":"1","name":"Arquero","x":4,"y":34,"team":"blue"}]`
+              }]
+            },
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
+          })
+        }
+      );
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      const parsed = JSON.parse(rawText);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setObjects(parsed);
+        recordHistory(parsed);
+        setShowPromptModal(false);
+        setPromptText('');
+      }
+    } catch (err) {
+      alert('Error al conectar con Gemini: ' + err.message);
+    } finally {
+      setIsGeneratingPrompt(false);
+    }
+  };
+
   if (!authenticatedUser) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-[#070b12] text-white p-4 font-sans select-none">
@@ -563,6 +635,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans">
+      {/* HEADER SUPERIOR */}
       <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 overflow-x-auto max-w-full">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-amber-400 bg-zinc-900 flex items-center justify-center font-black text-amber-400 text-xs">
@@ -584,12 +657,29 @@ export default function App() {
           >
             <Shield className="w-3.5 h-3.5" /> {viewMode === '2d' ? '3D' : '2D'}
           </button>
-          <button onClick={() => setShowTrainingMenu(!showTrainingMenu)} className={`p-1 rounded ${showTrainingMenu ? 'bg-amber-500 text-black' : 'text-amber-400'}`}>
-            <span className="font-bold">▲ Materiales</span>
+          <button
+            onClick={() => setShowTrainingMenu(!showTrainingMenu)}
+            className={`px-2.5 py-1 rounded-full text-xs font-bold transition ${showTrainingMenu ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-amber-400 border border-amber-500/30'}`}
+          >
+            ▲ Materiales
+          </button>
+          <button
+            onClick={() => setShowPromptModal(true)}
+            className="flex items-center gap-1 bg-amber-500/20 border border-amber-400 text-amber-300 px-2.5 py-1 rounded-full text-[11px] font-bold shadow active:scale-95"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Prompt IA
           </button>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          {selectedMaterial && (
+            <button
+              onClick={() => rotateObject(selectedMaterial.id)}
+              className="flex items-center gap-1 bg-amber-500 text-black px-2 py-1 rounded-full text-[10px] font-black"
+            >
+              <RotateCw className="w-3.5 h-3.5" /> 45°
+            </button>
+          )}
           {isRecording ? (
             <button
               onClick={stopRecording}
@@ -614,6 +704,30 @@ export default function App() {
         </div>
       </header>
 
+      {/* BARRA DE MATERIALES HORIZONTAL COMPLETA */}
+      {showTrainingMenu && (
+        <div className="bg-zinc-950 px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto border-b border-zinc-800 z-20">
+          <span className="text-[10px] font-black uppercase text-amber-400 mr-2 shrink-0">Materiales:</span>
+          {TRAINING_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => addElement(item.id, { color: item.color || '#ffffff' })}
+              className="flex items-center gap-1 px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-amber-400 rounded-xl text-xs font-bold text-zinc-200 shrink-0 shadow transition"
+            >
+              <span>{item.icon}</span>
+              <span>{item.name}</span>
+            </button>
+          ))}
+          <button
+            onClick={() => setShowTrainingMenu(false)}
+            className="p-1 text-red-400 hover:text-white shrink-0 ml-auto"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* CANCHA CENTRAL */}
       <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]">
         {viewMode === '2d' ? (
           <svg
@@ -626,21 +740,11 @@ export default function App() {
             onPointerLeave={handlePointerUp}
           >
             <defs>
-              <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
-                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" />
-              </marker>
-              <marker id="arrow-red" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
-                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ef4444" />
-              </marker>
-              <marker id="arrow-blue" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
-                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#3b82f6" />
-              </marker>
-              <marker id="arrow-yellow" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
-                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#facc15" />
-              </marker>
-              <marker id="arrow-black" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
-                <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#000000" />
-              </marker>
+              {['#ffffff', '#ef4444', '#3b82f6', '#facc15', '#000000'].map((c) => (
+                <marker key={c} id={`arrow-${c.replace('#', '')}`} viewBox="0 0 10 10" refX="1" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+                  <path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill={c} />
+                </marker>
+              ))}
               <linearGradient id="grassMain" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="#22c55e" />
                 <stop offset="50%" stopColor="#16a34a" />
@@ -664,6 +768,7 @@ export default function App() {
               />
             ))}
 
+            {/* LÍNEAS REGLAMENTARIAS */}
             {isPC ? (
               <g stroke="white" strokeWidth="0.7" fill="none" strokeLinecap="round">
                 <rect x="2" y="2" width={pitchMode === 'half' ? 51 : 101} height="64" rx="0.2" />
@@ -704,24 +809,9 @@ export default function App() {
               </g>
             )}
 
+            {/* TRAZADOS TÁCTICOS */}
             {drawings.map((l) => {
-              const markerId = l.type === 'straight' || l.type === 'dashed' ? '' : (
-                l.color === '#ef4444' ? 'url(#arrow-red)' :
-                l.color === '#3b82f6' ? 'url(#arrow-blue)' :
-                l.color === '#facc15' ? 'url(#arrow-yellow)' :
-                l.color === '#000000' ? 'url(#arrow-black)' : 'url(#arrow-white)'
-              );
-              const dx = l.end.x - l.start.x;
-              const dy = l.end.y - l.start.y;
-              const dist = Math.hypot(dx, dy) || 0.001;
-              const ux = dx / dist;
-              const uy = dy / dist;
-              const strokeW = l.width || 1.4;
-              const isArrow = l.type !== 'straight' && l.type !== 'block';
-              const shortenDist = isArrow ? strokeW * 3.2 : 0;
-              const endX = dist > shortenDist ? l.start.x + ux * (dist - shortenDist) : l.start.x;
-              const endY = dist > shortenDist ? l.start.y + uy * (dist - shortenDist) : l.start.y;
-
+              const markerId = l.type === 'straight' || l.type === 'dashed' ? '' : `url(#arrow-${(l.color || '#ffffff').replace('#', '')})`;
               return (
                 <g key={l.id} onPointerDown={(e) => {
                   if (tool === 'eraser') {
@@ -729,48 +819,17 @@ export default function App() {
                     setDrawings((prev) => prev.filter((d) => d.id !== l.id));
                   }
                 }}>
-                  {l.type === 'wavy' ? (
-                    <path
-                      fill="none"
-                      stroke={l.color}
-                      strokeWidth={strokeW}
-                      strokeLinecap="round"
-                      markerEnd={markerId}
-                      d={(function () {
-                        const effectiveDist = dist > shortenDist ? dist - shortenDist : 0.001;
-                        const numWaves = Math.max(1, Math.round(effectiveDist / 8));
-                        const waveLen = effectiveDist / numWaves;
-                        const amp = 2.4;
-                        const px = -uy;
-                        const py = ux;
-                        let pathD = `M ${l.start.x} ${l.start.y}`;
-                        for (let i = 0; i < numWaves; i++) {
-                          const bX = l.start.x + ux * (i * waveLen);
-                          const bY = l.start.y + uy * (i * waveLen);
-                          const eX = l.start.x + ux * ((i + 1) * waveLen);
-                          const eY = l.start.y + uy * ((i + 1) * waveLen);
-                          const cp1X = bX + ux * (waveLen * 0.35) + px * amp;
-                          const cp1Y = bY + uy * (waveLen * 0.35) + py * amp;
-                          const cp2X = bX + ux * (waveLen * 0.65) - px * amp;
-                          const cp2Y = bY + uy * (waveLen * 0.65) - py * amp;
-                          pathD += ` C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${eX} ${eY}`;
-                        }
-                        return pathD;
-                      })()}
-                    />
-                  ) : (
-                    <line
-                      x1={l.start.x}
-                      y1={l.start.y}
-                      x2={endX}
-                      y2={endY}
-                      stroke={l.color}
-                      strokeWidth={strokeW}
-                      strokeLinecap="round"
-                      strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'}
-                      markerEnd={markerId}
-                    />
-                  )}
+                  <line
+                    x1={l.start.x}
+                    y1={l.start.y}
+                    x2={l.end.x}
+                    y2={l.end.y}
+                    stroke={l.color}
+                    strokeWidth={l.width || 1.4}
+                    strokeLinecap="round"
+                    strokeDasharray={l.type === 'dashed' ? '3,2' : 'none'}
+                    markerEnd={markerId}
+                  />
                 </g>
               );
             })}
@@ -788,6 +847,7 @@ export default function App() {
               />
             )}
 
+            {/* ELEMENTOS Y MATERIALES EN CANCHA */}
             {objects.map((obj) => {
               if (obj.type === 'player') {
                 const playerColor = obj.customColor || (
@@ -842,25 +902,94 @@ export default function App() {
                   </g>
                 );
               }
-              if (obj.type === 'cone') {
-                return (
-                  <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => handlePointerDown(e, obj)}>
-                    <polygon points="0,-2.5 -2.2,2.5 2.2,2.5" fill="#ea580c" stroke="#ffffff" strokeWidth="0.3" />
-                  </g>
-                );
-              }
-              return null;
+
+              // MATERIALES DE ENTRENAMIENTO SVG CON ROTACIÓN
+              const rot = obj.rotation || 0;
+              const isSel = selectedObj?.id === obj.id;
+              return (
+                <g
+                  key={obj.id}
+                  transform={`translate(${obj.x}, ${obj.y}) rotate(${rot})`}
+                  onPointerDown={(e) => handlePointerDown(e, obj)}
+                  className="cursor-grab active:cursor-grabbing touch-none select-none"
+                >
+                  {isSel && <circle r="4.5" fill="none" stroke="#facc15" strokeWidth="0.5" strokeDasharray="1,1" />}
+                  {obj.type.startsWith('cone') && (
+                    <polygon points="0,-2.8 -2.4,2.2 2.4,2.2" fill={obj.color || '#ea580c'} stroke="#ffffff" strokeWidth="0.3" />
+                  )}
+                  {obj.type === 'mini_goal' && (
+                    <g>
+                      <rect x="-4" y="-2" width="8" height="4" fill="none" stroke="#ffffff" strokeWidth="0.6" rx="0.5" />
+                      <line x1="-4" y1="0" x2="4" y2="0" stroke="#facc15" strokeWidth="0.4" strokeDasharray="1,1" />
+                    </g>
+                  )}
+                  {obj.type === 'ladder' && (
+                    <g>
+                      <rect x="-2" y="-6" width="4" height="12" fill="none" stroke="#ffffff" strokeWidth="0.4" />
+                      {[-4, -2, 0, 2, 4].map((ly) => (
+                        <line key={ly} x1="-2" y1={ly} x2="2" y2={ly} stroke="#facc15" strokeWidth="0.5" />
+                      ))}
+                    </g>
+                  )}
+                  {obj.type === 'hurdle' && (
+                    <g>
+                      <line x1="-3.5" y1="0" x2="3.5" y2="0" stroke="#facc15" strokeWidth="1" strokeLinecap="round" />
+                      <line x1="-3" y1="-1" x2="-3" y2="1" stroke="#ffffff" strokeWidth="0.5" />
+                      <line x1="3" y1="-1" x2="3" y2="1" stroke="#ffffff" strokeWidth="0.5" />
+                    </g>
+                  )}
+                  {obj.type === 'dummy' && (
+                    <g>
+                      <circle cx="0" cy="-2.5" r="1.3" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.3" />
+                      <path d="M -2.2 2.5 L -1.5 -0.8 L 1.5 -0.8 L 2.2 2.5 Z" fill="#0284c7" stroke="#ffffff" strokeWidth="0.3" />
+                    </g>
+                  )}
+                  {obj.type === 'disc' && (
+                    <ellipse cx="0" cy="0" rx="2.5" ry="1.2" fill="#eab308" stroke="#ffffff" strokeWidth="0.3" />
+                  )}
+                  {obj.type === 'ring' && (
+                    <circle cx="0" cy="0" r="3" fill="none" stroke="#ef4444" strokeWidth="0.8" />
+                  )}
+                  {obj.type === 'pole' && (
+                    <line x1="0" y1="-4" x2="0" y2="4" stroke="#eab308" strokeWidth="1.2" strokeLinecap="round" />
+                  )}
+                </g>
+              );
             })}
           </svg>
         ) : (
-          <Suspense fallback={<div className="text-white font-bold text-sm">Cargando motor 3D...</div>}>
-            <Canvas shadows className="w-full h-full">
-              <Scene3D objects={objects} selectedObj={selectedObj} setSelectedObj={setSelectedObj} teamColors={teamColors} />
-            </Canvas>
-          </Suspense>
+          <div className="relative w-full h-full">
+            {/* BOTÓN FLOTANTE PARA ACTIVAR / BLOQUEAR CÁMARA */}
+            <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl p-2 shadow-2xl flex items-center gap-2">
+              <button
+                onClick={() => setCameraLocked(!cameraLocked)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                  cameraLocked
+                    ? 'bg-emerald-600 text-white shadow-lg'
+                    : 'bg-amber-500 text-black shadow-lg animate-pulse'
+                }`}
+              >
+                {cameraLocked ? <Lock className="w-4 h-4" /> : <Move className="w-4 h-4" />}
+                <span>{cameraLocked ? 'Cámara Bloqueada (Mover Fichas)' : 'Rotando Cancha (Orbitar)'}</span>
+              </button>
+            </div>
+
+            <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
+              <Canvas frameloop="demand" dpr={[1, 1.5]} shadows className="w-full h-full">
+                <Scene3D
+                  objects={objects}
+                  selectedObj={selectedObj}
+                  setSelectedObj={setSelectedObj}
+                  teamColors={teamColors}
+                  cameraLocked={cameraLocked}
+                />
+              </Canvas>
+            </Suspense>
+          </div>
         )}
       </main>
 
+      {/* FOOTER INFERIOR */}
       <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 overflow-x-auto max-w-full">
         <div className="flex items-center gap-2">
           <button
@@ -952,6 +1081,7 @@ export default function App() {
         </div>
       </footer>
 
+      {/* MODAL SISTEMAS */}
       {showSystemsMenu && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-5 max-w-xs w-full text-white">
@@ -974,20 +1104,7 @@ export default function App() {
         </div>
       )}
 
-      {showTrainingMenu && (
-        <div className="fixed bottom-16 left-4 bg-zinc-950 border border-zinc-800 rounded-2xl p-2 z-40 flex gap-2">
-          <button
-            onClick={() => {
-              addElement('cone');
-              setShowTrainingMenu(false);
-            }}
-            className="px-3 py-1 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 border border-zinc-700"
-          >
-            ▲ Cono
-          </button>
-        </div>
-      )}
-
+      {/* MODAL PALETA CAMISETAS */}
       {showKitPalette && (
         <div className="fixed bottom-16 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-2xl p-2.5 shadow-2xl flex items-center gap-3 z-40">
           <div className="flex items-center gap-1">
@@ -1024,6 +1141,7 @@ export default function App() {
         </div>
       )}
 
+      {/* MODAL TRAZADOS */}
       {showLinePalette && (
         <div className="fixed bottom-16 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 rounded-2xl p-2 shadow-2xl z-40 flex items-center gap-2">
           <button
@@ -1044,15 +1162,6 @@ export default function App() {
           >
             ⤏ Discontinua
           </button>
-          <button
-            onClick={() => {
-              setLineType('wavy');
-              setTool('draw');
-            }}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold ${lineType === 'wavy' ? 'bg-amber-500 text-black' : 'bg-zinc-900 text-white'}`}
-          >
-            〰 Dribling
-          </button>
           <div className="flex items-center gap-1">
             {['#ffffff', '#ef4444', '#3b82f6', '#facc15'].map((c) => (
               <button
@@ -1069,10 +1178,39 @@ export default function App() {
         </div>
       )}
 
+      {/* MODAL GEMINI IA */}
+      {showPromptModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-white">🤖 Generador Táctico IA</h3>
+              <button onClick={() => setShowPromptModal(false)} className="text-zinc-400 hover:text-white"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleGenerateTacticalPrompt}>
+              <textarea
+                value={promptText}
+                onChange={(e) => setPromptText(e.target.value)}
+                placeholder="Ejemplo: Salida 4-3-3 con laterales abiertos y presión alta..."
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-white text-sm mb-3 outline-none focus:border-amber-400"
+                rows={3}
+              />
+              <button
+                type="submit"
+                disabled={isGeneratingPrompt}
+                className="w-full bg-amber-500 text-black py-2.5 rounded-xl font-bold disabled:opacity-50"
+              >
+                {isGeneratingPrompt ? 'Generando posiciones...' : '✨ Armar en la Cancha'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR FICHA */}
       {editingPlayer && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-5 max-w-xs w-full text-white">
-            <h3 className="font-bold text-sm mb-3">Editar Jugador</h3>
+            <h3 className="font-bold text-sm mb-3">Editar Ficha</h3>
             <div className="space-y-3">
               <input
                 type="text"
