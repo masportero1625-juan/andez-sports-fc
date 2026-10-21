@@ -980,12 +980,12 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
         </defs>
 
           {/* CÉSPED PRO UNIVERSAL (PC, TABLET Y MÓVIL) */}
-          <rect width="400" height="400" x="-150" y="-150" fill="#15803d" />
-          <g opacity="0.13">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <rect key={i} x={-20 + i * 6} y="-40" width="3" height="200" fill="#ffffff" />
-            ))}
-          </g>
+    <rect width="450" height="450" x="-150" y="-150" fill="#15803d" />
+    <g opacity="0.13">
+      {Array.from({ length: 26 }).map((_, i) => (
+        <rect key={i} x={-20 + i * 7} y="-50" width="3.5" height="220" fill="#ffffff" />
+      ))}
+    </g>
           {/* DIBUJO DE CANCHA, ARCOS Y ÁREAS */}
           {isPC ? (
             <g stroke="white" strokeWidth="0.8" fill="none">
