@@ -85,25 +85,22 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   let content = null;
 
   if (obj.type === 'mini_goal') {
-    // Mini portería táctica con profundidad, marco de aluminio y red tejida
+    // Mini portería táctica reglamentaria vista cenital (Estándar TacticalPad 2D)
     content = (
       <g>
-        {/* Sombra de contacto suave sobre el césped */}
-        <polygon points="-4.8,1.4 4.8,1.4 5.6,-1.4 -3.8,-1.4" fill="rgba(0,0,0,0.32)" />
-        {/* Malla con textura de red microperforada */}
-        <polygon points="-4.2,0.8 4.2,0.8 5.0,-1.2 -3.4,-1.2" fill="rgba(248,250,252,0.4)" stroke="#64748b" strokeWidth="0.18" strokeDasharray="0.35,0.35" />
-        {/* Estructura trasera tubular */}
-        <line x1="-3.4" y1="-1.2" x2="5.0" y2="-1.2" stroke="#475569" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="-3.4" y1="-1.2" x2="-4.2" y2="0.8" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="5.0" y1="-1.2" x2="4.2" y2="0.8" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        {/* Travesaño frontal de aluminio blanco con reflejo superior */}
-        <line x1="-4.3" y1="0.8" x2="4.3" y2="0.8" stroke="#94a3b8" strokeWidth="0.65" strokeLinecap="round" />
-        <line x1="-4.3" y1="0.65" x2="4.3" y2="0.65" stroke="#ffffff" strokeWidth="0.35" strokeLinecap="round" />
-        {/* Postes laterales con tapas redondeadas */}
-        <circle cx="-4.2" cy="0.8" r="0.45" fill="#f8fafc" stroke="#64748b" strokeWidth="0.15" />
-        <circle cx="4.2" cy="0.8" r="0.45" fill="#f8fafc" stroke="#64748b" strokeWidth="0.15" />
+        {/* Sombra de apoyo en el césped */}
+        <rect x="-2.6" y="-1.6" width="5.2" height="1.8" rx="0.2" fill="rgba(0,0,0,0.25)" />
+        {/* Red de nylon translúcida */}
+        <rect x="-2.5" y="-1.5" width="5.0" height="1.5" fill="rgba(255,255,255,0.4)" stroke="#94a3b8" strokeWidth="0.12" strokeDasharray="0.3,0.3" />
+        {/* Estructura tubular lateral y trasera */}
+        <line x1="-2.5" y1="-1.5" x2="2.5" y2="-1.5" stroke="#cbd5e1" strokeWidth="0.2" />
+        <line x1="-2.5" y1="-1.5" x2="-2.5" y2="0" stroke="#cbd5e1" strokeWidth="0.2" />
+        <line x1="2.5" y1="-1.5" x2="2.5" y2="0" stroke="#cbd5e1" strokeWidth="0.2" />
+        {/* Travesaño frontal blanco de alta visibilidad */}
+        <line x1="-2.5" y1="0" x2="2.5" y2="0" stroke="#ffffff" strokeWidth="0.4" strokeLinecap="round" />
       </g>
     );
+  }
   } else if (obj.type === 'dummy') {
     // Maniquí de entrenamiento profesional con silueta anatómica estilizada y cruceta metálica
     content = (
