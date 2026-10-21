@@ -938,12 +938,18 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
           </radialGradient>  
         </defs>
 
-          {/* CÉSPED PRO CALIBRADO UNIVERSAL (PC, TABLET, MOVIL) */}
-          <rect width="450" height="450" x="-150" y="-150" fill="#15803d" />
-          <g opacity="0.14">
-            {Array.from({ length: 26 }).map((_, i) => (
-              <rect key={i} x={-35 + i * 7} y="-50" width="3.5" height="220" fill="#ffffff" />
-            ))}
+          {/* CÉSPED PRO SIMÉTRICO DINÁMICO (PC HORIZONTAL / MÓVIL VERTICAL) */}
+          <rect width="500" height="500" x="-200" y="-200" fill="#15803d" />
+          <g opacity="0.12">
+            {isPC ? (
+              Array.from({ length: 12 }).map((_, i) => (
+                <rect key={i} x="-20" y={-6.8 + i * 6.8} width="150" height="3.4" fill="#ffffff" />
+              ))
+            ) : (
+              Array.from({ length: 14 }).map((_, i) => (
+                <rect key={i} x={-10 + i * 6.8} y="-20" width="3.4" height="150" fill="#ffffff" />
+              ))
+            )}
           </g>
           {/* DIBUJO DE CANCHA, ARCOS Y ÁREAS */}
           {isPC ? (
