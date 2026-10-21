@@ -88,17 +88,12 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
     // Mini portería vista cenital táctica (Estándar TacticalPad 2D)
     content = (
       <g>
-        {/* Sombra suave de apoyo */}
         <rect x="-4.2" y="-1.5" width="8.4" height="3.2" rx="0.4" fill="rgba(0,0,0,0.28)" />
-        {/* Red de fondo vista desde arriba */}
         <rect x="-4.0" y="-1.2" width="8.0" height="2.2" fill="rgba(241,245,249,0.5)" stroke="#94a3b8" strokeWidth="0.2" strokeDasharray="0.4,0.4" />
-        {/* Tirantes laterales y trasero */}
         <line x1="-4.0" y1="-1.2" x2="-4.0" y2="1.0" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
         <line x1="4.0" y1="-1.2" x2="4.0" y2="1.0" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
         <line x1="-4.0" y1="-1.2" x2="4.0" y2="-1.2" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        {/* Travesaño frontal blanco reflectante de alta definición */}
         <line x1="-4.2" y1="1.0" x2="4.2" y2="1.0" stroke="#ffffff" strokeWidth="0.65" strokeLinecap="round" />
-        {/* Postes frontales */}
         <circle cx="-4.0" cy="1.0" r="0.4" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.15" />
         <circle cx="4.0" cy="1.0" r="0.4" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.15" />
       </g>
@@ -107,122 +102,92 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
     // Maniquí vista cenital táctica esbelta (Estándar TacticalPad 2D)
     content = (
       <g>
-        {/* Sombra en el césped */}
         <ellipse cx="0.8" cy="1.0" rx="1.8" ry="1.0" fill="rgba(0,0,0,0.3)" />
-        {/* Base en cruz de apoyo al suelo */}
         <line x1="-1.2" y1="0" x2="1.2" y2="0" stroke="#1e293b" strokeWidth="0.3" strokeLinecap="round" />
         <line x1="0" y1="-0.8" x2="0" y2="0.8" stroke="#1e293b" strokeWidth="0.3" strokeLinecap="round" />
-        {/* Silueta de hombros y cabeza vista cenital estilizada */}
         <ellipse cx="0" cy="0" rx="1.3" ry="0.6" fill="#facc15" stroke="#ca8a04" strokeWidth="0.25" />
         <circle cx="0" cy="0" r="0.45" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.2" />
       </g>
     );
-  }
   } else if (obj.type === 'hurdle') {
-    // Valla de salto técnica
     content = (
-      <svg viewBox="0 0 80 40" width="8" height="4" x="-4" y="-2" overflow="visible">
-        <ellipse cx="16" cy="34" rx="14" ry="4.5" fill="rgba(0,0,0,0.28)" />
-        <ellipse cx="64" cy="34" rx="14" ry="4.5" fill="rgba(0,0,0,0.28)" />
-        <line x1="6" y1="36" x2="26" y2="32" stroke="#ca8a04" strokeWidth="3.2" strokeLinecap="round" />
-        <line x1="54" y1="36" x2="74" y2="32" stroke="#ca8a04" strokeWidth="3.2" strokeLinecap="round" />
-        <line x1="16" y1="34" x2="16" y2="6" stroke="#facc15" strokeWidth="3.5" strokeLinecap="round" />
-        <line x1="64" y1="34" x2="64" y2="6" stroke="#ca8a04" strokeWidth="3.5" strokeLinecap="round" />
-        <rect x="12" y="2" width="56" height="6.5" rx="2" fill="#facc15" stroke="#ca8a04" strokeWidth="1.2" />
-        <line x1="13" y1="5.2" x2="67" y2="5.2" stroke="#ffffff" strokeWidth="1.6" opacity="0.8" />
-      </svg>
+      <g>
+        <ellipse cx="-2.4" cy="0.6" rx="1.1" ry="0.4" fill="rgba(0,0,0,0.28)" />
+        <ellipse cx="2.4" cy="0.6" rx="1.1" ry="0.4" fill="rgba(0,0,0,0.28)" />
+        <line x1="-2.4" y1="-0.8" x2="-2.4" y2="0.8" stroke="#ca8a04" strokeWidth="0.4" strokeLinecap="round" />
+        <line x1="2.4" y1="-0.8" x2="2.4" y2="0.8" stroke="#ca8a04" strokeWidth="0.4" strokeLinecap="round" />
+        <line x1="-2.4" y1="0" x2="2.4" y2="0" stroke="#facc15" strokeWidth="0.6" strokeLinecap="round" />
+      </g>
     );
   } else if (obj.type === 'cone') {
-    // Cono de delimitación con base octogonal y sombra nítida
     const isCustom = obj.color && obj.color !== '#ea580c';
-    const fillCol = isCustom ? obj.color : '#f97316';
-    const darkCol = isCustom ? obj.color : '#c2410c';
+    const cFill = isCustom ? obj.color : '#ea580c';
     content = (
-      <svg viewBox="0 0 50 50" width="4.5" height="4.5" x="-2.25" y="-2.25" overflow="visible">
-        <ellipse cx="32" cy="38" rx="16" ry="7" fill="rgba(0,0,0,0.35)" />
-        <polygon points="8,35 42,35 38,41 4,41" fill="#7c2d12" />
-        <polygon points="8,35 42,35 39,30 11,30" fill={darkCol} />
-        <polygon points="12,32 38,32 26,4 24,4" fill={fillCol} stroke="#7c2d12" strokeWidth="0.8" />
-        <polygon points="17,23 33,23 30,15 20,15" fill="#ffffff" />
-        <circle cx="25" cy="4" r="2.4" fill={fillCol} />
-      </svg>
+      <g>
+        <ellipse cx="0.4" cy="0.4" rx="1.6" ry="1.0" fill="rgba(0,0,0,0.3)" />
+        <rect x="-1.2" y="-1.2" width="2.4" height="2.4" rx="0.3" fill="#c2410c" />
+        <circle cx="0" cy="0" r="0.9" fill={cFill} />
+        <circle cx="0" cy="0" r="0.35" fill="#ffffff" />
+      </g>
     );
   } else if (obj.type === 'saucer') {
-    // Plato chino / lenteja
     const c = obj.color || '#facc15';
     content = (
-      <svg viewBox="0 0 40 30" width="3.6" height="2.7" x="-1.8" y="-1.35" overflow="visible">
-        <ellipse cx="23" cy="22" rx="15" ry="6" fill="rgba(0,0,0,0.28)" />
-        <ellipse cx="20" cy="18" rx="16" ry="6.5" fill={c} stroke="rgba(0,0,0,0.25)" strokeWidth="1" />
-        <ellipse cx="20" cy="16" rx="9" ry="3.5" fill="#fef08a" />
-        <ellipse cx="20" cy="16" rx="3.5" ry="1.5" fill="#0f172a" />
-      </svg>
-    );
-  } else if (obj.type === 'pole') {
-    // Estaca de eslalon fina con tope de goma
-    const c = obj.color || '#facc15';
-    content = (
-      <svg viewBox="0 0 30 90" width="2.4" height="7.2" x="-1.2" y="-3.6" overflow="visible">
-        <polygon points="15,84 18,84 30,55 27,55" fill="rgba(0,0,0,0.28)" />
-        <circle cx="15" cy="84" r="3.2" fill="rgba(0,0,0,0.35)" />
-        <rect x="12" y="72" width="6" height="12" rx="1.5" fill="#1e293b" />
-        <rect x="13.5" y="10" width="3" height="66" rx="1.2" fill={c} stroke="#ca8a04" strokeWidth="0.8" />
-        <circle cx="15" cy="8" r="4.2" fill="#ef4444" stroke="#991b1b" strokeWidth="1" />
-      </svg>
+      <g>
+        <ellipse cx="0.3" cy="0.3" rx="1.4" ry="0.9" fill="rgba(0,0,0,0.25)" />
+        <circle cx="0" cy="0" r="1.3" fill={c} stroke="rgba(0,0,0,0.2)" strokeWidth="0.15" />
+        <circle cx="0" cy="0" r="0.3" fill="#0f172a" />
+      </g>
     );
   } else if (obj.type === 'ladder') {
-    // Escalera de coordinación
     content = (
-      <svg viewBox="0 0 30 120" width="3" height="12" x="-1.5" y="-6" overflow="visible">
-        <polygon points="2,2 28,2 30,118 4,118" fill="rgba(0,0,0,0.16)" />
-        <line x1="4" y1="2" x2="4" y2="118" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" />
-        <line x1="26" y1="2" x2="26" y2="118" stroke="#0f172a" strokeWidth="2.2" strokeLinecap="round" />
-        {[10, 26, 42, 58, 74, 90, 106].map(pos => (
-          <line key={pos} x1="4" y1={pos} x2="26" y2={pos} stroke="#facc15" strokeWidth="3.2" strokeLinecap="round" />
+      <g>
+        <rect x="-1.8" y="-7.2" width="3.6" height="14.4" fill="rgba(0,0,0,0.15)" />
+        <line x1="-1.6" y1="-7.0" x2="-1.6" y2="7.0" stroke="#0f172a" strokeWidth="0.3" strokeLinecap="round" />
+        <line x1="1.6" y1="-7.0" x2="1.6" y2="7.0" stroke="#0f172a" strokeWidth="0.3" strokeLinecap="round" />
+        {[-6.0, -4.0, -2.0, 0, 2.0, 4.0, 6.0].map(pos => (
+          <line key={pos} x1="-1.6" y1={pos} x2="1.6" y2={pos} stroke="#facc15" strokeWidth="0.5" strokeLinecap="round" />
         ))}
-      </svg>
+      </g>
     );
   } else if (obj.type === 'ring') {
-    // Aro de agilidad
     const c = obj.color || '#38bdf8';
     content = (
-      <svg viewBox="0 0 50 50" width="4.5" height="4.5" x="-2.25" y="-2.25" overflow="visible">
-        <ellipse cx="27" cy="27" rx="20" ry="14" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="3.5" />
-        <ellipse cx="25" cy="25" rx="20" ry="14" fill="none" stroke={c} strokeWidth="4.5" />
-      </svg>
+      <g>
+        <ellipse cx="0.3" cy="0.3" rx="2.2" ry="2.2" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.4" />
+        <circle cx="0" cy="0" r="2.2" fill="none" stroke={c} strokeWidth="0.5" />
+      </g>
+    );
+  } else if (obj.type === 'pole') {
+    const c = obj.color || '#facc15';
+    content = (
+      <g>
+        <ellipse cx="1.2" cy="1.2" rx="2.0" ry="0.6" fill="rgba(0,0,0,0.28)" transform="rotate(-30, 1.2, 1.2)" />
+        <circle cx="0" cy="0" r="0.9" fill="#1e293b" />
+        <circle cx="0" cy="0" r="0.35" fill={c} />
+      </g>
     );
   } else if (obj.type === 'rebounder') {
-    // Panel de pases
     content = (
-      <svg viewBox="0 0 80 40" width="8" height="4" x="-4" y="-2" overflow="visible">
-        <polygon points="6,36 74,36 78,24 10,24" fill="rgba(0,0,0,0.3)" />
-        <line x1="16" y1="24" x2="16" y2="6" stroke="#334155" strokeWidth="3.5" />
-        <line x1="64" y1="24" x2="64" y2="6" stroke="#334155" strokeWidth="3.5" />
-        <polygon points="6,6 74,6 74,30 6,30" fill="#d97706" stroke="#78350f" strokeWidth="1.8" />
-        <line x1="10" y1="18" x2="70" y2="18" stroke="#451a03" strokeWidth="1.6" strokeDasharray="6,6" />
-      </svg>
+      <g>
+        <rect x="-3.6" y="-0.6" width="7.2" height="1.8" fill="rgba(0,0,0,0.25)" />
+        <rect x="-3.5" y="-0.5" width="7.0" height="1.0" rx="0.2" fill="#d97706" stroke="#78350f" strokeWidth="0.2" />
+      </g>
     );
   } else if (obj.type === 'trampoline') {
-    // Trampolín de reacción
     content = (
-      <svg viewBox="0 0 60 40" width="6" height="4" x="-3" y="-2" overflow="visible">
-        <ellipse cx="33" cy="24" rx="24" ry="13" fill="rgba(0,0,0,0.3)" />
-        {[-14, 0, 14].map(xP => (
-          <line key={xP} x1={30 + xP} y1="18" x2={30 + xP} y2="30" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
-        ))}
-        <ellipse cx="30" cy="18" rx="23" ry="12" fill="#0f172a" stroke="#38bdf8" strokeWidth="3.5" />
-        <ellipse cx="30" cy="18" rx="16" ry="8" fill="#0284c7" stroke="#bae6fd" strokeWidth="1.5" strokeDasharray="4,4" />
-      </svg>
+      <g>
+        <ellipse cx="0.4" cy="0.4" rx="2.6" ry="2.6" fill="rgba(0,0,0,0.25)" />
+        <circle cx="0" cy="0" r="2.5" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.5" />
+        <circle cx="0" cy="0" r="1.8" fill="#0284c7" stroke="#bae6fd" strokeWidth="0.2" strokeDasharray="0.6,0.6" />
+      </g>
     );
   } else if (obj.type === 'mat') {
-    // Colchoneta
     content = (
-      <svg viewBox="0 0 80 40" width="8" height="4" x="-4" y="-2" overflow="visible">
-        <polygon points="6,34 74,34 78,18 10,18" fill="rgba(0,0,0,0.25)" />
-        <polygon points="8,32 72,32 76,19 12,19" fill="#2563eb" stroke="#1d4ed8" strokeWidth="1.2" />
-        <polygon points="8,32 72,32 72,36 8,36" fill="#1e40af" />
-        <polygon points="72,32 76,19 76,23 72,36" fill="#1e3a8a" />
-      </svg>
+      <g>
+        <rect x="-3.6" y="-1.8" width="7.2" height="3.6" rx="0.3" fill="rgba(0,0,0,0.2)" />
+        <rect x="-3.4" y="-1.6" width="6.8" height="3.2" rx="0.2" fill="#2563eb" stroke="#1d4ed8" strokeWidth="0.2" />
+      </g>
     );
   }
 
