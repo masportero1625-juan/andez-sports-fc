@@ -85,108 +85,155 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   let content = null;
 
   if (obj.type === 'mini_goal') {
-    // Mini portería vista cenital táctica (Estándar TacticalPad 2D)
+    // Mini portería táctica con profundidad, marco de aluminio y red tejida
     content = (
       <g>
-        <rect x="-4.2" y="-1.5" width="8.4" height="3.2" rx="0.4" fill="rgba(0,0,0,0.28)" />
-        <rect x="-4.0" y="-1.2" width="8.0" height="2.2" fill="rgba(241,245,249,0.5)" stroke="#94a3b8" strokeWidth="0.2" strokeDasharray="0.4,0.4" />
-        <line x1="-4.0" y1="-1.2" x2="-4.0" y2="1.0" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="4.0" y1="-1.2" x2="4.0" y2="1.0" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="-4.0" y1="-1.2" x2="4.0" y2="-1.2" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
-        <line x1="-4.2" y1="1.0" x2="4.2" y2="1.0" stroke="#ffffff" strokeWidth="0.65" strokeLinecap="round" />
-        <circle cx="-4.0" cy="1.0" r="0.4" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.15" />
-        <circle cx="4.0" cy="1.0" r="0.4" fill="#ffffff" stroke="#94a3b8" strokeWidth="0.15" />
+        {/* Sombra de contacto suave sobre el césped */}
+        <polygon points="-4.8,1.4 4.8,1.4 5.6,-1.4 -3.8,-1.4" fill="rgba(0,0,0,0.32)" />
+        {/* Malla con textura de red microperforada */}
+        <polygon points="-4.2,0.8 4.2,0.8 5.0,-1.2 -3.4,-1.2" fill="rgba(248,250,252,0.4)" stroke="#64748b" strokeWidth="0.18" strokeDasharray="0.35,0.35" />
+        {/* Estructura trasera tubular */}
+        <line x1="-3.4" y1="-1.2" x2="5.0" y2="-1.2" stroke="#475569" strokeWidth="0.3" strokeLinecap="round" />
+        <line x1="-3.4" y1="-1.2" x2="-4.2" y2="0.8" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="5.0" y1="-1.2" x2="4.2" y2="0.8" stroke="#64748b" strokeWidth="0.35" strokeLinecap="round" />
+        {/* Travesaño frontal de aluminio blanco con reflejo superior */}
+        <line x1="-4.3" y1="0.8" x2="4.3" y2="0.8" stroke="#94a3b8" strokeWidth="0.65" strokeLinecap="round" />
+        <line x1="-4.3" y1="0.65" x2="4.3" y2="0.65" stroke="#ffffff" strokeWidth="0.35" strokeLinecap="round" />
+        {/* Postes laterales con tapas redondeadas */}
+        <circle cx="-4.2" cy="0.8" r="0.45" fill="#f8fafc" stroke="#64748b" strokeWidth="0.15" />
+        <circle cx="4.2" cy="0.8" r="0.45" fill="#f8fafc" stroke="#64748b" strokeWidth="0.15" />
       </g>
     );
   } else if (obj.type === 'dummy') {
-    // Maniquí vista cenital táctica esbelta (Estándar TacticalPad 2D)
+    // Maniquí de entrenamiento profesional con silueta anatómica estilizada y cruceta metálica
     content = (
       <g>
-        <ellipse cx="0.8" cy="1.0" rx="1.8" ry="1.0" fill="rgba(0,0,0,0.3)" />
-        <line x1="-1.2" y1="0" x2="1.2" y2="0" stroke="#1e293b" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="0" y1="-0.8" x2="0" y2="0.8" stroke="#1e293b" strokeWidth="0.3" strokeLinecap="round" />
-        <ellipse cx="0" cy="0" rx="1.3" ry="0.6" fill="#facc15" stroke="#ca8a04" strokeWidth="0.25" />
-        <circle cx="0" cy="0" r="0.45" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.2" />
+        {/* Sombra proyectada suave en ángulo */}
+        <ellipse cx="1.2" cy="1.2" rx="2.2" ry="0.9" fill="rgba(0,0,0,0.35)" transform="rotate(-15, 1.2, 1.2)" />
+        {/* Cruceta de acero de soporte en suelo */}
+        <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#0f172a" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="0" y1="-1.0" x2="0" y2="1.0" stroke="#0f172a" strokeWidth="0.35" strokeLinecap="round" />
+        <circle cx="-1.4" cy="0" r="0.2" fill="#0f172a" />
+        <circle cx="1.4" cy="0" r="0.2" fill="#0f172a" />
+        <circle cx="0" cy="-1.0" r="0.2" fill="#0f172a" />
+        <circle cx="0" cy="1.0" r="0.2" fill="#0f172a" />
+        {/* Hombros y torso estilizado (amarillo flúor de alta visibilidad) */}
+        <ellipse cx="0" cy="0" rx="1.6" ry="0.75" fill="#eab308" stroke="#ca8a04" strokeWidth="0.25" />
+        <ellipse cx="0" cy="-0.1" rx="1.3" ry="0.5" fill="#facc15" />
+        {/* Varillas de ventilación y cabeza */}
+        <line x1="-1.1" y1="0" x2="1.1" y2="0" stroke="#ca8a04" strokeWidth="0.25" strokeLinecap="round" />
+        <circle cx="0" cy="0" r="0.48" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.2" />
+        <circle cx="0" cy="-0.08" r="0.25" fill="#ffffff" opacity="0.6" />
       </g>
     );
   } else if (obj.type === 'hurdle') {
+    // Valla de agilidad con bases estabilizadoras y barra fluorescente
     content = (
       <g>
-        <ellipse cx="-2.4" cy="0.6" rx="1.1" ry="0.4" fill="rgba(0,0,0,0.28)" />
-        <ellipse cx="2.4" cy="0.6" rx="1.1" ry="0.4" fill="rgba(0,0,0,0.28)" />
-        <line x1="-2.4" y1="-0.8" x2="-2.4" y2="0.8" stroke="#ca8a04" strokeWidth="0.4" strokeLinecap="round" />
-        <line x1="2.4" y1="-0.8" x2="2.4" y2="0.8" stroke="#ca8a04" strokeWidth="0.4" strokeLinecap="round" />
-        <line x1="-2.4" y1="0" x2="2.4" y2="0" stroke="#facc15" strokeWidth="0.6" strokeLinecap="round" />
+        <ellipse cx="-2.6" cy="0.6" rx="1.0" ry="0.4" fill="rgba(0,0,0,0.28)" />
+        <ellipse cx="2.6" cy="0.6" rx="1.0" ry="0.4" fill="rgba(0,0,0,0.28)" />
+        {/* Bases laterales de goma */}
+        <line x1="-2.6" y1="-0.9" x2="-2.6" y2="0.9" stroke="#713f12" strokeWidth="0.45" strokeLinecap="round" />
+        <line x1="2.6" y1="-0.9" x2="2.6" y2="0.9" stroke="#713f12" strokeWidth="0.45" strokeLinecap="round" />
+        {/* Travesaño con franja de advertencia */}
+        <line x1="-2.6" y1="0" x2="2.6" y2="0" stroke="#ca8a04" strokeWidth="0.65" strokeLinecap="round" />
+        <line x1="-2.6" y1="-0.1" x2="2.6" y2="-0.1" stroke="#facc15" strokeWidth="0.4" strokeLinecap="round" />
+        <line x1="-1.0" y1="0" x2="1.0" y2="0" stroke="#000000" strokeWidth="0.3" strokeDasharray="0.6,0.6" />
       </g>
     );
   } else if (obj.type === 'cone') {
+    // Cono de señalización de base cuadrada biselada y luz de foco
     const isCustom = obj.color && obj.color !== '#ea580c';
     const cFill = isCustom ? obj.color : '#ea580c';
     content = (
       <g>
-        <ellipse cx="0.4" cy="0.4" rx="1.6" ry="1.0" fill="rgba(0,0,0,0.3)" />
-        <rect x="-1.2" y="-1.2" width="2.4" height="2.4" rx="0.3" fill="#c2410c" />
-        <circle cx="0" cy="0" r="0.9" fill={cFill} />
-        <circle cx="0" cy="0" r="0.35" fill="#ffffff" />
+        <ellipse cx="0.5" cy="0.5" rx="1.7" ry="1.0" fill="rgba(0,0,0,0.3)" />
+        <rect x="-1.3" y="-1.3" width="2.6" height="2.6" rx="0.35" fill="#9a3412" stroke="#7c2d12" strokeWidth="0.15" />
+        <rect x="-1.1" y="-1.1" width="2.2" height="2.2" rx="0.25" fill="#c2410c" />
+        <circle cx="0" cy="0" r="0.95" fill={cFill} />
+        <circle cx="0" cy="0" r="0.45" fill="#ffffff" />
+        <circle cx="0" cy="0" r="0.22" fill={cFill} />
       </g>
     );
   } else if (obj.type === 'saucer') {
+    // Plato / lenteja de entrenamiento cóncava
     const c = obj.color || '#facc15';
     content = (
       <g>
-        <ellipse cx="0.3" cy="0.3" rx="1.4" ry="0.9" fill="rgba(0,0,0,0.25)" />
-        <circle cx="0" cy="0" r="1.3" fill={c} stroke="rgba(0,0,0,0.2)" strokeWidth="0.15" />
-        <circle cx="0" cy="0" r="0.3" fill="#0f172a" />
+        <ellipse cx="0.35" cy="0.35" rx="1.5" ry="0.95" fill="rgba(0,0,0,0.25)" />
+        <circle cx="0" cy="0" r="1.35" fill={c} stroke="rgba(0,0,0,0.3)" strokeWidth="0.15" />
+        <circle cx="0" cy="-0.08" r="0.9" fill="#fef08a" opacity="0.8" />
+        <circle cx="0" cy="0" r="0.32" fill="#0f172a" />
       </g>
     );
   } else if (obj.type === 'ladder') {
+    // Escalera de coordinación de cintas de nylon de alta resistencia
     content = (
       <g>
-        <rect x="-1.8" y="-7.2" width="3.6" height="14.4" fill="rgba(0,0,0,0.15)" />
-        <line x1="-1.6" y1="-7.0" x2="-1.6" y2="7.0" stroke="#0f172a" strokeWidth="0.3" strokeLinecap="round" />
-        <line x1="1.6" y1="-7.0" x2="1.6" y2="7.0" stroke="#0f172a" strokeWidth="0.3" strokeLinecap="round" />
+        <rect x="-1.9" y="-7.3" width="3.8" height="14.6" rx="0.3" fill="rgba(0,0,0,0.18)" />
+        {/* Correas longitudinales negras */}
+        <line x1="-1.6" y1="-7.1" x2="-1.6" y2="7.1" stroke="#09090b" strokeWidth="0.35" strokeLinecap="round" />
+        <line x1="1.6" y1="-7.1" x2="1.6" y2="7.1" stroke="#09090b" strokeWidth="0.35" strokeLinecap="round" />
+        {/* Peldaños plásticos rígidos */}
         {[-6.0, -4.0, -2.0, 0, 2.0, 4.0, 6.0].map(pos => (
-          <line key={pos} x1="-1.6" y1={pos} x2="1.6" y2={pos} stroke="#facc15" strokeWidth="0.5" strokeLinecap="round" />
+          <g key={pos}>
+            <line x1="-1.7" y1={pos} x2="1.7" y2={pos} stroke="#ca8a04" strokeWidth="0.55" strokeLinecap="round" />
+            <line x1="-1.7" y1={pos - 0.08} x2="1.7" y2={pos - 0.08} stroke="#fef08a" strokeWidth="0.25" strokeLinecap="round" />
+          </g>
         ))}
       </g>
     );
   } else if (obj.type === 'ring') {
+    // Aro de agilidad tubular
     const c = obj.color || '#38bdf8';
     content = (
       <g>
-        <ellipse cx="0.3" cy="0.3" rx="2.2" ry="2.2" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="0.4" />
-        <circle cx="0" cy="0" r="2.2" fill="none" stroke={c} strokeWidth="0.5" />
+        <ellipse cx="0.35" cy="0.35" rx="2.3" ry="2.3" fill="none" stroke="rgba(0,0,0,0.22)" strokeWidth="0.45" />
+        <circle cx="0" cy="0" r="2.3" fill="none" stroke="#0284c7" strokeWidth="0.6" />
+        <circle cx="0" cy="0" r="2.3" fill="none" stroke={c} strokeWidth="0.4" />
       </g>
     );
   } else if (obj.type === 'pole') {
+    // Estaca de eslalon clavada con base de goma y regatón
     const c = obj.color || '#facc15';
     content = (
       <g>
-        <ellipse cx="1.2" cy="1.2" rx="2.0" ry="0.6" fill="rgba(0,0,0,0.28)" transform="rotate(-30, 1.2, 1.2)" />
-        <circle cx="0" cy="0" r="0.9" fill="#1e293b" />
-        <circle cx="0" cy="0" r="0.35" fill={c} />
+        <ellipse cx="1.3" cy="1.3" rx="2.2" ry="0.65" fill="rgba(0,0,0,0.3)" transform="rotate(-30, 1.3, 1.3)" />
+        <circle cx="0" cy="0" r="1.0" fill="#1e293b" stroke="#0f172a" strokeWidth="0.15" />
+        <circle cx="0" cy="0" r="0.65" fill="#334155" />
+        <circle cx="0" cy="0" r="0.35" fill={c} stroke="#ca8a04" strokeWidth="0.1" />
+        <circle cx="0" cy="0" r="0.12" fill="#ef4444" />
       </g>
     );
   } else if (obj.type === 'rebounder') {
+    // Panel de pases / banco con marco reforzado
     content = (
       <g>
-        <rect x="-3.6" y="-0.6" width="7.2" height="1.8" fill="rgba(0,0,0,0.25)" />
-        <rect x="-3.5" y="-0.5" width="7.0" height="1.0" rx="0.2" fill="#d97706" stroke="#78350f" strokeWidth="0.2" />
+        <rect x="-3.7" y="-0.7" width="7.4" height="2.0" rx="0.3" fill="rgba(0,0,0,0.28)" />
+        <rect x="-3.5" y="-0.5" width="7.0" height="1.0" rx="0.25" fill="#78350f" stroke="#451a03" strokeWidth="0.2" />
+        <rect x="-3.3" y="-0.4" width="6.6" height="0.6" rx="0.15" fill="#d97706" />
+        <line x1="-3.0" y1="-0.1" x2="3.0" y2="-0.1" stroke="#fef3c7" strokeWidth="0.15" opacity="0.6" />
       </g>
     );
   } else if (obj.type === 'trampoline') {
+    // Trampolín de reacción con borde acolchado y lona tensada
     content = (
       <g>
-        <ellipse cx="0.4" cy="0.4" rx="2.6" ry="2.6" fill="rgba(0,0,0,0.25)" />
-        <circle cx="0" cy="0" r="2.5" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.5" />
-        <circle cx="0" cy="0" r="1.8" fill="#0284c7" stroke="#bae6fd" strokeWidth="0.2" strokeDasharray="0.6,0.6" />
+        <ellipse cx="0.4" cy="0.4" rx="2.7" ry="2.7" fill="rgba(0,0,0,0.28)" />
+        <circle cx="0" cy="0" r="2.6" fill="#1e293b" stroke="#0f172a" strokeWidth="0.2" />
+        <circle cx="0" cy="0" r="2.35" fill="#0284c7" />
+        <circle cx="0" cy="0" r="1.85" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.25" />
+        <circle cx="0" cy="0" r="1.7" fill="#0369a1" stroke="#bae6fd" strokeWidth="0.15" strokeDasharray="0.5,0.5" />
       </g>
     );
   } else if (obj.type === 'mat') {
+    // Colchoneta técnica con costuras perimetrales
     content = (
       <g>
-        <rect x="-3.6" y="-1.8" width="7.2" height="3.6" rx="0.3" fill="rgba(0,0,0,0.2)" />
-        <rect x="-3.4" y="-1.6" width="6.8" height="3.2" rx="0.2" fill="#2563eb" stroke="#1d4ed8" strokeWidth="0.2" />
+        <rect x="-3.7" y="-1.9" width="7.4" height="3.8" rx="0.35" fill="rgba(0,0,0,0.22)" />
+        <rect x="-3.5" y="-1.7" width="7.0" height="3.4" rx="0.25" fill="#1e3a8a" stroke="#172554" strokeWidth="0.2" />
+        <rect x="-3.3" y="-1.5" width="6.6" height="3.0" rx="0.2" fill="#2563eb" />
+        <rect x="-3.1" y="-1.3" width="6.2" height="2.6" fill="none" stroke="#60a5fa" strokeWidth="0.15" strokeDasharray="0.8,0.8" opacity="0.7" />
       </g>
     );
   }
