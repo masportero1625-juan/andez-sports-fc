@@ -99,9 +99,8 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
         {/* Travesaño frontal blanco de alta visibilidad */}
         <line x1="-2.5" y1="0" x2="2.5" y2="0" stroke="#ffffff" strokeWidth="0.4" strokeLinecap="round" />
       </g>
-    );
-  }
-  } else if (obj.type === 'dummy') {
+  );
+} else if (obj.type === 'dummy') {
     // Maniquí de entrenamiento profesional con silueta anatómica estilizada y cruceta metálica
     content = (
       <g>
