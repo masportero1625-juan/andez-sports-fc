@@ -938,18 +938,19 @@ CRITERIOS TÁCTICOS Y DE VELOCIDAD:
           </radialGradient>  
         </defs>
 
-          {/* CÉSPED PRO SIMÉTRICO DINÁMICO (PC HORIZONTAL / MÓVIL VERTICAL) */}
+          {/* CÉSPED PRO CALIBRADO AL RECTÁNGULO DE JUEGO */}
           <rect width="500" height="500" x="-200" y="-200" fill="#15803d" />
-          <g opacity="0.12">
-            {isPC ? (
-              Array.from({ length: 12 }).map((_, i) => (
-                <rect key={i} x="-20" y={-6.8 + i * 6.8} width="150" height="3.4" fill="#ffffff" />
-              ))
-            ) : (
-              Array.from({ length: 14 }).map((_, i) => (
-                <rect key={i} x={-10 + i * 6.8} y="-20" width="3.4" height="150" fill="#ffffff" />
-              ))
-            )}
+          <g opacity="0.13">
+            {Array.from({ length: 22 }).map((_, i) => (
+              <rect
+                key={i}
+                x={-9.2 + i * 5.61}
+                y="-50"
+                width="2.805"
+                height="220"
+                fill="#ffffff"
+              />
+            ))}
           </g>
           {/* DIBUJO DE CANCHA, ARCOS Y ÁREAS */}
           {isPC ? (
