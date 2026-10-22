@@ -479,42 +479,147 @@ function ProceduralPlayer3D({ position, color, number, isSelected, onClick }) {
 }
 
 
-const PLAYER_MODEL_URL = `${import.meta.env.BASE_URL || '/'}models/andez-player.glb`;
+function Player3D({ position, color, number, isSelected, onClick }) {
+  const shirtColor = color || '#2563eb';
+  const shortsColor = '#ffffff';
+  const skinColor = '#dca783';
+  const hairColor = '#1f1b18';
+  const sockColor = color || '#2563eb';
+  const bootColor = '#111827';
 
-function PlayerModelGLTF({ position, color, number, isSelected, onClick }) {
-  const { scene } = useGLTF(PLAYER_MODEL_URL);
-  const cloned = useMemo(() => scene.clone(), [scene]);
+  const bodyGroup = useRef();
+  const leftArmRef = useRef();
+  const rightArmRef = useRef();
+  const headRef = useRef();
 
-  useEffect(() => {
-    cloned.traverse((child) => {
-      if (child.isMesh && child.material) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        if (/shirt|jersey|top|body|cloth|character/i.test(child.name || child.material.name)) {
-          child.material = child.material.clone();
-          child.material.color.set(color || '#2563eb');
-        }
-      }
-    });
-  }, [cloned, color]);
+  const animOffset = useMemo(() => (Number(number) || 1) * 0.45, [number]);
+
+  const posX = (position?.x ?? 52.5) - 52.5;
+  const posZ = (position?.y ?? 34) - 34;
+
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime() * 2 + animOffset;
+    if (bodyGroup.current) {
+      bodyGroup.current.position.y = Math.sin(t) * 0.025;
+    }
+    if (leftArmRef.current && rightArmRef.current) {
+      leftArmRef.current.rotation.x = Math.sin(t) * 0.06;
+      rightArmRef.current.rotation.x = -Math.sin(t) * 0.06;
+    }
+    if (headRef.current) {
+      headRef.current.rotation.y = Math.sin(t * 0.5) * 0.05;
+    }
+  });
 
   return (
-    <group
-      position={[position.x - 52.5, 0, position.y - 34]}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
-    >
-      <primitive object={cloned} scale={[1.15, 1.15, 1.15]} />
-      <Html center position={[0, 2.1, 0.2]} distanceFactor={16}>
+    <group position={[posX, 0, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      {isSelected && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+          <ringGeometry args={[1.15, 1.4, 32]} />
+          <meshBasicMaterial color="#facc15" toneMapped={false} />
+        </mesh>
+      )}
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <circleGeometry args={[0.9, 24]} />
+        <meshBasicMaterial color="#000000" opacity={0.35} transparent />
+      </mesh>
+
+      <group ref={bodyGroup} position={[0, 0, 0]} scale={[1.35, 1.35, 1.35]}>
+        <group position={[-0.23, 0, 0]}>
+          <mesh position={[0, 0.1, 0.05]} castShadow>
+            <boxGeometry args={[0.18, 0.2, 0.44]} />
+            <meshStandardMaterial color={bootColor} roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.48, 0]} castShadow>
+            <cylinderGeometry args={[0.088, 0.098, 0.58, 14]} />
+            <meshStandardMaterial color={sockColor} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 0.88, 0]} castShadow>
+            <cylinderGeometry args={[0.105, 0.092, 0.28, 14]} />
+            <meshStandardMaterial color={skinColor} roughness={0.7} />
+          </mesh>
+        </group>
+
+        <group position={[0.23, 0, 0]}>
+          <mesh position={[0, 0.1, 0.05]} castShadow>
+            <boxGeometry args={[0.18, 0.2, 0.44]} />
+            <meshStandardMaterial color={bootColor} roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.48, 0]} castShadow>
+            <cylinderGeometry args={[0.088, 0.098, 0.58, 14]} />
+            <meshStandardMaterial color={sockColor} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 0.88, 0]} castShadow>
+            <cylinderGeometry args={[0.105, 0.092, 0.28, 14]} />
+            <meshStandardMaterial color={skinColor} roughness={0.7} />
+          </mesh>
+        </group>
+
+        <mesh position={[0, 1.22, 0]} castShadow>
+          <cylinderGeometry args={[0.35, 0.38, 0.44, 16]} />
+          <meshStandardMaterial color={shortsColor} roughness={0.45} />
+        </mesh>
+
+        <mesh position={[0, 1.76, 0]} castShadow>
+          <cylinderGeometry args={[0.37, 0.33, 0.74, 16]} />
+          <meshStandardMaterial color={shirtColor} roughness={0.35} metalness={0.05} />
+        </mesh>
+
+        <group ref={leftArmRef} position={[-0.44, 1.82, 0]}>
+          <mesh position={[0, -0.18, 0]} rotation={[0, 0, 0.16]} castShadow>
+            <cylinderGeometry args={[0.078, 0.078, 0.34, 12]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, -0.46, 0.02]} rotation={[0.08, 0, 0.12]} castShadow>
+            <cylinderGeometry args={[0.068, 0.062, 0.32, 12]} />
+            <meshStandardMaterial color={skinColor} roughness={0.7} />
+          </mesh>
+        </group>
+
+        <group ref={rightArmRef} position={[0.44, 1.82, 0]}>
+          <mesh position={[0, -0.18, 0]} rotation={[0, 0, -0.16]} castShadow>
+            <cylinderGeometry args={[0.078, 0.078, 0.34, 12]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, -0.46, 0.02]} rotation={[0.08, 0, -0.12]} castShadow>
+            <cylinderGeometry args={[0.068, 0.062, 0.32, 12]} />
+            <meshStandardMaterial color={skinColor} roughness={0.7} />
+          </mesh>
+        </group>
+
+        <mesh position={[0, 2.2, 0]} castShadow>
+          <cylinderGeometry args={[0.1, 0.115, 0.16, 12]} />
+          <meshStandardMaterial color={skinColor} roughness={0.7} />
+        </mesh>
+
+        <group ref={headRef} position={[0, 2.45, 0]}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.21, 20, 20]} />
+            <meshStandardMaterial color={skinColor} roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.07, -0.02]} castShadow>
+            <sphereGeometry args={[0.215, 16, 16]} />
+            <meshStandardMaterial color={hairColor} roughness={0.85} />
+          </mesh>
+        </group>
+      </group>
+
+      <Html center position={[0, 4.15, 0]} distanceFactor={26}>
         <div
           style={{
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            border: `2px solid ${shirtColor}`,
             color: '#ffffff',
             fontWeight: 900,
             fontSize: '12px',
-            lineHeight: 1,
-            textShadow: '0 1px 3px rgba(0,0,0,0.98)',
+            width: '25px',
+            height: '25px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 3px 6px rgba(0,0,0,0.6)',
             pointerEvents: 'none',
             userSelect: 'none',
           }}
@@ -522,39 +627,7 @@ function PlayerModelGLTF({ position, color, number, isSelected, onClick }) {
           {number}
         </div>
       </Html>
-      {isSelected && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
-          <ringGeometry args={[0.65, 0.76, 40]} />
-          <meshBasicMaterial color="#facc15" toneMapped={false} />
-        </mesh>
-      )}
     </group>
-  );
-}
-
-class PlayerModelBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { failed: false };
-  }
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  componentDidCatch(err) {
-    console.warn('Cargando respaldo procedimental:', err);
-  }
-  render() {
-    return this.state.failed ? this.props.fallback : this.props.children;
-  }
-}
-
-function Player3D(props) {
-  return (
-    <PlayerModelBoundary fallback={<ProceduralPlayer3D {...props} />}>
-      <Suspense fallback={<ProceduralPlayer3D {...props} />}>
-        <PlayerModelGLTF {...props} />
-      </Suspense>
-    </PlayerModelBoundary>
   );
 }
 
@@ -727,8 +800,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
 
   // En móvil usamos una perspectiva diagonal para conservar el volumen 3D y
   // encuadrar la cancha con sus dos porterías. Se mantiene el eje vertical natural de Three.js.
-  const camPos = isPC ? [0, 46, 56] : [0, 38, 44];
-  const camFov = isPC ? 50 : 62;
+  const camPos = isPC ? [0, 64, 58] : [0, 85, 48];
+const camFov = isPC ? 46 : 68;
 
   return (
     <>
