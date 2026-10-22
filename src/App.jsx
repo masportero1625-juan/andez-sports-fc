@@ -592,86 +592,86 @@ function TacticalText3D({ item, isPC }) {
   </Html>;
 }
 
-function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, isPC, recordHistory }) {
-  const isDragging3D = useRef(false);
-  const activeObjIdRef = useRef(null);
+function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory }) {
+  const isDragging = useRef(false);
+  const dragId = useRef(null);
+  const mathPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
+  const planeIntersect = useMemo(() => new THREE.Vector3(), []);
 
-  // Conversión adaptada: en móvil rota 90° para que la cancha quede vertical igual que en 2D
-  const toWorld = (obj) => {
-    if (isPC) {
-      return { x: obj.x - 52.5, z: obj.y - 34 };
-    }
-    return { x: obj.y - 34, z: obj.x - 52.5 };
-  };
+  // Coordenadas idénticas 1:1 en PC y Móvil centradas en la cancha reglamentaria (105 x 68)
+  const toWorld = (obj) => ({
+    x: obj.x - 52.5,
+    z: obj.y - 34
+  });
 
-  const handlePointerDownObject = (e, obj) => {
+  const handlePointerDown = (e, obj) => {
     if (!cameraLocked) return;
     e.stopPropagation();
     setSelectedObj(obj);
-    activeObjIdRef.current = obj.id;
-    isDragging3D.current = true;
+    dragId.current = obj.id;
+    isDragging.current = true;
   };
 
-  const handlePointerMoveCanvas = (e) => {
-    if (!isDragging3D.current || !activeObjIdRef.current || !cameraLocked) return;
+  const handlePointerMove = (e) => {
+    if (!isDragging.current || !dragId.current || !cameraLocked) return;
     e.stopPropagation();
 
-    const pt = e.point;
-    let newX, newY;
+    // Intersección matemática directa con el césped (cero lag y compatibilidad total con pantalla táctil)
+    if (e.ray.intersectPlane(mathPlane, planeIntersect)) {
+      const clampedX = Math.max(2, Math.min(103, planeIntersect.x + 52.5));
+      const clampedY = Math.max(2, Math.min(66, planeIntersect.z + 34));
 
-    if (isPC) {
-      newX = Math.max(2, Math.min(103, pt.x + 52.5));
-      newY = Math.max(2, Math.min(66, pt.z + 34));
-    } else {
-      newX = Math.max(2, Math.min(66, pt.x + 34));
-      newY = Math.max(2, Math.min(103, pt.z + 52.5));
+      setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
     }
-
-    setObjects(prev => prev.map(o => o.id === activeObjIdRef.current ? { ...o, x: newX, y: newY } : o));
   };
 
-  const handlePointerUpCanvas = () => {
-    if (isDragging3D.current) {
-      isDragging3D.current = false;
-      activeObjIdRef.current = null;
+  const handlePointerUp = (e) => {
+    if (isDragging.current) {
+      e.stopPropagation();
+      isDragging.current = false;
+      dragId.current = null;
       if (recordHistory) recordHistory(objects);
     }
   };
 
-  const camPos = isPC ? [0, 40, 48] : [0, 85, 30];
-  const camFov = isPC ? 48 : 60;
-
   return (
     <>
-      <PerspectiveCamera makeDefault position={camPos} fov={camFov} />
-      <OrbitControls enabled={!cameraLocked} target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.03} minPolarAngle={0.2} minDistance={15} maxDistance={140} enableDamping dampingFactor={0.08} />
+      {/* Vista panorámica de transmisión limpia y con ángulo horizontal reglamentario */}
+      <PerspectiveCamera makeDefault position={[0, 48, 54]} fov={48} />
+      <OrbitControls
+        enabled={!cameraLocked}
+        target={[0, 0, 0]}
+        maxPolarAngle={Math.PI / 2.05}
+        minPolarAngle={0.2}
+        minDistance={15}
+        maxDistance={130}
+        enableDamping
+        dampingFactor={0.08}
+      />
       <ambientLight intensity={0.95} />
       <hemisphereLight args={["#e0f2fe", "#14532d", 0.65]} />
       <directionalLight position={[12, 35, 18]} intensity={1.7} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
 
-      {/* Cancha 3D orientada */}
-      <group rotation={isPC ? [0, 0, 0] : [0, Math.PI / 2, 0]}>
-        <Pitch3D />
-      </group>
+      {/* Estadio y cancha 3D */}
+      <Pitch3D />
 
-      {/* Receptor táctil continuo */}
+      {/* Plano de captura de eventos globales (cubre todo el campo de juego) */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.05, 0]}
-        onPointerMove={handlePointerMoveCanvas}
-        onPointerUp={handlePointerUpCanvas}
-        onPointerLeave={handlePointerUpCanvas}
+        position={[0, 0.02, 0]}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
       >
-        <planeGeometry args={[130, 130]} />
+        <planeGeometry args={[140, 95]} />
         <meshBasicMaterial visible={false} />
       </mesh>
 
-      {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} isPC={isPC} />)}
-      {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} isPC={isPC} />)}
+      {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} isPC={true} />)}
+      {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} isPC={true} />)}
 
       {objects.map((obj) => {
         const pos = toWorld(obj);
-        const onDown = (e) => handlePointerDownObject(e, obj);
+        const onDown = (e) => handlePointerDown(e, obj);
 
         if (obj.type === 'player') {
           const col = obj.customColor || (
@@ -680,21 +680,39 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
               : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
           );
           return (
-            <group key={obj.id} position={[pos.x, 0, pos.z]} onPointerDown={onDown}>
+            <group
+              key={obj.id}
+              position={[pos.x, 0, pos.z]}
+              onPointerDown={onDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+            >
               <Player3D position={{ x: 52.5, y: 34 }} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} onClick={() => {}} />
             </group>
           );
         }
         if (obj.type === 'ball') {
           return (
-            <group key={obj.id} position={[pos.x, 0, pos.z]} onPointerDown={onDown}>
+            <group
+              key={obj.id}
+              position={[pos.x, 0, pos.z]}
+              onPointerDown={onDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+            >
               <Ball3D position={{ x: 52.5, y: 34 }} onClick={() => {}} />
             </group>
           );
         }
         if (['cone', 'saucer', 'ring', 'pole', 'hurdle', 'dummy', 'mini_goal', 'ladder', 'rebounder', 'trampoline', 'mat'].includes(obj.type)) {
           return (
-            <group key={obj.id} position={[pos.x, 0, pos.z]} onPointerDown={onDown}>
+            <group
+              key={obj.id}
+              position={[pos.x, 0, pos.z]}
+              onPointerDown={onDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+            >
               <TrainingObject3D obj={obj} position={{ x: 52.5, y: 34 }} onClick={() => {}} />
             </group>
           );
