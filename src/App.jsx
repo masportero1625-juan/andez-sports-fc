@@ -592,33 +592,112 @@ function TacticalText3D({ item, isPC }) {
   </Html>;
 }
 
-function Scene3D({ objects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, isPC }) {
-  const toWorld = (obj) => isPC
-    ? { x: obj.x, y: obj.y }
-    : { x: (obj.y / 105) * 105, y: (obj.x / 68) * 68 };
+function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, isPC, recordHistory }) {
+  const isDragging3D = useRef(false);
+  const activeObjIdRef = useRef(null);
+
+  // Conversión adaptada: en móvil rota 90° para que la cancha quede vertical igual que en 2D
+  const toWorld = (obj) => {
+    if (isPC) {
+      return { x: obj.x - 52.5, z: obj.y - 34 };
+    }
+    return { x: obj.y - 34, z: obj.x - 52.5 };
+  };
+
+  const handlePointerDownObject = (e, obj) => {
+    if (!cameraLocked) return;
+    e.stopPropagation();
+    setSelectedObj(obj);
+    activeObjIdRef.current = obj.id;
+    isDragging3D.current = true;
+  };
+
+  const handlePointerMoveCanvas = (e) => {
+    if (!isDragging3D.current || !activeObjIdRef.current || !cameraLocked) return;
+    e.stopPropagation();
+
+    const pt = e.point;
+    let newX, newY;
+
+    if (isPC) {
+      newX = Math.max(2, Math.min(103, pt.x + 52.5));
+      newY = Math.max(2, Math.min(66, pt.z + 34));
+    } else {
+      newX = Math.max(2, Math.min(66, pt.x + 34));
+      newY = Math.max(2, Math.min(103, pt.z + 52.5));
+    }
+
+    setObjects(prev => prev.map(o => o.id === activeObjIdRef.current ? { ...o, x: newX, y: newY } : o));
+  };
+
+  const handlePointerUpCanvas = () => {
+    if (isDragging3D.current) {
+      isDragging3D.current = false;
+      activeObjIdRef.current = null;
+      if (recordHistory) recordHistory(objects);
+    }
+  };
+
+  const camPos = isPC ? [0, 40, 48] : [0, 85, 30];
+  const camFov = isPC ? 48 : 60;
+
   return (
     <>
-      <PerspectiveCamera makeDefault position={[0, 39, 47]} fov={48} />
-      <OrbitControls enabled={!cameraLocked} target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.03} minPolarAngle={0.22} minDistance={15} maxDistance={92} enableDamping dampingFactor={0.08} />
-      <ambientLight intensity={0.9} />
-      <hemisphereLight args={["#e0f2fe", "#14532d", 0.6]} />
-      <directionalLight position={[12, 32, 18]} intensity={1.65} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
-      <Pitch3D />
+      <PerspectiveCamera makeDefault position={camPos} fov={camFov} />
+      <OrbitControls enabled={!cameraLocked} target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.03} minPolarAngle={0.2} minDistance={15} maxDistance={140} enableDamping dampingFactor={0.08} />
+      <ambientLight intensity={0.95} />
+      <hemisphereLight args={["#e0f2fe", "#14532d", 0.65]} />
+      <directionalLight position={[12, 35, 18]} intensity={1.7} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
+
+      {/* Cancha 3D orientada */}
+      <group rotation={isPC ? [0, 0, 0] : [0, Math.PI / 2, 0]}>
+        <Pitch3D />
+      </group>
+
+      {/* Receptor táctil continuo */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.05, 0]}
+        onPointerMove={handlePointerMoveCanvas}
+        onPointerUp={handlePointerUpCanvas}
+        onPointerLeave={handlePointerUpCanvas}
+      >
+        <planeGeometry args={[130, 130]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
+
       {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} isPC={isPC} />)}
       {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} isPC={isPC} />)}
+
       {objects.map((obj) => {
         const pos = toWorld(obj);
+        const onDown = (e) => handlePointerDownObject(e, obj);
+
         if (obj.type === 'player') {
           const col = obj.customColor || (
             obj.role === 'GK'
               ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk)
               : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
           );
-          return <Player3D key={obj.id} position={pos} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} onClick={() => setSelectedObj(obj)} />;
+          return (
+            <group key={obj.id} position={[pos.x, 0, pos.z]} onPointerDown={onDown}>
+              <Player3D position={{ x: 52.5, y: 34 }} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} onClick={() => {}} />
+            </group>
+          );
         }
-        if (obj.type === 'ball') return <Ball3D key={obj.id} position={pos} onClick={() => setSelectedObj(obj)} />;
+        if (obj.type === 'ball') {
+          return (
+            <group key={obj.id} position={[pos.x, 0, pos.z]} onPointerDown={onDown}>
+              <Ball3D position={{ x: 52.5, y: 34 }} onClick={() => {}} />
+            </group>
+          );
+        }
         if (['cone', 'saucer', 'ring', 'pole', 'hurdle', 'dummy', 'mini_goal', 'ladder', 'rebounder', 'trampoline', 'mat'].includes(obj.type)) {
-          return <TrainingObject3D key={obj.id} obj={obj} position={pos} onClick={() => setSelectedObj(obj)} />;
+          return (
+            <group key={obj.id} position={[pos.x, 0, pos.z]} onPointerDown={onDown}>
+              <TrainingObject3D obj={obj} position={{ x: 52.5, y: 34 }} onClick={() => {}} />
+            </group>
+          );
         }
         return null;
       })}
@@ -1582,7 +1661,7 @@ Devuelve estricta y únicamente el array JSON.`;
             </div>
             <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
               <Canvas frameloop="always" dpr={[1, 1.5]} shadows gl={{ antialias: true, powerPreference: "high-performance" }} className="w-full h-full">
-                <Scene3D objects={objects} drawings={drawings} textBlocks={textBlocks} selectedObj={selectedObj} setSelectedObj={setSelectedObj} teamColors={teamColors} cameraLocked={cameraLocked} isPC={isPC} />
+                <Scene3D objects={objects} setObjects={setObjects} drawings={drawings} textBlocks={textBlocks} selectedObj={selectedObj} setSelectedObj={setSelectedObj} teamColors={teamColors} cameraLocked={cameraLocked} isPC={isPC} recordHistory={recordHistory} />
               </Canvas>
             </Suspense>
           </div>
