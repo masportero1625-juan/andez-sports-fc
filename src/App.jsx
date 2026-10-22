@@ -1073,71 +1073,54 @@ function makeCrowdTexture(style, seed, length, rowDepth) {
 }
 
 // Marco local de la tribuna: X = largo paralelo a la línea, Y = arriba, Z = hacia AFUERA de la cancha.
-function Stand({ position, rotationY = 0, length, variant = 'blue', seed = 1, rows = 14, rowDepth = 1.0, rise = 0.5 }) {
-  const style = STAND_STYLES[variant] || STAND_STYLES.blue;
+function Stand({ position, rotationY = 0, length, variant = 'blue', rows = 12, rowDepth = 1.1, rise = 0.55 }) {
+  const seatColor = variant === 'red' ? '#b91c1c' : '#1d4ed8';
+  const concreteColor = '#94a3b8';
+  const roofColor = '#334155';
+  const fasciaColor = variant === 'red' ? '#ef4444' : '#3b82f6';
+
   const depth = rows * rowDepth;
   const topH = rows * rise;
-
-  const crowdTex = useMemo(() => makeCrowdTexture(style, seed, length, rowDepth), [style, seed, length, rowDepth]);
-  const stepMats = useMemo(() => {
-    const concrete = new THREE.MeshStandardMaterial({ color: '#8b95a3', roughness: 0.92 });
-    const riser = new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.9 });
-    const back = new THREE.MeshStandardMaterial({ color: '#64748b', roughness: 0.95 });
-    const seats = new THREE.MeshStandardMaterial({ map: crowdTex, roughness: 0.8 });
-    // Orden de caras de BoxGeometry: +x, -x, +y (asientos), -y, +z (trasera), -z (contrahuella hacia la cancha)
-    return [concrete, concrete, seats, concrete, back, riser];
-  }, [crowdTex]);
-  const roofMats = useMemo(() => {
-    const dark = new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.7, metalness: 0.2 });
-    const top = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.6, metalness: 0.15 });
-    const under = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.8 });
-    return [dark, dark, top, under, dark, dark];
-  }, []);
-  const lipMat = useMemo(() => new THREE.MeshStandardMaterial({ color: style.accent, roughness: 0.5 }), [style]);
-  const columnMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.5, metalness: 0.3 }), []);
-
-  useEffect(() => () => {
-    crowdTex.dispose();
-    stepMats.forEach((m) => m.dispose());
-    roofMats.forEach((m) => m.dispose());
-    lipMat.dispose();
-    columnMat.dispose();
-  }, [crowdTex, stepMats, roofMats, lipMat, columnMat]);
-
-  // Visera inclinada: sube hacia el fondo de la tribuna
-  const zf = 4, yf = topH + 4.6;
-  const zb = depth + 2, yb = topH + 8.4;
-  const roofLen = Math.hypot(zb - zf, yb - yf);
-  const roofTilt = -Math.atan2(yb - yf, zb - zf);
-  const yAt = (z) => yf + ((yb - yf) / (zb - zf)) * (z - zf);
-  const colZ = zb - 1.5;
-  const colH = yAt(colZ) - 0.3;
   const nCols = Math.max(2, Math.round(length / 16));
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Escalones: cada fila es un bloque macizo más alto que el anterior */}
+      {/* Gradas escalonadas de hormigón */}
       {Array.from({ length: rows }).map((_, i) => {
         const h = (i + 1) * rise;
+        const zPos = i * rowDepth + rowDepth / 2;
         return (
-          <mesh key={`row-${i}`} position={[0, h / 2, i * rowDepth + rowDepth / 2]} material={stepMats}>
-            <boxGeometry args={[length, h, rowDepth]} />
-          </mesh>
+          <group key={`row-${i}`}>
+            {/* Escalón de hormigón */}
+            <mesh position={[0, h / 2, zPos]}>
+              <boxGeometry args={[length, h, rowDepth]} />
+              <meshStandardMaterial color={concreteColor} roughness={0.9} />
+            </mesh>
+            {/* Fila corrida de butacas de color nítido */}
+            <mesh position={[0, h + 0.1, zPos]}>
+              <boxGeometry args={[length - 0.4, 0.2, rowDepth * 0.65]} />
+              <meshStandardMaterial color={seatColor} roughness={0.6} />
+            </mesh>
+          </group>
         );
       })}
 
-      {/* Visera / techo */}
-      <mesh position={[0, (yf + yb) / 2, (zf + zb) / 2]} rotation={[roofTilt, 0, 0]} material={roofMats}>
-        <boxGeometry args={[length, 0.4, roofLen]} />
+      {/* Visera / Techo del estadio */}
+      <mesh position={[0, topH + 5.2, depth / 2 + 1.5]} rotation={[-0.14, 0, 0]}>
+        <boxGeometry args={[length, 0.35, depth + 4]} />
+        <meshStandardMaterial color={roofColor} roughness={0.7} metalness={0.15} />
       </mesh>
-      {/* Canto frontal de la visera con el color de la tribuna */}
-      <mesh position={[0, yf, zf]} material={lipMat}>
-        <boxGeometry args={[length, 0.6, 0.3]} />
+      {/* Borde frontal decorativo con color del club */}
+      <mesh position={[0, topH + 4.9, 0]}>
+        <boxGeometry args={[length, 0.5, 0.25]} />
+        <meshStandardMaterial color={fasciaColor} roughness={0.5} />
       </mesh>
-      {/* Columnas de soporte */}
+
+      {/* Pilares de soporte metálicos */}
       {Array.from({ length: nCols + 1 }).map((_, k) => (
-        <mesh key={`col-${k}`} position={[-length / 2 + (k * length) / nCols, colH / 2, colZ]} material={columnMat}>
-          <cylinderGeometry args={[0.28, 0.34, colH, 10]} />
+        <mesh key={`col-${k}`} position={[-length / 2 + (k * length) / nCols, (topH + 5) / 2, depth - 0.5]}>
+          <cylinderGeometry args={[0.26, 0.32, topH + 5, 12]} />
+          <meshStandardMaterial color="#cbd5e1" roughness={0.4} metalness={0.4} />
         </mesh>
       ))}
     </group>
@@ -1212,9 +1195,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     e.stopPropagation();
 
     if (e.ray.intersectPlane(mathPlane, planeIntersect)) {
-      // Inversa exacta de toWorld, con los mismos límites físicos en cualquier dispositivo.
-      const clampedX = Math.max(2, Math.min(103, planeIntersect.x + 52.5));
-      const clampedY = Math.max(2, Math.min(66, planeIntersect.z + 34));
+      const clampedX = Math.max(1, Math.min(104, Number((planeIntersect.x + 52.5).toFixed(1))));
+      const clampedY = Math.max(1, Math.min(67, Number((planeIntersect.z + 34).toFixed(1))));
       setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
     }
   };
@@ -1313,7 +1295,7 @@ const camFov = isPC ? 46 : 68;
                 <sphereGeometry args={[1.4, 12, 10]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
-              <Ball3D position={{ x: 52.5, y: 34 }} onClick={() => {}} />
+              <Ball3D position={{ x: obj.x, y: obj.y }} isSelected={selectedObj?.id === obj.id} onClick={() => {}} />
             </group>
           );
         }
