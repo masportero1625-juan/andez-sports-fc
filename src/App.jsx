@@ -240,6 +240,64 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   );
 }
 
+// ===== RED DE PORTERÍA PROCEDURAL (sin imágenes externas) =====
+// Malla romboidal con nudos dibujada en un canvas; se usa como alphaMap para que solo se vean los hilos.
+const NET_CELL = 0.35; // tamaño de cada rombo de la red en metros (sube el valor para hilos más gruesos a la distancia)
+let _netCanvas = null;
+function getNetCanvas() {
+  if (_netCanvas) return _netCanvas;
+  const S = 64;
+  const c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, S, S);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3.2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  // Rombo que conecta los puntos medios de los bordes: el patrón teselado forma la malla continua.
+  ctx.moveTo(0, S / 2); ctx.lineTo(S / 2, 0);
+  ctx.moveTo(S / 2, 0); ctx.lineTo(S, S / 2);
+  ctx.moveTo(S, S / 2); ctx.lineTo(S / 2, S);
+  ctx.moveTo(S / 2, S); ctx.lineTo(0, S / 2);
+  ctx.stroke();
+  // Nudos en los cruces
+  ctx.fillStyle = '#ffffff';
+  [[0, S / 2], [S, S / 2], [S / 2, 0], [S / 2, S]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 3.6, 0, Math.PI * 2); ctx.fill();
+  });
+  _netCanvas = c;
+  return c;
+}
+
+function NetPanel({ position, rotation = [0, 0, 0], width, height }) {
+  const texture = useMemo(() => {
+    const t = new THREE.CanvasTexture(getNetCanvas());
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(width / NET_CELL, height / NET_CELL);
+    t.anisotropy = 8;
+    t.needsUpdate = true;
+    return t;
+  }, [width, height]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return (
+    <mesh position={position} rotation={rotation}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial
+        color="#f1f5f9"
+        alphaMap={texture}
+        transparent
+        alphaTest={0.04}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+        toneMapped={false}
+      />
+    </mesh>
+  );
+}
+
 // MOTOR 3D
 function Pitch3D() {
   const lineMat = <meshBasicMaterial color="#ffffff" toneMapped={false} />;
@@ -252,13 +310,20 @@ function Pitch3D() {
     </mesh>
   );
 
-  // Cuadrante de córner exacto hacia el interior de la cancha
-  const corner = (x, z, startAngle, key) => (
-    <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.036, z]}>
-      <ringGeometry args={[0.92, 1.04, 32, 1, startAngle, Math.PI / 2]} />
-      {lineMat}
-    </mesh>
-  );
+  // Cuadrante de córner hacia el INTERIOR de la cancha.
+  // El mesh se rota -PI/2 en X, por eso el ángulo local θ del anillo cae en el mundo como (x = cosθ, z = -sinθ).
+  // Dirección hacia el interior desde el vértice (x, z): (-sign(x), -sign(z))  ->  θ_medio = atan2(sign(z), -sign(x)).
+  // El arco de 90° se centra en esa dirección:  startAngle = θ_medio - PI/4.
+  //   [-52.5,-34] -> -PI/2   [-52.5, 34] -> 0   [52.5,-34] -> PI (=-PI)   [52.5, 34] -> PI/2
+  const corner = (x, z, key) => {
+    const startAngle = Math.atan2(Math.sign(z), -Math.sign(x)) - Math.PI / 4;
+    return (
+      <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.036, z]}>
+        <ringGeometry args={[0.92, 1.04, 32, 1, startAngle, Math.PI / 2]} />
+        {lineMat}
+      </mesh>
+    );
+  };
 
   // Banderines de córner oficiales
   const flag = (x, z, rotY, key) => (
@@ -333,21 +398,14 @@ function Pitch3D() {
           {postMat}
         </mesh>
 
-        {/* Red posterior */}
-        <mesh position={[dir * depth, 1.22, 0]} rotation={[0, isLeft ? Math.PI / 2 : -Math.PI / 2, 0]}>
-          <planeGeometry args={[7.32, 2.44]} />
-          <meshStandardMaterial color="#f8fafc" opacity={0.35} transparent roughness={0.9} side={2} />
-        </mesh>
-        {/* Red lateral superior */}
-        <mesh position={[dir * (depth / 2), 1.22, -3.66]}>
-          <planeGeometry args={[depth, 2.44]} />
-          <meshStandardMaterial color="#f8fafc" opacity={0.3} transparent roughness={0.9} side={2} />
-        </mesh>
-        {/* Red lateral inferior */}
-        <mesh position={[dir * (depth / 2), 1.22, 3.66]}>
-          <planeGeometry args={[depth, 2.44]} />
-          <meshStandardMaterial color="#f8fafc" opacity={0.3} transparent roughness={0.9} side={2} />
-        </mesh>
+        {/* Red posterior (malla procedural) */}
+        <NetPanel position={[dir * depth, 1.22, 0]} rotation={[0, Math.PI / 2, 0]} width={7.32} height={2.44} />
+        {/* Red lateral (lado -Z) */}
+        <NetPanel position={[dir * (depth / 2), 1.22, -3.66]} width={depth} height={2.44} />
+        {/* Red lateral (lado +Z) */}
+        <NetPanel position={[dir * (depth / 2), 1.22, 3.66]} width={depth} height={2.44} />
+        {/* Red superior (techo de la red) */}
+        <NetPanel position={[dir * (depth / 2), 2.44, 0]} rotation={[-Math.PI / 2, 0, 0]} width={depth} height={7.32} />
       </group>
     );
   };
@@ -425,15 +483,11 @@ function Pitch3D() {
         {lineMat}
       </mesh>
 
-      {/* 4 CÓRNERS INTERNOS REGLAMENTARIOS (ORIENTADOS ESTRICTAMENTE HACIA EL CÉSPED) */}
-      {/* Superior Izquierdo: apunta al cuadrante X positivo, Z positivo */}
-      {corner(-52.5, -34, 0, 'c-tl')}
-      {/* Inferior Izquierdo: apunta al cuadrante X positivo, Z negativo */}
-      {corner(-52.5, 34, -Math.PI / 2, 'c-bl')}
-      {/* Superior Derecho: apunta al cuadrante X negativo, Z positivo */}
-      {corner(52.5, -34, Math.PI / 2, 'c-tr')}
-      {/* Inferior Derecho: apunta al cuadrante X negativo, Z negativo */}
-      {corner(52.5, 34, Math.PI, 'c-br')}
+      {/* 4 CÓRNERS INTERNOS REGLAMENTARIOS (startAngle calculado dentro de corner(), siempre hacia el césped) */}
+      {corner(-52.5, -34, 'c-tl')}
+      {corner(-52.5, 34, 'c-bl')}
+      {corner(52.5, -34, 'c-tr')}
+      {corner(52.5, 34, 'c-br')}
 
       {/* BANDERINES DE CÓRNER */}
       {flag(-52.5, -34, 0.4, 'f-tl')}
@@ -853,9 +907,68 @@ function TrainingObject3D({ obj, position, onClick }) {
   );
 }
 
+// ===== BALÓN CLÁSICO (icosaedro truncado: 12 pentágonos + 20 hexágonos) =====
+// Textura equirectangular generada una sola vez. Cada píxel se proyecta sobre la esfera y se asigna a la cara del
+// poliedro que el rayo desde el centro toca primero: maximiza (n · centro_cara) / distancia_plano_cara.
+let _ballTexture = null;
+function getBallTexture() {
+  if (_ballTexture) return _ballTexture;
+  const W = 1024, H = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(W, H);
+  const phi = (1 + Math.sqrt(5)) / 2;
+  const unit = (v) => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; };
+  const DP = 0.9392336; // distancia (radio=1) del plano de cada pentágono
+  const DH = 0.9149584; // distancia del plano de cada hexágono
+  const faces = [];
+  for (const a of [-1, 1]) for (const b of [-1, 1]) {
+    faces.push({ c: unit([0, a, b * phi]), k: 1 / DP, pent: true });
+    faces.push({ c: unit([a, b * phi, 0]), k: 1 / DP, pent: true });
+    faces.push({ c: unit([b * phi, 0, a]), k: 1 / DP, pent: true });
+    for (const c of [-1, 1]) faces.push({ c: unit([a, b, c]), k: 1 / DH, pent: false });
+    faces.push({ c: unit([a / phi, 0, b * phi]), k: 1 / DH, pent: false });
+    faces.push({ c: unit([a * phi, b / phi, 0]), k: 1 / DH, pent: false });
+    faces.push({ c: unit([0, a * phi, b / phi]), k: 1 / DH, pent: false });
+  }
+  const smooth = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+  const white = [248, 250, 252], black = [17, 24, 39], seam = [46, 52, 64];
+  for (let py = 0; py < H; py++) {
+    const th = Math.PI * (py + 0.5) / H;
+    const sinT = Math.sin(th), y = Math.cos(th);
+    for (let px = 0; px < W; px++) {
+      const ph = 2 * Math.PI * (px + 0.5) / W;
+      const x = -Math.cos(ph) * sinT, z = Math.sin(ph) * sinT;
+      let v1 = -9, v2 = -9, p1 = false;
+      for (let i = 0; i < faces.length; i++) {
+        const f = faces[i];
+        const v = (f.c[0] * x + f.c[1] * y + f.c[2] * z) * f.k;
+        if (v > v1) { v2 = v1; v1 = v; p1 = f.pent; } else if (v > v2) { v2 = v; }
+      }
+      const base = p1 ? black : white;
+      const s = 1 - smooth(0.004, 0.017, v1 - v2);
+      const o = (py * W + px) * 4;
+      img.data[o] = base[0] + (seam[0] - base[0]) * s;
+      img.data[o + 1] = base[1] + (seam[1] - base[1]) * s;
+      img.data[o + 2] = base[2] + (seam[2] - base[2]) * s;
+      img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  _ballTexture = tex;
+  return tex;
+}
+
 function Ball3D({ position, isSelected, onClick }) {
   const posX = (position?.x ?? 52.5) - 52.5;
   const posZ = (position?.y ?? 34) - 34;
+  const ballTexture = useMemo(() => getBallTexture(), []);
 
   return (
     <group position={[posX, 0.32, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
@@ -865,32 +978,10 @@ function Ball3D({ position, isSelected, onClick }) {
         <meshBasicMaterial color="#000000" opacity={0.45} transparent />
       </mesh>
 
-      {/* Cuerpo principal del balón blanco con brillo de cuero sintético */}
-      <mesh castShadow>
-        <sphereGeometry args={[0.32, 28, 28]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.05} />
-      </mesh>
-
-      {/* Pentágonos / Cascos negros tradicionales */}
-      <mesh position={[0, 0.28, 0.12]} rotation={[0.4, 0, 0]}>
-        <circleGeometry args={[0.09, 5]} />
-        <meshBasicMaterial color="#0f172a" />
-      </mesh>
-      <mesh position={[0, -0.28, 0.12]} rotation={[-0.4, 0, 0]}>
-        <circleGeometry args={[0.09, 5]} />
-        <meshBasicMaterial color="#0f172a" />
-      </mesh>
-      <mesh position={[0.26, 0.08, 0.14]} rotation={[0.2, 0.6, 0]}>
-        <circleGeometry args={[0.09, 5]} />
-        <meshBasicMaterial color="#0f172a" />
-      </mesh>
-      <mesh position={[-0.26, 0.08, 0.14]} rotation={[0.2, -0.6, 0]}>
-        <circleGeometry args={[0.09, 5]} />
-        <meshBasicMaterial color="#0f172a" />
-      </mesh>
-      <mesh position={[0, 0.05, -0.31]} rotation={[Math.PI, 0, 0]}>
-        <circleGeometry args={[0.09, 5]} />
-        <meshBasicMaterial color="#0f172a" />
+      {/* Balón: esfera con textura procedural de pentágonos y hexágonos */}
+      <mesh castShadow rotation={[0.35, 0.6, 0.1]}>
+        <sphereGeometry args={[0.32, 48, 32]} />
+        <meshStandardMaterial map={ballTexture} roughness={0.42} metalness={0.02} />
       </mesh>
     </group>
   );
@@ -942,34 +1033,156 @@ function TacticalText3D({ item }) {
     </div>
   </Html>;
 }
+// ===== GRADERÍAS ESCALONADAS CON VISERA =====
+const STAND_STYLES = {
+  red:  { seat: '#b91c1c', fans: ['#f8fafc', '#fbbf24', '#1f2937', '#fca5a5'], accent: '#dc2626' },
+  blue: { seat: '#1d4ed8', fans: ['#f8fafc', '#fbbf24', '#93c5fd', '#111827'], accent: '#2563eb' },
+};
+
+function makeCrowdTexture(style, seed, length, rowDepth) {
+  const cols = 32, rowsPx = 2, cell = 16; // 32 x 2 asientos de 0.5 m  => 16 m x 1 m por baldosa
+  const c = document.createElement('canvas');
+  c.width = cols * cell; c.height = rowsPx * cell;
+  const ctx = c.getContext('2d');
+  let s = ((seed * 7919 + 13) % 2147483646) + 1;
+  const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  const skins = ['#e0b08a', '#c68642', '#8d5524', '#f1c27d'];
+  ctx.fillStyle = style.seat;
+  ctx.fillRect(0, 0, c.width, c.height);
+  for (let r = 0; r < rowsPx; r++) {
+    for (let k = 0; k < cols; k++) {
+      const x = k * cell, y = r * cell;
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
+      if (rnd() < 0.6) {
+        ctx.fillStyle = style.fans[Math.floor(rnd() * style.fans.length)];
+        ctx.beginPath(); ctx.arc(x + cell / 2, y + cell * 0.68, 5.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = skins[Math.floor(rnd() * skins.length)];
+        ctx.beginPath(); ctx.arc(x + cell / 2, y + cell * 0.3, 3, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(length / 16, rowDepth);
+  t.anisotropy = 8;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  return t;
+}
+
+// Marco local de la tribuna: X = largo paralelo a la línea, Y = arriba, Z = hacia AFUERA de la cancha.
+function Stand({ position, rotationY = 0, length, variant = 'blue', seed = 1, rows = 14, rowDepth = 1.0, rise = 0.5 }) {
+  const style = STAND_STYLES[variant] || STAND_STYLES.blue;
+  const depth = rows * rowDepth;
+  const topH = rows * rise;
+
+  const crowdTex = useMemo(() => makeCrowdTexture(style, seed, length, rowDepth), [style, seed, length, rowDepth]);
+  const stepMats = useMemo(() => {
+    const concrete = new THREE.MeshStandardMaterial({ color: '#8b95a3', roughness: 0.92 });
+    const riser = new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.9 });
+    const back = new THREE.MeshStandardMaterial({ color: '#64748b', roughness: 0.95 });
+    const seats = new THREE.MeshStandardMaterial({ map: crowdTex, roughness: 0.8 });
+    // Orden de caras de BoxGeometry: +x, -x, +y (asientos), -y, +z (trasera), -z (contrahuella hacia la cancha)
+    return [concrete, concrete, seats, concrete, back, riser];
+  }, [crowdTex]);
+  const roofMats = useMemo(() => {
+    const dark = new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.7, metalness: 0.2 });
+    const top = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.6, metalness: 0.15 });
+    const under = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.8 });
+    return [dark, dark, top, under, dark, dark];
+  }, []);
+  const lipMat = useMemo(() => new THREE.MeshStandardMaterial({ color: style.accent, roughness: 0.5 }), [style]);
+  const columnMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#cbd5e1', roughness: 0.5, metalness: 0.3 }), []);
+
+  useEffect(() => () => {
+    crowdTex.dispose();
+    stepMats.forEach((m) => m.dispose());
+    roofMats.forEach((m) => m.dispose());
+    lipMat.dispose();
+    columnMat.dispose();
+  }, [crowdTex, stepMats, roofMats, lipMat, columnMat]);
+
+  // Visera inclinada: sube hacia el fondo de la tribuna
+  const zf = 4, yf = topH + 4.6;
+  const zb = depth + 2, yb = topH + 8.4;
+  const roofLen = Math.hypot(zb - zf, yb - yf);
+  const roofTilt = -Math.atan2(yb - yf, zb - zf);
+  const yAt = (z) => yf + ((yb - yf) / (zb - zf)) * (z - zf);
+  const colZ = zb - 1.5;
+  const colH = yAt(colZ) - 0.3;
+  const nCols = Math.max(2, Math.round(length / 16));
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* Escalones: cada fila es un bloque macizo más alto que el anterior */}
+      {Array.from({ length: rows }).map((_, i) => {
+        const h = (i + 1) * rise;
+        return (
+          <mesh key={`row-${i}`} position={[0, h / 2, i * rowDepth + rowDepth / 2]} material={stepMats}>
+            <boxGeometry args={[length, h, rowDepth]} />
+          </mesh>
+        );
+      })}
+
+      {/* Visera / techo */}
+      <mesh position={[0, (yf + yb) / 2, (zf + zb) / 2]} rotation={[roofTilt, 0, 0]} material={roofMats}>
+        <boxGeometry args={[length, 0.4, roofLen]} />
+      </mesh>
+      {/* Canto frontal de la visera con el color de la tribuna */}
+      <mesh position={[0, yf, zf]} material={lipMat}>
+        <boxGeometry args={[length, 0.6, 0.3]} />
+      </mesh>
+      {/* Columnas de soporte */}
+      {Array.from({ length: nCols + 1 }).map((_, k) => (
+        <mesh key={`col-${k}`} position={[-length / 2 + (k * length) / nCols, colH / 2, colZ]} material={columnMat}>
+          <cylinderGeometry args={[0.28, 0.34, colH, 10]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function StadiumEnvironment() {
+  const towers = [[-68, -50], [68, -50], [-68, 50], [68, 50]];
   return (
     <group>
-      {/* Gradería Fondo Norte */}
-      <mesh position={[0, 8, -55]} rotation={[0.4, 0, 0]}>
-        <boxGeometry args={[130, 20, 12]} />
-        <meshStandardMaterial color="#2c3e50" roughness={0.8} />
-      </mesh>
-      {/* Gradería Fondo Sur */}
-      <mesh position={[0, 8, 55]} rotation={[-0.4, 0, 0]}>
-        <boxGeometry args={[130, 20, 12]} />
-        <meshStandardMaterial color="#2c3e50" roughness={0.8} />
-      </mesh>
-      {/* Gradería Lateral Oeste */}
-      <mesh position={[-75, 8, 0]} rotation={[0, 0, -0.4]}>
-        <boxGeometry args={[12, 20, 100]} />
-        <meshStandardMaterial color="#34495e" roughness={0.8} />
-      </mesh>
-      {/* Gradería Lateral Este */}
-      <mesh position={[75, 8, 0]} rotation={[0, 0, 0.4]}>
-        <boxGeometry args={[12, 20, 100]} />
-        <meshStandardMaterial color="#34495e" roughness={0.8} />
-      </mesh>
+      {/* Fondos (norte y sur): largo 118 m, empiezan a 41 m del centro, justo fuera del césped perimetral */}
+      <Stand position={[0, 0, -41]} rotationY={Math.PI} length={118} variant="red" seed={1} />
+      <Stand position={[0, 0, 41]} rotationY={0} length={118} variant="red" seed={2} />
+      {/* Laterales (oeste y este): largo 84 m, empiezan a 61 m del centro */}
+      <Stand position={[-61, 0, 0]} rotationY={-Math.PI / 2} length={84} variant="blue" seed={3} />
+      <Stand position={[61, 0, 0]} rotationY={Math.PI / 2} length={84} variant="blue" seed={4} />
+
+      {/* Vallas publicitarias alrededor de la cancha (fuera de las líneas) */}
+      {[-36.8, 36.8].map((z) => (
+        <group key={`ad-z-${z}`}>
+          <mesh position={[0, 0.5, z]}><boxGeometry args={[110, 1, 0.15]} /><meshStandardMaterial color="#0f2f6b" roughness={0.6} /></mesh>
+          <mesh position={[0, 1.04, z]}><boxGeometry args={[110, 0.08, 0.18]} /><meshStandardMaterial color="#f8fafc" roughness={0.5} /></mesh>
+        </group>
+      ))}
+      {[-55.8, 55.8].map((x) => (
+        <group key={`ad-x-${x}`}>
+          <mesh position={[x, 0.5, 0]}><boxGeometry args={[0.15, 1, 74]} /><meshStandardMaterial color="#0f2f6b" roughness={0.6} /></mesh>
+          <mesh position={[x, 1.04, 0]}><boxGeometry args={[0.18, 0.08, 74]} /><meshStandardMaterial color="#f8fafc" roughness={0.5} /></mesh>
+        </group>
+      ))}
+
+      {/* Torres de iluminación en las esquinas */}
+      {towers.map(([x, z]) => (
+        <group key={`tower-${x}-${z}`} position={[x, 0, z]}>
+          <mesh position={[0, 15, 0]}><cylinderGeometry args={[0.3, 0.45, 30, 10]} /><meshStandardMaterial color="#94a3b8" roughness={0.5} metalness={0.4} /></mesh>
+          <group position={[0, 30, 0]} rotation={[0, Math.atan2(-x, -z), 0]}>
+            <mesh><boxGeometry args={[6, 3.4, 0.5]} /><meshStandardMaterial color="#e2e8f0" emissive="#fef9c3" emissiveIntensity={1.1} roughness={0.4} /></mesh>
+          </group>
+        </group>
+      ))}
 
       {/* Suelo perimetral de hormigón */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
         <planeGeometry args={[160, 120]} />
-        <meshStandardMaterial color="#1e272e" roughness={0.9} />
+        <meshStandardMaterial color="#3b4350" roughness={0.9} />
       </mesh>
     </group>
   );
@@ -1081,7 +1294,7 @@ const camFov = isPC ? 46 : 68;
                 <cylinderGeometry args={[1.4, 1.4, 2.4, 12]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
-              <Player3D position={{ x: 52.5, y: 34 }} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} isMoving={activeDragId === obj.id} onClick={() => {}} />
+              <ProceduralPlayer3D position={{ x: obj.x, y: obj.y }} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} onClick={() => {}} />
             </group>
           );
         }
