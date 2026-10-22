@@ -592,17 +592,20 @@ function TacticalText3D({ item, isPC }) {
   </Html>;
 }
 
-function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory }) {
+function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC }) {
   const isDragging = useRef(false);
   const dragId = useRef(null);
   const mathPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const planeIntersect = useMemo(() => new THREE.Vector3(), []);
 
-  // Coordenadas idénticas 1:1 en PC y Móvil centradas en la cancha reglamentaria (105 x 68)
-  const toWorld = (obj) => ({
-    x: obj.x - 52.5,
-    z: obj.y - 34
-  });
+  // Coordenadas calculadas según el modo (Horizontal en PC, Vertical nativo en Móvil)
+  const toWorld = (obj) => {
+    if (isPC) {
+      return { x: obj.x - 52.5, z: obj.y - 34 };
+    }
+    // En móvil el sistema 2D mide X: 0 a 68 e Y: 0 a 105. Centramos respecto a (34, 52.5)
+    return { x: obj.x - 34, z: obj.y - 52.5 };
+  };
 
   const handlePointerDown = (e, obj) => {
     if (!cameraLocked) return;
@@ -616,35 +619,42 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     if (!isDragging.current || !dragId.current || !cameraLocked) return;
     e.stopPropagation();
 
-    // Intersección matemática directa con el césped (cero lag y compatibilidad total con pantalla táctil)
     if (e.ray.intersectPlane(mathPlane, planeIntersect)) {
-      const clampedX = Math.max(2, Math.min(103, planeIntersect.x + 52.5));
-      const clampedY = Math.max(2, Math.min(66, planeIntersect.z + 34));
-
-      setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
+      if (isPC) {
+        const clampedX = Math.max(2, Math.min(103, planeIntersect.x + 52.5));
+        const clampedY = Math.max(2, Math.min(66, planeIntersect.z + 34));
+        setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
+      } else {
+        const clampedX = Math.max(2, Math.min(66, planeIntersect.x + 34));
+        const clampedY = Math.max(2, Math.min(103, planeIntersect.z + 52.5));
+        setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
+      }
     }
   };
 
   const handlePointerUp = (e) => {
     if (isDragging.current) {
-      e.stopPropagation();
+      if (e && e.stopPropagation) e.stopPropagation();
       isDragging.current = false;
       dragId.current = null;
       if (recordHistory) recordHistory(objects);
     }
   };
 
+  // En PC la cámara mira de costado panorámico; en móvil mira de frente en vertical idéntico al 2D
+  const camPos = isPC ? [0, 48, 54] : [0, 95, 38];
+  const camFov = isPC ? 48 : 58;
+
   return (
     <>
-      {/* Vista panorámica de transmisión limpia y con ángulo horizontal reglamentario */}
-      <PerspectiveCamera makeDefault position={[0, 48, 54]} fov={48} />
+      <PerspectiveCamera makeDefault position={camPos} fov={camFov} />
       <OrbitControls
         enabled={!cameraLocked}
         target={[0, 0, 0]}
         maxPolarAngle={Math.PI / 2.05}
         minPolarAngle={0.2}
         minDistance={15}
-        maxDistance={130}
+        maxDistance={140}
         enableDamping
         dampingFactor={0.08}
       />
@@ -652,22 +662,24 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       <hemisphereLight args={["#e0f2fe", "#14532d", 0.65]} />
       <directionalLight position={[12, 35, 18]} intensity={1.7} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
 
-      {/* Estadio y cancha 3D */}
-      <Pitch3D />
+      {/* En móvil la cancha se rota 90° para que los arcos queden arriba y abajo exacto como el 2D */}
+      <group rotation={isPC ? [0, 0, 0] : [0, Math.PI / 2, 0]}>
+        <Pitch3D />
+      </group>
 
-      {/* Plano de captura de eventos globales (cubre todo el campo de juego) */}
+      {/* Malla receptora de interacción táctil y mouse con rango amplio */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.02, 0]}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        <planeGeometry args={[140, 95]} />
+        <planeGeometry args={[160, 160]} />
         <meshBasicMaterial visible={false} />
       </mesh>
 
-      {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} isPC={true} />)}
-      {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} isPC={true} />)}
+      {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} isPC={isPC} />)}
+      {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} isPC={isPC} />)}
 
       {objects.map((obj) => {
         const pos = toWorld(obj);
@@ -1696,6 +1708,7 @@ Devuelve estricta y únicamente el array JSON.`;
                 teamColors={teamColors}
                 cameraLocked={cameraLocked}
                 recordHistory={recordHistory}
+                isPC={isPC}
               />
             </Canvas>
             </Suspense>
