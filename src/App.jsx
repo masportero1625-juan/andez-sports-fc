@@ -502,353 +502,280 @@ function Pitch3D() {
   );
 }
 
-function ProceduralPlayer3D({ position, color, number, isSelected, onClick }) {
-  const groupRef = useRef();
-  const leftArmRef = useRef();
-  const rightArmRef = useRef();
-  const leftLegRef = useRef();
-  const rightLegRef = useRef();
-  const jerseyColor = color || '#2563eb';
-  const skinColor = '#b9825f';
-  const shortsColor = jerseyColor;
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime() + (Number(number) || 0) * 0.19;
-    const gait = isSelected ? 0.34 : 0.055;
-    if (leftArmRef.current && rightArmRef.current && leftLegRef.current && rightLegRef.current) {
-      // Ciclo de movimiento suave de calentamiento; se acentúa al seleccionar.
-      const swing = Math.sin(t * (isSelected ? 5.2 : 2.2)) * gait;
-      leftArmRef.current.rotation.x = swing;
-      rightArmRef.current.rotation.x = -swing;
-      leftLegRef.current.rotation.x = -swing * 1.15;
-      rightLegRef.current.rotation.x = swing * 1.15;
-    }
-    if (groupRef.current) {
-      const targetY = isSelected ? 0.025 + Math.abs(Math.sin(t * 5.2)) * 0.035 : Math.abs(Math.sin(t * 2.2)) * 0.006;
-      groupRef.current.position.y += (targetY - groupRef.current.position.y) * 0.18;
-      groupRef.current.rotation.y = isSelected ? Math.sin(t * 1.8) * 0.07 : 0;
-    }
-  });
-  return (
-    <group ref={groupRef} position={[0, 0, 0]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      {/* Sombra de contacto */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <circleGeometry args={[0.53, 32]} />
-        <meshBasicMaterial color="#020617" transparent opacity={0.32} />
-      </mesh>
-      {/* Piernas articuladas, medias y botines */}
-      {[-1, 1].map((side) => (
-        <group key={`leg-${side}`} ref={side < 0 ? leftLegRef : rightLegRef} position={[side * 0.17, 0.88, 0]}>
-          <mesh position={[0, -0.22, 0]} castShadow>
-            <capsuleGeometry args={[0.105, 0.34, 6, 12]} />
-            <meshStandardMaterial color={skinColor} roughness={0.86} />
-          </mesh>
-          {/* Media alta */}
-          <mesh position={[0, -0.48, 0.012]} castShadow>
-            <cylinderGeometry args={[0.095, 0.105, 0.39, 16]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.7} />
-          </mesh>
-          <mesh position={[0, -0.31, 0.015]}>
-            <cylinderGeometry args={[0.097, 0.097, 0.055, 16]} />
-            <meshStandardMaterial color={jerseyColor} roughness={0.65} />
-          </mesh>
-          {/* Botín con suela y pequeños tacos */}
-          <group position={[0, -0.72, 0.12]}>
-            <mesh position={[0, 0, 0.055]} castShadow>
-              <capsuleGeometry args={[0.105, 0.22, 5, 10]} />
-              <meshStandardMaterial color="#15191f" roughness={0.42} />
-            </mesh>
-            <mesh position={[0, -0.065, 0.055]}>
-              <boxGeometry args={[0.17, 0.035, 0.31]} />
-              <meshStandardMaterial color="#d1d5db" roughness={0.6} />
-            </mesh>
-            {[-0.055, 0.055].map((x) => <mesh key={x} position={[x, -0.09, 0.12]}><cylinderGeometry args={[0.018, 0.018, 0.035, 6]} /><meshStandardMaterial color="#111827" /></mesh>)}
-          </group>
-        </group>
-      ))}
-      {/* Pantalón corto con piernas separadas */}
-      <mesh position={[0, 0.91, 0]} castShadow>
-        <cylinderGeometry args={[0.245, 0.285, 0.25, 24]} />
-        <meshStandardMaterial color={shortsColor} roughness={0.72} />
-      </mesh>
-      {[-1, 1].map(side => <mesh key={`short-${side}`} position={[side * 0.135, 0.79, 0]} castShadow>
-        <cylinderGeometry args={[0.105, 0.12, 0.18, 16]} />
-        <meshStandardMaterial color={shortsColor} roughness={0.7} />
-      </mesh>)}
-      {/* Torso anatómico y camiseta */}
-      <mesh position={[0, 1.31, 0]} castShadow>
-        <capsuleGeometry args={[0.265, 0.39, 7, 16]} />
-        <meshStandardMaterial color={jerseyColor} roughness={0.64} metalness={0.01} />
-      </mesh>
-      {/* Cuello y ribetes de la camiseta */}
-      <mesh position={[0, 1.66, 0]}>
-        <cylinderGeometry args={[0.09, 0.105, 0.14, 16]} />
-        <meshStandardMaterial color={skinColor} roughness={0.88} />
-      </mesh>
-      <mesh position={[0, 1.49, 0.235]}>
-        <boxGeometry args={[0.035, 0.42, 0.014]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.62} />
-      </mesh>
-      <mesh position={[0, 1.59, 0.19]}>
-        <torusGeometry args={[0.09, 0.018, 8, 18]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.65} />
-      </mesh>
-      {/* Mangas, antebrazos y manos */}
-      {[-1, 1].map(side => (
-        <group key={`arm-${side}`} ref={side < 0 ? leftArmRef : rightArmRef} position={[side * 0.29, 1.49, 0]}>
-          <mesh rotation={[0, 0, side * -0.17]} position={[side * 0.035, -0.13, 0]} castShadow>
-            <capsuleGeometry args={[0.105, 0.23, 6, 12]} />
-            <meshStandardMaterial color={jerseyColor} roughness={0.62} />
-          </mesh>
-          <mesh position={[side * 0.055, -0.35, 0.012]} castShadow>
-            <capsuleGeometry args={[0.073, 0.2, 5, 10]} />
-            <meshStandardMaterial color={skinColor} roughness={0.88} />
-          </mesh>
-          <mesh position={[side * 0.06, -0.48, 0.02]} castShadow>
-            <sphereGeometry args={[0.075, 12, 10]} />
-            <meshStandardMaterial color={skinColor} roughness={0.88} />
-          </mesh>
-        </group>
-      ))}
-      {/* Cabeza, orejas, pelo y rasgos faciales sencillos */}
-      <mesh position={[0, 2.02, 0]} castShadow>
-        <sphereGeometry args={[0.225, 28, 24]} />
-        <meshStandardMaterial color={skinColor} roughness={0.88} />
-      </mesh>
-      <mesh position={[0, 2.14, -0.018]} castShadow>
-        <sphereGeometry args={[0.229, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
-        <meshStandardMaterial color="#30231e" roughness={0.94} />
-      </mesh>
-      {[-1, 1].map(side => <mesh key={`ear-${side}`} position={[side * 0.22, 2.015, 0]}>
-        <sphereGeometry args={[0.045, 12, 10]} />
-        <meshStandardMaterial color={skinColor} roughness={0.9} />
-      </mesh>)}
-      {[-1, 1].map(side => <mesh key={`eye-${side}`} position={[side * 0.075, 2.035, 0.205]}>
-        <sphereGeometry args={[0.018, 8, 8]} />
-        <meshBasicMaterial color="#1f2937" />
-      </mesh>)}
-      <mesh position={[0, 1.965, 0.218]}>
-        <boxGeometry args={[0.065, 0.012, 0.012]} />
-        <meshBasicMaterial color="#75452f" />
-      </mesh>
-      {/* Dorsal legible y visible desde la cámara táctica */}
-      <Html center position={[0, 1.34, 0.275]} distanceFactor={17}>
-        <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '12px', lineHeight: 1, textShadow: '0 1px 3px rgba(0,0,0,0.98)', pointerEvents: 'none', userSelect: 'none' }}>{number}</div>
-      </Html>
-      {isSelected && <>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
-          <ringGeometry args={[0.62, 0.72, 40]} />
-          <meshBasicMaterial color="#facc15" toneMapped={false} />
-        </mesh>
-        <mesh position={[0, 2.42, 0]}>
-          <sphereGeometry args={[0.05, 12, 12]} />
-          <meshBasicMaterial color="#facc15" toneMapped={false} />
-        </mesh>
-      </>}
-    </group>
-  );
+// ===== JUGADOR TÁCTICO PROCEDURAL (estilo TacticalPad) =====
+// Anatomía estilizada con primitivas FUSIONADAS en pocas mallas por rol (campo / arquero): ~10 draw calls por jugador.
+// Origen local = [0,0,0] en la base de los pies. No aplica traslaciones globales: el <group> padre de Scene3D lo posiciona.
+// Modelo construido mirando a +Z; la prop `facing` (por defecto Math.PI) lo gira para que el dorsal se vea desde la cámara táctica.
+const SELECTOR_COLOR = '#facc15'; // dorado; cámbialo por '#2563eb' para el selector azul
+const PLAYER_ANKLE = 0.1;         // altura del tobillo sobre el césped
+const PLAYER_THIGH = 0.44;        // largo del muslo
+const PLAYER_SHIN = 0.48;         // largo de la pierna inferior
+const PLAYER_HIP_OFFSET = 0.02;   // el hueso de la cadera cuelga 2 cm bajo el centro de la pelvis
+
+const _playerMatCache = new Map();
+function playerStdMat(color, roughness = 0.7, metalness = 0) {
+  const key = `${color}|${roughness}|${metalness}`;
+  if (!_playerMatCache.has(key)) {
+    _playerMatCache.set(key, new THREE.MeshStandardMaterial({ color, roughness, metalness }));
+  }
+  return _playerMatCache.get(key);
 }
 
+function playerHexLuma(hex) {
+  let h = String(hex || '#2563eb').replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  h = h.padEnd(6, '0');
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
 
-function Player3D({ position, color, number, isSelected, onClick }) {
-  const shirtColor = color || '#2563eb';
-  const shortsColor = '#ffffff';
-  const skinColor = '#c68642';
-  const hairColor = '#1a1105';
-  const sockColor = color || '#2563eb';
-  const bootColor = '#111827';
+// Dado el largo de la cadera y la flexión del muslo (alpha), calcula la flexión de rodilla (beta) para que el pie quede a ras de césped.
+function solvePlayerKnee(hipY, alpha) {
+  const c = (hipY - PLAYER_HIP_OFFSET - PLAYER_ANKLE - PLAYER_THIGH * Math.cos(alpha)) / PLAYER_SHIN;
+  return alpha + Math.acos(Math.min(1, Math.max(-1, c)));
+}
 
+// Fusiona una lista de BufferGeometry (position + normal + index) en una sola.
+function mergePlayerGeos(list) {
+  let vCount = 0;
+  let iCount = 0;
+  list.forEach((g) => {
+    vCount += g.attributes.position.count;
+    iCount += g.index ? g.index.count : g.attributes.position.count;
+  });
+  const pos = new Float32Array(vCount * 3);
+  const nor = new Float32Array(vCount * 3);
+  const idx = vCount > 65000 ? new Uint32Array(iCount) : new Uint16Array(iCount);
+  let vOff = 0;
+  let iOff = 0;
+  list.forEach((g) => {
+    const p = g.attributes.position;
+    const n = g.attributes.normal;
+    for (let i = 0; i < p.count; i++) {
+      pos[(vOff + i) * 3] = p.getX(i); pos[(vOff + i) * 3 + 1] = p.getY(i); pos[(vOff + i) * 3 + 2] = p.getZ(i);
+      nor[(vOff + i) * 3] = n.getX(i); nor[(vOff + i) * 3 + 1] = n.getY(i); nor[(vOff + i) * 3 + 2] = n.getZ(i);
+    }
+    if (g.index) {
+      for (let i = 0; i < g.index.count; i++) idx[iOff + i] = g.index.getX(i) + vOff;
+      iOff += g.index.count;
+    } else {
+      for (let i = 0; i < p.count; i++) idx[iOff + i] = vOff + i;
+      iOff += p.count;
+    }
+    vOff += p.count;
+  });
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  merged.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  merged.setIndex(new THREE.BufferAttribute(idx, 1));
+  merged.computeBoundingSphere();
+  merged.computeBoundingBox();
+  return merged;
+}
+
+// Construye (una sola vez por rol) las mallas fusionadas por "slot" de material.
+const _playerModelCache = {};
+function getPlayerModel(isGK) {
+  const cacheKey = isGK ? 'gk' : 'field';
+  if (_playerModelCache[cacheKey]) return _playerModelCache[cacheKey];
+
+  // Postura por rol
+  const pose = isGK
+    ? { hipY: 0.8, lean: 0.3, legX: 0.2, abd: 0.12, alphaL: 0.72, alphaR: 0.72, armX: [-0.2, -0.2], armZ: 0.95, elbow: [0.4, 0.4], headTilt: 0.85 }
+    : { hipY: 1.0, lean: 0.05, legX: 0.13, abd: 0.0, alphaL: 0.3, alphaR: -0.12, armX: [-0.38, 0.28], armZ: 0.1, elbow: [1.1, 0.75], headTilt: 0.8 };
+
+  const root = new THREE.Group();
+  const node = (parent, pos, rot) => {
+    const g = new THREE.Group();
+    if (pos) g.position.set(pos[0], pos[1], pos[2]);
+    if (rot) g.rotation.set(rot[0], rot[1], rot[2]);
+    parent.add(g);
+    return g;
+  };
+  const part = (parent, slot, geo, pos, rot, scl) => {
+    const m = new THREE.Mesh(geo);
+    m.userData.slot = slot;
+    if (pos) m.position.set(pos[0], pos[1], pos[2]);
+    if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
+    if (scl) m.scale.set(scl[0], scl[1], scl[2]);
+    parent.add(m);
+    return m;
+  };
+  const cyl = (rt, rb, h, seg = 10) => new THREE.CylinderGeometry(rt, rb, h, seg);
+  const sph = (r, ws = 10, hs = 8) => new THREE.SphereGeometry(r, ws, hs);
+
+  const hips = node(root, [0, pose.hipY, 0]);
+  // Pantalón: pelvis
+  part(hips, 'shorts', cyl(0.22, 0.2, 0.24, 14), [0, 0, 0], null, [1, 1, 0.72]);
+
+  // ----- Piernas -----
+  [-1, 1].forEach((side) => {
+    const alpha = side < 0 ? pose.alphaL : pose.alphaR;
+    const beta = solvePlayerKnee(pose.hipY, alpha);
+    const hip = node(hips, [side * pose.legX, -PLAYER_HIP_OFFSET, 0], [-alpha, 0, side * pose.abd]);
+    // Muslo (piel) + pernera del pantalón
+    part(hip, 'skin', cyl(0.105, 0.078, PLAYER_THIGH, 10), [0, -PLAYER_THIGH / 2, 0]);
+    part(hip, 'shorts', cyl(0.135, 0.125, 0.27, 12), [0, -0.12, 0]);
+    // Rodilla y pierna inferior con media alta + ribete
+    const knee = node(hip, [0, -PLAYER_THIGH, 0], [beta, 0, 0]);
+    part(knee, 'skin', sph(0.075, 8, 6), [0, 0, 0]);
+    part(knee, 'sock', cyl(0.078, 0.058, 0.43, 10), [0, -0.235, 0]);
+    part(knee, 'sock', sph(0.08, 8, 6), [0, -0.13, -0.015], null, [1, 1.7, 1]); // gemelo
+    part(knee, 'ribete', cyl(0.084, 0.082, 0.045, 12), [0, -0.06, 0]);
+    // Botín: caña, empeine y suela diferenciada
+    const foot = node(knee, [0, -PLAYER_SHIN, 0], [alpha - beta, 0, 0]);
+    part(foot, 'boot', cyl(0.062, 0.066, 0.07, 8), [0, 0, 0]);
+    part(foot, 'boot', sph(0.08, 10, 8), [0, -0.045, 0.075], null, [1, 0.95, 2.0]);
+    part(foot, 'sole', new THREE.BoxGeometry(0.15, 0.03, 0.3), [0, -0.088, 0.08]);
+  });
+
+  // ----- Torso (caída en V), hombros, cuello y cabeza -----
+  const torso = node(hips, [0, 0.06, 0], [pose.lean, 0, 0]);
+  part(torso, 'jersey', cyl(0.3, 0.2, 0.54, 14), [0, 0.3, 0], null, [1, 1, 0.58]);
+  [-1, 1].forEach((side) => {
+    part(torso, 'jersey', sph(0.115, 10, 8), [side * 0.33, 0.53, 0], null, [1, 1.05, 0.95]); // deltoides
+  });
+  part(torso, 'skin', cyl(0.075, 0.085, 0.14, 10), [0, 0.64, 0]); // cuello
+  part(torso, 'collar', new THREE.TorusGeometry(0.085, 0.018, 6, 14), [0, 0.585, 0], [Math.PI / 2, 0, 0]);
+
+  const head = node(torso, [0, 0.7, 0.02], [-pose.lean * pose.headTilt, 0, 0]);
+  part(head, 'skin', sph(0.19, 14, 12), [0, 0.17, 0]);
+  part(head, 'hair', new THREE.SphereGeometry(0.196, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), [0, 0.185, -0.02]);
+  [-1, 1].forEach((side) => part(head, 'hair', sph(0.017, 6, 6), [side * 0.07, 0.19, 0.172]));
+
+  // ----- Brazos con codos semi-doblados -----
+  [-1, 1].forEach((side) => {
+    const i = side < 0 ? 0 : 1;
+    const shoulder = node(torso, [side * 0.345, 0.52, 0], [pose.armX[i], 0, side * pose.armZ]);
+    part(shoulder, 'skin', cyl(0.062, 0.052, 0.3, 8), [0, -0.15, 0]);
+    part(shoulder, 'jersey', cyl(0.088, 0.08, 0.17, 10), [0, -0.085, 0]); // manga corta
+    const elbow = node(shoulder, [0, -0.3, 0], [-pose.elbow[i], 0, 0]);
+    part(elbow, 'skin', sph(0.055, 8, 6), [0, 0, 0]);
+    part(elbow, 'skin', cyl(0.052, 0.042, 0.27, 8), [0, -0.14, 0]);
+    if (isGK) {
+      part(elbow, 'boot', cyl(0.062, 0.06, 0.07, 8), [0, -0.23, 0]);                      // puño del guante
+      part(elbow, 'glove', sph(0.09, 10, 8), [0, -0.325, 0.012], null, [1, 1.15, 0.8]);   // guante
+    } else {
+      part(elbow, 'skin', sph(0.052, 8, 6), [0, -0.29, 0]);                               // mano
+    }
+  });
+
+  root.updateMatrixWorld(true);
+  const buckets = {};
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const g = o.geometry.clone();
+    g.applyMatrix4(o.matrixWorld);
+    (buckets[o.userData.slot] = buckets[o.userData.slot] || []).push(g);
+    o.geometry.dispose();
+  });
+  const geos = {};
+  Object.keys(buckets).forEach((slot) => {
+    geos[slot] = mergePlayerGeos(buckets[slot]);
+    buckets[slot].forEach((g) => g.dispose());
+  });
+
+  const model = { geos, hipY: pose.hipY, lean: pose.lean };
+  _playerModelCache[cacheKey] = model;
+  return model;
+}
+
+// Dorsal procedural: textura de canvas cacheada por número y contraste (sin <Html>, sin DOM)
+const _playerNumMatCache = new Map();
+function getPlayerNumberMaterial(number, darkText) {
+  const label = String(number ?? '');
+  const key = `${label}|${darkText ? 'd' : 'l'}`;
+  if (_playerNumMatCache.has(key)) return _playerNumMatCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `900 ${label.length > 1 ? 80 : 100}px Arial, Helvetica, sans-serif`;
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = darkText ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.65)';
+  ctx.strokeText(label, 64, 68);
+  ctx.fillStyle = darkText ? '#111827' : '#ffffff';
+  ctx.fillText(label, 64, 68);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -1 });
+  _playerNumMatCache.set(key, mat);
+  return mat;
+}
+
+function TacticalPlayer3D({ color, number, role, isSelected, onClick, facing = Math.PI }) {
   const bodyRef = useRef();
-  const leftArmRef = useRef();
-  const rightArmRef = useRef();
+  const isGK = role === 'GK';
+  const model = useMemo(() => getPlayerModel(isGK), [isGK]);
+  const jersey = color || '#2563eb';
+  const light = playerHexLuma(jersey) > 0.78;
 
-  const animOffset = useMemo(() => (Number(number) || 1) * 0.4, [number]);
-  const posX = (position?.x ?? 52.5) - 52.5;
-  const posZ = (position?.y ?? 34) - 34;
+  const mats = useMemo(() => ({
+    jersey: playerStdMat(jersey, 0.64),
+    shorts: playerStdMat(light ? '#1f2937' : '#f8fafc', 0.72),
+    sock: playerStdMat('#f8fafc', 0.7),
+    ribete: playerStdMat(light ? '#111827' : jersey, 0.65),
+    collar: playerStdMat(light ? '#111827' : '#f8fafc', 0.65),
+    skin: playerStdMat('#b9825f', 0.88),
+    hair: playerStdMat('#30231e', 0.94),
+    boot: playerStdMat('#15191f', 0.42),
+    sole: playerStdMat('#d1d5db', 0.6),
+    glove: playerStdMat('#f8fafc', 0.55),
+  }), [jersey, light]);
+  const numberMat = getPlayerNumberMaterial(number, light);
 
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime() * 2 + animOffset;
-    if (bodyRef.current) bodyRef.current.position.y = Math.sin(t) * 0.015;
-    if (leftArmRef.current) leftArmRef.current.rotation.x = Math.sin(t) * 0.04;
-    if (rightArmRef.current) rightArmRef.current.rotation.x = -Math.sin(t) * 0.04;
+  // Rebote leve solo cuando está seleccionado (costo mínimo)
+  useFrame(({ clock }) => {
+    if (!bodyRef.current) return;
+    const target = isSelected ? Math.abs(Math.sin(clock.getElapsedTime() * 5)) * 0.03 : 0;
+    bodyRef.current.position.y += (target - bodyRef.current.position.y) * 0.2;
   });
 
   return (
-    <group position={[posX, 0, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Halo de selección TacticalPad */}
-      {isSelected && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-          <ringGeometry args={[1.05, 1.25, 32]} />
-          <meshBasicMaterial color="#facc15" toneMapped={false} />
-        </mesh>
-      )}
-
-      {/* Sombra de oclusión suave */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <circleGeometry args={[0.85, 24]} />
-        <meshBasicMaterial color="#000000" opacity={0.4} transparent />
+    <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      {/* Sombra de contacto */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+        <circleGeometry args={[0.55, 28]} />
+        <meshBasicMaterial color="#020617" transparent opacity={0.32} depthWrite={false} />
       </mesh>
 
-      {/* CUERPO DEL JUGADOR TACTICALPAD */}
-      <group ref={bodyRef} scale={[1.25, 1.25, 1.25]}>
-        {/* PIERNA IZQUIERDA */}
-        <group position={[-0.22, 0, 0]}>
-          {/* Botín con taco y lengüeta */}
-          <mesh position={[0, 0.08, 0.06]} castShadow>
-            <boxGeometry args={[0.16, 0.16, 0.42]} />
-            <meshStandardMaterial color={bootColor} roughness={0.5} />
+      {/* Selector táctico en el césped: aro nítido + disco translúcido */}
+      {isSelected && (
+        <group>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+            <circleGeometry args={[0.82, 40]} />
+            <meshBasicMaterial color={SELECTOR_COLOR} transparent opacity={0.35} depthWrite={false} toneMapped={false} polygonOffset polygonOffsetFactor={-2} />
           </mesh>
-          <mesh position={[0, 0.02, -0.05]}>
-            <boxGeometry args={[0.14, 0.04, 0.2]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-          {/* Calceta / Media */}
-          <mesh position={[0, 0.44, 0]} castShadow>
-            <cylinderGeometry args={[0.085, 0.095, 0.56, 16]} />
-            <meshStandardMaterial color={sockColor} roughness={0.4} />
-          </mesh>
-          {/* Remate superior media */}
-          <mesh position={[0, 0.72, 0]}>
-            <cylinderGeometry args={[0.096, 0.092, 0.08, 16]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-          {/* Rodilla y muslo visible */}
-          <mesh position={[0, 0.9, 0]} castShadow>
-            <cylinderGeometry args={[0.105, 0.095, 0.32, 16]} />
-            <meshStandardMaterial color={skinColor} roughness={0.65} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+            <ringGeometry args={[0.82, 0.95, 48]} />
+            <meshBasicMaterial color={SELECTOR_COLOR} toneMapped={false} depthWrite={false} polygonOffset polygonOffsetFactor={-3} />
           </mesh>
         </group>
+      )}
 
-        {/* PIERNA DERECHA */}
-        <group position={[0.22, 0, 0]}>
-          <mesh position={[0, 0.08, 0.06]} castShadow>
-            <boxGeometry args={[0.16, 0.16, 0.42]} />
-            <meshStandardMaterial color={bootColor} roughness={0.5} />
-          </mesh>
-          <mesh position={[0, 0.02, -0.05]}>
-            <boxGeometry args={[0.14, 0.04, 0.2]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-          <mesh position={[0, 0.44, 0]} castShadow>
-            <cylinderGeometry args={[0.085, 0.095, 0.56, 16]} />
-            <meshStandardMaterial color={sockColor} roughness={0.4} />
-          </mesh>
-          <mesh position={[0, 0.72, 0]}>
-            <cylinderGeometry args={[0.096, 0.092, 0.08, 16]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-          <mesh position={[0, 0.9, 0]} castShadow>
-            <cylinderGeometry args={[0.105, 0.095, 0.32, 16]} />
-            <meshStandardMaterial color={skinColor} roughness={0.65} />
-          </mesh>
-        </group>
-
-        {/* PANTALÓN CORTO / SHORT DEPORTIVO */}
-        <group position={[0, 1.22, 0]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.34, 0.38, 0.46, 18]} />
-            <meshStandardMaterial color={shortsColor} roughness={0.5} />
-          </mesh>
-          {/* Franjas laterales del short */}
-          <mesh position={[-0.34, 0, 0]}>
-            <boxGeometry args={[0.02, 0.44, 0.1]} />
-            <meshStandardMaterial color={shirtColor} />
-          </mesh>
-          <mesh position={[0.34, 0, 0]}>
-            <boxGeometry args={[0.02, 0.44, 0.1]} />
-            <meshStandardMaterial color={shirtColor} />
-          </mesh>
-        </group>
-
-        {/* TORSO / CAMISETA CON CORTE ATLÉTICO */}
-        <group position={[0, 1.76, 0]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.38, 0.32, 0.72, 18]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.35} metalness={0.08} />
-          </mesh>
-          {/* Cuello en V */}
-          <mesh position={[0, 0.33, 0.19]} rotation={[0.4, 0, 0]}>
-            <boxGeometry args={[0.14, 0.08, 0.03]} />
-            <meshStandardMaterial color="#ffffff" roughness={0.3} />
-          </mesh>
-        </group>
-
-        {/* BRAZO IZQUIERDO CON MANGA Y ANTEBRAZO */}
-        <group ref={leftArmRef} position={[-0.44, 1.84, 0]}>
-          {/* Manga */}
-          <mesh position={[0, -0.12, 0]} rotation={[0, 0, 0.12]} castShadow>
-            <cylinderGeometry args={[0.085, 0.085, 0.24, 14]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.35} />
-          </mesh>
-          {/* Brazo y mano */}
-          <mesh position={[-0.03, -0.38, 0.02]} rotation={[0.06, 0, 0.1]} castShadow>
-            <cylinderGeometry args={[0.07, 0.06, 0.34, 12]} />
-            <meshStandardMaterial color={skinColor} roughness={0.65} />
-          </mesh>
-        </group>
-
-        {/* BRAZO DERECHO CON MANGA Y ANTEBRAZO */}
-        <group ref={rightArmRef} position={[0.44, 1.84, 0]}>
-          <mesh position={[0, -0.12, 0]} rotation={[0, 0, -0.12]} castShadow>
-            <cylinderGeometry args={[0.085, 0.085, 0.24, 14]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.35} />
-          </mesh>
-          <mesh position={[0.03, -0.38, 0.02]} rotation={[0.06, 0, -0.1]} castShadow>
-            <cylinderGeometry args={[0.07, 0.06, 0.34, 12]} />
-            <meshStandardMaterial color={skinColor} roughness={0.65} />
-          </mesh>
-        </group>
-
-        {/* CUELLO */}
-        <mesh position={[0, 2.18, 0]} castShadow>
-          <cylinderGeometry args={[0.095, 0.11, 0.16, 14]} />
-          <meshStandardMaterial color={skinColor} roughness={0.65} />
-        </mesh>
-
-        {/* CABEZA Y CORTE DE CABELLO */}
-        <group position={[0, 2.42, 0]}>
-          <mesh castShadow>
-            <sphereGeometry args={[0.2, 22, 22]} />
-            <meshStandardMaterial color={skinColor} roughness={0.65} />
-          </mesh>
-          {/* Nariz */}
-          <mesh position={[0, 0.01, 0.19]} castShadow>
-            <boxGeometry args={[0.04, 0.07, 0.06]} />
-            <meshStandardMaterial color={skinColor} roughness={0.65} />
-          </mesh>
-          {/* Cabello deportivo */}
-          <mesh position={[0, 0.06, -0.02]} castShadow>
-            <sphereGeometry args={[0.208, 18, 18]} />
-            <meshStandardMaterial color={hairColor} roughness={0.9} />
+      <group ref={bodyRef} rotation={[0, facing, 0]}>
+        {Object.keys(model.geos).map((slot) => (
+          <mesh key={slot} geometry={model.geos[slot]} material={mats[slot]} castShadow />
+        ))}
+        {/* Dorsal en la espalda (sigue la inclinación del torso) */}
+        <group position={[0, model.hipY + 0.06, 0]} rotation={[model.lean, 0, 0]}>
+          <mesh position={[0, 0.33, -0.153]} rotation={[-0.11, 0, 0]} material={numberMat}>
+            <planeGeometry args={[0.3, 0.3]} />
           </mesh>
         </group>
       </group>
-
-      {/* DORSAL FLOTANTE DISCRETO TACTICALPAD */}
-      <Html center position={[0, 3.8, 0]} distanceFactor={30}>
-        <div
-          style={{
-            backgroundColor: 'rgba(15, 23, 42, 0.92)',
-            border: `2px solid ${shirtColor}`,
-            color: '#ffffff',
-            fontWeight: 800,
-            fontSize: '11px',
-            width: '22px',
-            height: '22px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 5px rgba(0,0,0,0.5)',
-            pointerEvents: 'none',
-            userSelect: 'none',
-          }}
-        >
-          {number}
-        </div>
-      </Html>
     </group>
   );
 }
+
+
+
 
 function TrainingObject3D({ obj, position, onClick }) {
   const s = obj.scale || 1;
@@ -1297,7 +1224,13 @@ const camFov = isPC ? 46 : 68;
                 <cylinderGeometry args={[1.4, 1.4, 2.4, 12]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
-              <ProceduralPlayer3D position={{ x: obj.x, y: obj.y }} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} onClick={() => {}} />
+              <TacticalPlayer3D
+                color={col}
+                number={obj.number}
+                role={(obj.role === 'GK' || obj.team === 'gk' || obj.team === 'gk_away') ? 'GK' : obj.role}
+                isSelected={selectedObj?.id === obj.id}
+                onClick={() => {}}
+              />
             </group>
           );
         }
