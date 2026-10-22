@@ -1660,9 +1660,26 @@ Devuelve estricta y únicamente el array JSON.`;
               </button>
             </div>
             <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
-              <Canvas frameloop="always" dpr={[1, 1.5]} shadows gl={{ antialias: true, powerPreference: "high-performance" }} className="w-full h-full">
-                <Scene3D objects={objects} setObjects={setObjects} drawings={drawings} textBlocks={textBlocks} selectedObj={selectedObj} setSelectedObj={setSelectedObj} teamColors={teamColors} cameraLocked={cameraLocked} isPC={isPC} recordHistory={recordHistory} />
-              </Canvas>
+              <Canvas
+              frameloop="always"
+              dpr={[1, 1.5]}
+              shadows
+              gl={{ antialias: true, powerPreference: "high-performance" }}
+              className="w-full h-full touch-none select-none"
+              style={{ touchAction: 'none' }}
+            >
+              <Scene3D
+                objects={objects}
+                setObjects={setObjects}
+                drawings={drawings}
+                textBlocks={textBlocks}
+                selectedObj={selectedObj}
+                setSelectedObj={setSelectedObj}
+                teamColors={teamColors}
+                cameraLocked={cameraLocked}
+                recordHistory={recordHistory}
+              />
+            </Canvas>
             </Suspense>
           </div>
         )}
