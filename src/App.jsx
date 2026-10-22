@@ -308,23 +308,23 @@ function Pitch3D() {
         <group key={`goal-${side}`} position={[side * 52.5, 0, 0]}>
           {[-3.66, 3.66].map((z) => (
             <mesh key={`post-${z}`} position={[0, 1.22, z]} castShadow>
-              <cylinderGeometry args={[0.075, 0.075, 2.44, 12]} />
+              <cylinderGeometry args={[0.09, 0.09, 2.44, 16]} />
               <meshStandardMaterial color="#f8fafc" metalness={0.25} roughness={0.35} />
             </mesh>
           ))}
           <mesh position={[0, 2.44, 0]} castShadow>
-            <boxGeometry args={[0.14, 0.14, 7.32]} />
+            <boxGeometry args={[0.17, 0.17, 7.32]} />
             <meshStandardMaterial color="#f8fafc" metalness={0.25} roughness={0.35} />
           </mesh>
           {[-1, 1].map((zSide) => (
             <mesh key={`net-side-${zSide}`} position={[side * 1.35, 1.1, zSide * 3.45]}>
               <boxGeometry args={[2.7, 2.2, 0.035]} />
-              <meshBasicMaterial color="#e2e8f0" transparent opacity={0.16} wireframe />
+              <meshBasicMaterial color="#f8fafc" transparent opacity={0.32} wireframe />
             </mesh>
           ))}
           <mesh position={[side * 1.35, 1.1, 0]}>
             <boxGeometry args={[2.7, 2.2, 7.0]} />
-            <meshBasicMaterial color="#e2e8f0" transparent opacity={0.12} wireframe />
+            <meshBasicMaterial color="#f8fafc" transparent opacity={0.25} wireframe />
           </mesh>
         </group>
       ))}
@@ -332,137 +332,157 @@ function Pitch3D() {
   );
 }
 
-function Player3D({ position, color, number, isSelected, onClick }) {
+function ProceduralPlayer3D({ position, color, number, isSelected, onClick }) {
   const groupRef = useRef();
   const leftArmRef = useRef();
   const rightArmRef = useRef();
   const leftLegRef = useRef();
   const rightLegRef = useRef();
   const jerseyColor = color || '#2563eb';
+  const skinColor = '#b9825f';
+  const shortsColor = jerseyColor;
   useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
+    const t = clock.getElapsedTime() + (Number(number) || 0) * 0.19;
+    const gait = isSelected ? 0.34 : 0.055;
     if (leftArmRef.current && rightArmRef.current && leftLegRef.current && rightLegRef.current) {
-      const swing = Math.sin(t * 4.1 + (Number(number) || 0) * 0.25) * (isSelected ? 0.19 : 0.035);
+      // Ciclo de movimiento suave de calentamiento; se acentúa al seleccionar.
+      const swing = Math.sin(t * (isSelected ? 5.2 : 2.2)) * gait;
       leftArmRef.current.rotation.x = swing;
       rightArmRef.current.rotation.x = -swing;
-      leftLegRef.current.rotation.x = -swing * 0.75;
-      rightLegRef.current.rotation.x = swing * 0.75;
+      leftLegRef.current.rotation.x = -swing * 1.15;
+      rightLegRef.current.rotation.x = swing * 1.15;
     }
     if (groupRef.current) {
-      const targetY = isSelected ? 0.035 + Math.sin(t * 3.2) * 0.035 : 0;
-      groupRef.current.position.y += (targetY - groupRef.current.position.y) * 0.16;
+      const targetY = isSelected ? 0.025 + Math.abs(Math.sin(t * 5.2)) * 0.035 : Math.abs(Math.sin(t * 2.2)) * 0.006;
+      groupRef.current.position.y += (targetY - groupRef.current.position.y) * 0.18;
+      groupRef.current.rotation.y = isSelected ? Math.sin(t * 1.8) * 0.07 : 0;
     }
   });
-
   return (
-    <group
-      ref={groupRef}
-      position={[position.x - 52.5, 0, position.y - 34]}
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-    >
+    <group ref={groupRef} position={[position.x - 52.5, 0, position.y - 34]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
       {/* Sombra de contacto */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <circleGeometry args={[0.62, 32]} />
-        <meshBasicMaterial color="#020617" transparent opacity={0.34} />
+        <circleGeometry args={[0.53, 32]} />
+        <meshBasicMaterial color="#020617" transparent opacity={0.32} />
       </mesh>
-      {/* Botines y piernas articuladas */}
-      <group ref={leftLegRef} position={[-0.19, 0.82, 0]}>
-        <mesh position={[0, -0.34, 0]} castShadow>
-          <capsuleGeometry args={[0.105, 0.48, 5, 10]} />
-          <meshStandardMaterial color="#e8b995" roughness={0.86} />
-        </mesh>
-        <mesh position={[0, -0.68, 0.11]} castShadow>
-          <capsuleGeometry args={[0.11, 0.19, 4, 10]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.72} />
-        </mesh>
-        <mesh position={[0, -0.79, 0.2]} castShadow>
-          <boxGeometry args={[0.19, 0.12, 0.34]} />
-          <meshStandardMaterial color="#111827" roughness={0.48} />
-        </mesh>
-      </group>
-      <group ref={rightLegRef} position={[0.19, 0.82, 0]}>
-        <mesh position={[0, -0.34, 0]} castShadow>
-          <capsuleGeometry args={[0.105, 0.48, 5, 10]} />
-          <meshStandardMaterial color="#e8b995" roughness={0.86} />
-        </mesh>
-        <mesh position={[0, -0.68, 0.11]} castShadow>
-          <capsuleGeometry args={[0.11, 0.19, 4, 10]} />
-          <meshStandardMaterial color="#f8fafc" roughness={0.72} />
-        </mesh>
-        <mesh position={[0, -0.79, 0.2]} castShadow>
-          <boxGeometry args={[0.19, 0.12, 0.34]} />
-          <meshStandardMaterial color="#111827" roughness={0.48} />
-        </mesh>
-      </group>
-      {/* Tronco con camiseta, cuello y ribetes */}
-      <mesh position={[0, 1.28, 0]} castShadow>
-        <capsuleGeometry args={[0.29, 0.56, 8, 16]} />
-        <meshStandardMaterial color={jerseyColor} roughness={0.56} metalness={0.02} />
-      </mesh>
-      <mesh position={[0, 1.69, 0]}>
-        <cylinderGeometry args={[0.105, 0.12, 0.16, 12]} />
-        <meshStandardMaterial color="#d6a17e" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 1.42, 0.286]}>
-        <boxGeometry args={[0.045, 0.56, 0.018]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.65} />
-      </mesh>
-      {/* Brazos y mangas */}
-      <group ref={leftArmRef} position={[-0.32, 1.46, 0]}>
-        <mesh rotation={[0, 0, -0.2]} position={[-0.025, -0.2, 0]} castShadow>
-          <capsuleGeometry args={[0.095, 0.34, 5, 10]} />
-          <meshStandardMaterial color={jerseyColor} roughness={0.6} />
-        </mesh>
-        <mesh position={[-0.055, -0.47, 0.015]} castShadow>
-          <capsuleGeometry args={[0.075, 0.18, 5, 10]} />
-          <meshStandardMaterial color="#e8b995" roughness={0.9} />
-        </mesh>
-      </group>
-      <group ref={rightArmRef} position={[0.32, 1.46, 0]}>
-        <mesh rotation={[0, 0, 0.2]} position={[0.025, -0.2, 0]} castShadow>
-          <capsuleGeometry args={[0.095, 0.34, 5, 10]} />
-          <meshStandardMaterial color={jerseyColor} roughness={0.6} />
-        </mesh>
-        <mesh position={[0.055, -0.47, 0.015]} castShadow>
-          <capsuleGeometry args={[0.075, 0.18, 5, 10]} />
-          <meshStandardMaterial color="#e8b995" roughness={0.9} />
-        </mesh>
-      </group>
-      {/* Cabeza, orejas y pelo estilizado */}
-      <mesh position={[0, 2.04, 0]} castShadow>
-        <sphereGeometry args={[0.245, 24, 20]} />
-        <meshStandardMaterial color="#e8b995" roughness={0.88} />
-      </mesh>
-      <mesh position={[0, 2.17, -0.015]} castShadow>
-        <sphereGeometry args={[0.247, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
-        <meshStandardMaterial color="#30231e" roughness={0.95} />
-      </mesh>
-      {[-1, 1].map(side => (
-        <mesh key={`ear-${side}`} position={[side * 0.238, 2.02, 0]}>
-          <sphereGeometry args={[0.055, 10, 10]} />
-          <meshStandardMaterial color="#d6a17e" roughness={0.9} />
-        </mesh>
+      {/* Piernas articuladas, medias y botines */}
+      {[-1, 1].map((side) => (
+        <group key={`leg-${side}`} ref={side < 0 ? leftLegRef : rightLegRef} position={[side * 0.17, 0.88, 0]}>
+          <mesh position={[0, -0.22, 0]} castShadow>
+            <capsuleGeometry args={[0.105, 0.34, 6, 12]} />
+            <meshStandardMaterial color={skinColor} roughness={0.86} />
+          </mesh>
+          {/* Media alta */}
+          <mesh position={[0, -0.48, 0.012]} castShadow>
+            <cylinderGeometry args={[0.095, 0.105, 0.39, 16]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, -0.31, 0.015]}>
+            <cylinderGeometry args={[0.097, 0.097, 0.055, 16]} />
+            <meshStandardMaterial color={jerseyColor} roughness={0.65} />
+          </mesh>
+          {/* Botín con suela y pequeños tacos */}
+          <group position={[0, -0.72, 0.12]}>
+            <mesh position={[0, 0, 0.055]} castShadow>
+              <capsuleGeometry args={[0.105, 0.22, 5, 10]} />
+              <meshStandardMaterial color="#15191f" roughness={0.42} />
+            </mesh>
+            <mesh position={[0, -0.065, 0.055]}>
+              <boxGeometry args={[0.17, 0.035, 0.31]} />
+              <meshStandardMaterial color="#d1d5db" roughness={0.6} />
+            </mesh>
+            {[-0.055, 0.055].map((x) => <mesh key={x} position={[x, -0.09, 0.12]}><cylinderGeometry args={[0.018, 0.018, 0.035, 6]} /><meshStandardMaterial color="#111827" /></mesh>)}
+          </group>
+        </group>
       ))}
-      {/* Dorsal orientado hacia la cámara táctica */}
-      <Html center position={[0, 1.35, 0.31]} distanceFactor={17}>
-        <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '11px', lineHeight: 1, textShadow: '0 1px 3px rgba(0,0,0,0.95)', pointerEvents: 'none', userSelect: 'none' }}>
-          {number}
-        </div>
+      {/* Pantalón corto con piernas separadas */}
+      <mesh position={[0, 0.91, 0]} castShadow>
+        <cylinderGeometry args={[0.245, 0.285, 0.25, 24]} />
+        <meshStandardMaterial color={shortsColor} roughness={0.72} />
+      </mesh>
+      {[-1, 1].map(side => <mesh key={`short-${side}`} position={[side * 0.135, 0.79, 0]} castShadow>
+        <cylinderGeometry args={[0.105, 0.12, 0.18, 16]} />
+        <meshStandardMaterial color={shortsColor} roughness={0.7} />
+      </mesh>)}
+      {/* Torso anatómico y camiseta */}
+      <mesh position={[0, 1.31, 0]} castShadow>
+        <capsuleGeometry args={[0.265, 0.39, 7, 16]} />
+        <meshStandardMaterial color={jerseyColor} roughness={0.64} metalness={0.01} />
+      </mesh>
+      {/* Cuello y ribetes de la camiseta */}
+      <mesh position={[0, 1.66, 0]}>
+        <cylinderGeometry args={[0.09, 0.105, 0.14, 16]} />
+        <meshStandardMaterial color={skinColor} roughness={0.88} />
+      </mesh>
+      <mesh position={[0, 1.49, 0.235]}>
+        <boxGeometry args={[0.035, 0.42, 0.014]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.62} />
+      </mesh>
+      <mesh position={[0, 1.59, 0.19]}>
+        <torusGeometry args={[0.09, 0.018, 8, 18]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.65} />
+      </mesh>
+      {/* Mangas, antebrazos y manos */}
+      {[-1, 1].map(side => (
+        <group key={`arm-${side}`} ref={side < 0 ? leftArmRef : rightArmRef} position={[side * 0.29, 1.49, 0]}>
+          <mesh rotation={[0, 0, side * -0.17]} position={[side * 0.035, -0.13, 0]} castShadow>
+            <capsuleGeometry args={[0.105, 0.23, 6, 12]} />
+            <meshStandardMaterial color={jerseyColor} roughness={0.62} />
+          </mesh>
+          <mesh position={[side * 0.055, -0.35, 0.012]} castShadow>
+            <capsuleGeometry args={[0.073, 0.2, 5, 10]} />
+            <meshStandardMaterial color={skinColor} roughness={0.88} />
+          </mesh>
+          <mesh position={[side * 0.06, -0.48, 0.02]} castShadow>
+            <sphereGeometry args={[0.075, 12, 10]} />
+            <meshStandardMaterial color={skinColor} roughness={0.88} />
+          </mesh>
+        </group>
+      ))}
+      {/* Cabeza, orejas, pelo y rasgos faciales sencillos */}
+      <mesh position={[0, 2.02, 0]} castShadow>
+        <sphereGeometry args={[0.225, 28, 24]} />
+        <meshStandardMaterial color={skinColor} roughness={0.88} />
+      </mesh>
+      <mesh position={[0, 2.14, -0.018]} castShadow>
+        <sphereGeometry args={[0.229, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
+        <meshStandardMaterial color="#30231e" roughness={0.94} />
+      </mesh>
+      {[-1, 1].map(side => <mesh key={`ear-${side}`} position={[side * 0.22, 2.015, 0]}>
+        <sphereGeometry args={[0.045, 12, 10]} />
+        <meshStandardMaterial color={skinColor} roughness={0.9} />
+      </mesh>)}
+      {[-1, 1].map(side => <mesh key={`eye-${side}`} position={[side * 0.075, 2.035, 0.205]}>
+        <sphereGeometry args={[0.018, 8, 8]} />
+        <meshBasicMaterial color="#1f2937" />
+      </mesh>)}
+      <mesh position={[0, 1.965, 0.218]}>
+        <boxGeometry args={[0.065, 0.012, 0.012]} />
+        <meshBasicMaterial color="#75452f" />
+      </mesh>
+      {/* Dorsal legible y visible desde la cámara táctica */}
+      <Html center position={[0, 1.34, 0.275]} distanceFactor={17}>
+        <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '12px', lineHeight: 1, textShadow: '0 1px 3px rgba(0,0,0,0.98)', pointerEvents: 'none', userSelect: 'none' }}>{number}</div>
       </Html>
-      {isSelected && (
-        <>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
-            <ringGeometry args={[0.69, 0.79, 40]} />
-            <meshBasicMaterial color="#facc15" toneMapped={false} />
-          </mesh>
-          <mesh position={[0, 2.55, 0]}>
-            <sphereGeometry args={[0.055, 12, 12]} />
-            <meshBasicMaterial color="#facc15" toneMapped={false} />
-          </mesh>
-        </>
-      )}
+      {isSelected && <>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+          <ringGeometry args={[0.62, 0.72, 40]} />
+          <meshBasicMaterial color="#facc15" toneMapped={false} />
+        </mesh>
+        <mesh position={[0, 2.42, 0]}>
+          <sphereGeometry args={[0.05, 12, 12]} />
+          <meshBasicMaterial color="#facc15" toneMapped={false} />
+        </mesh>
+      </>}
     </group>
   );
+}
+
+
+// Jugador 3D procedimental: no depende de peticiones GLB ni de módulos internos de Three.js.
+// Se conserva el fallback anatómico existente para que la escena cargue sin archivos externos.
+function Player3D(props) {
+  return <ProceduralPlayer3D {...props} />;
 }
 
 function TrainingObject3D({ obj, position, onClick }) {
@@ -544,11 +564,10 @@ function Ball3D({ position, onClick }) {
   );
 }
 
-function TacticalDrawing3D({ drawing, isPC }) {
+function TacticalDrawing3D({ drawing }) {
   const geometry = useMemo(() => {
-    const convert = (p) => isPC
-      ? new THREE.Vector3(p.x - 52.5, 0.14, p.y - 34)
-      : new THREE.Vector3(p.y - 52.5, 0.14, p.x - 34);
+    // Coordenadas universales: el largo de la cancha corresponde al eje X y el ancho al eje Z.
+    const convert = (p) => new THREE.Vector3(p.x - 52.5, 0.14, p.y - 34);
     const a = convert(drawing.start);
     const b = convert(drawing.end);
     const delta = b.clone().sub(a);
@@ -563,7 +582,7 @@ function TacticalDrawing3D({ drawing, isPC }) {
       if (segmentLength > 0.02) dashSegments.push({ mid: a.clone().add(direction.clone().multiplyScalar(offset + segmentLength / 2)), length: segmentLength });
     }
     return { a, b, length, quaternion, mid, head, direction, dashSegments };
-  }, [drawing.start.x, drawing.start.y, drawing.end.x, drawing.end.y, isPC]);
+  }, [drawing.start.x, drawing.start.y, drawing.end.x, drawing.end.y]);
   const radius = Math.max(0.025, Math.min(0.075, (drawing.width || 1.2) * 0.025));
   return (
     <group>
@@ -582,9 +601,9 @@ function TacticalDrawing3D({ drawing, isPC }) {
   );
 }
 
-function TacticalText3D({ item, isPC }) {
-  const x = isPC ? item.x - 52.5 : item.y - 52.5;
-  const z = isPC ? item.y - 34 : item.x - 34;
+function TacticalText3D({ item }) {
+  const x = item.x - 52.5;
+  const z = item.y - 34;
   return <Html position={[x, 0.3, z]} center distanceFactor={24}>
     <div style={{ color: item.color || '#ffffff', fontWeight: item.isBold === false ? 600 : 900, fontSize: `${Math.max(10, Math.min(22, (item.size || 2.8) * 4))}px`, textDecoration: item.isUnderline ? 'underline' : 'none', textShadow: '0 1px 4px rgba(0,0,0,.95)', whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none' }}>
       {item.text}
@@ -595,17 +614,12 @@ function TacticalText3D({ item, isPC }) {
 function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC }) {
   const isDragging = useRef(false);
   const dragId = useRef(null);
+  const [activeDragId, setActiveDragId] = useState(null);
   const mathPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const planeIntersect = useMemo(() => new THREE.Vector3(), []);
 
-  // Coordenadas calculadas según el modo (Horizontal en PC, Vertical nativo en Móvil)
-  const toWorld = (obj) => {
-    if (isPC) {
-      return { x: obj.x - 52.5, z: obj.y - 34 };
-    }
-    // En móvil el sistema 2D mide X: 0 a 68 e Y: 0 a 105. Centramos respecto a (34, 52.5)
-    return { x: obj.x - 34, z: obj.y - 52.5 };
-  };
+  // Proyección única para PC, tablet y móvil: X2D -> X3D; Y2D -> Z3D.
+  const toWorld = (obj) => ({ x: obj.x - 52.5, z: obj.y - 34 });
 
   const handlePointerDown = (e, obj) => {
     if (!cameraLocked) return;
@@ -613,6 +627,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     setSelectedObj(obj);
     dragId.current = obj.id;
     isDragging.current = true;
+    setActiveDragId(obj.id);
   };
 
   const handlePointerMove = (e) => {
@@ -620,15 +635,10 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     e.stopPropagation();
 
     if (e.ray.intersectPlane(mathPlane, planeIntersect)) {
-      if (isPC) {
-        const clampedX = Math.max(2, Math.min(103, planeIntersect.x + 52.5));
-        const clampedY = Math.max(2, Math.min(66, planeIntersect.z + 34));
-        setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
-      } else {
-        const clampedX = Math.max(2, Math.min(66, planeIntersect.x + 34));
-        const clampedY = Math.max(2, Math.min(103, planeIntersect.z + 52.5));
-        setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
-      }
+      // Inversa exacta de toWorld, con los mismos límites físicos en cualquier dispositivo.
+      const clampedX = Math.max(2, Math.min(103, planeIntersect.x + 52.5));
+      const clampedY = Math.max(2, Math.min(66, planeIntersect.z + 34));
+      setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
     }
   };
 
@@ -637,17 +647,19 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       if (e && e.stopPropagation) e.stopPropagation();
       isDragging.current = false;
       dragId.current = null;
+      setActiveDragId(null);
       if (recordHistory) recordHistory(objects);
     }
   };
 
-  // En PC la cámara mira de costado panorámico; en móvil mira de frente en vertical idéntico al 2D
-  const camPos = isPC ? [0, 48, 54] : [0, 95, 38];
-  const camFov = isPC ? 48 : 58;
+  // En móvil usamos una perspectiva diagonal para conservar el volumen 3D y
+  // encuadrar la cancha con sus dos porterías. Se mantiene el eje vertical natural de Three.js.
+  const camPos = isPC ? [0, 48, 54] : [0, 75, 78];
+  const camFov = isPC ? 48 : 56;
 
   return (
     <>
-      <PerspectiveCamera makeDefault position={camPos} fov={camFov} />
+      <PerspectiveCamera makeDefault position={camPos} fov={camFov} up={[0, 1, 0]} />
       <OrbitControls
         enabled={!cameraLocked}
         target={[0, 0, 0]}
@@ -662,10 +674,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       <hemisphereLight args={["#e0f2fe", "#14532d", 0.65]} />
       <directionalLight position={[12, 35, 18]} intensity={1.7} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
 
-      {/* En móvil la cancha se rota 90° para que los arcos queden arriba y abajo exacto como el 2D */}
-      <group rotation={isPC ? [0, 0, 0] : [0, Math.PI / 2, 0]}>
-        <Pitch3D />
-      </group>
+      {/* Cancha 3D en coordenadas nativas, sin rotación CSS del viewport. */}
+      <Pitch3D />
 
       {/* Malla receptora de interacción táctil y mouse con rango amplio */}
       <mesh
@@ -673,13 +683,14 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
         position={[0, 0.02, 0]}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         <planeGeometry args={[160, 160]} />
         <meshBasicMaterial visible={false} />
       </mesh>
 
-      {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} isPC={isPC} />)}
-      {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} isPC={isPC} />)}
+      {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} />)}
+      {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} />)}
 
       {objects.map((obj) => {
         const pos = toWorld(obj);
@@ -698,8 +709,14 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
               onPointerDown={onDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             >
-              <Player3D position={{ x: 52.5, y: 34 }} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} onClick={() => {}} />
+              {/* Hitbox táctil ampliada para móvil */}
+              <mesh position={[0, 1.1, 0]}>
+                <cylinderGeometry args={[1.4, 1.4, 2.4, 12]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
+              <Player3D position={{ x: 52.5, y: 34 }} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} isMoving={activeDragId === obj.id} onClick={() => {}} />
             </group>
           );
         }
@@ -711,7 +728,13 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
               onPointerDown={onDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             >
+              {/* Hitbox invisible ampliada para selección táctil del balón. */}
+              <mesh position={[0, 0.9, 0]}>
+                <sphereGeometry args={[1.4, 12, 10]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
               <Ball3D position={{ x: 52.5, y: 34 }} onClick={() => {}} />
             </group>
           );
@@ -724,7 +747,13 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
               onPointerDown={onDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             >
+              {/* Hitbox invisible común para conos y material: facilita tocar sin cambiar su aspecto. */}
+              <mesh position={[0, 0.85, 0]}>
+                <cylinderGeometry args={[1.35, 1.35, 1.7, 12]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
               <TrainingObject3D obj={obj} position={{ x: 52.5, y: 34 }} onClick={() => {}} />
             </group>
           );
@@ -1335,7 +1364,9 @@ Devuelve estricta y únicamente el array JSON.`;
   const currentCategoryContext = isTeacherRestricted ? authenticatedUser.categoryId : (selectedCategoryFilter === 'all' ? (categories[0]?.id || 'sub10') : selectedCategoryFilter);
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black">
+    <div
+      className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black"
+    >
       {/* HEADER */}
       <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 no-print overflow-x-auto max-w-full">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -1696,7 +1727,7 @@ Devuelve estricta y únicamente el array JSON.`;
               shadows
               gl={{ antialias: true, powerPreference: "high-performance" }}
               className="w-full h-full touch-none select-none"
-              style={{ touchAction: 'none' }}
+              style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
             >
               <Scene3D
                 objects={objects}
