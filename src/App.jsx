@@ -243,12 +243,8 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
 // MOTOR 3D
 function Pitch3D() {
   const lineMat = <meshBasicMaterial color="#ffffff" toneMapped={false} />;
-  const goalPostMat = <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />;
-  const netMat = <meshStandardMaterial color="#e2e8f0" roughness={0.9} wireframe opacity={0.65} transparent />;
-  const flagPoleMat = <meshStandardMaterial color="#ffffff" roughness={0.3} />;
-  const flagMat = <meshStandardMaterial color="#ef4444" roughness={0.4} side={2} />;
+  const postMat = <meshStandardMaterial color="#ffffff" roughness={0.15} metalness={0.05} />;
 
-  // Generador de líneas planas reglamentarias
   const line = (x, z, w, d, key) => (
     <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.035, z]}>
       <planeGeometry args={[w, d]} />
@@ -256,21 +252,82 @@ function Pitch3D() {
     </mesh>
   );
 
-  // Generador de banderín de córner reglamentario (mástil 1.5m + tela roja)
+  // Cuadrante de córner exacto: radio 1m orientado estrictamente hacia el interior del campo
+  const innerCorner = (x, z, startAngle, key) => (
+    <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.036, z]}>
+      <ringGeometry args={[0.92, 1.04, 32, 1, startAngle, Math.PI / 2]} />
+      {lineMat}
+    </mesh>
+  );
+
+  // Banderín reforzado para visibilidad nítida en tomas aéreas y móviles
   const cornerFlag = (x, z, rotY, key) => (
     <group key={key} position={[x, 0, z]} rotation={[0, rotY, 0]}>
-      {/* Mástil vertical */}
-      <mesh position={[0, 0.75, 0]} castShadow>
-        <cylinderGeometry args={[0.02, 0.02, 1.5, 12]} />
-        {flagPoleMat}
+      <mesh position={[0, 0.8, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.045, 1.6, 16]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.3} />
       </mesh>
-      {/* Tela del banderín */}
-      <mesh position={[0.18, 1.35, 0]}>
-        <planeGeometry args={[0.36, 0.24]} />
-        {flagMat}
+      {/* Tela del banderín doble cara roja intensa */}
+      <mesh position={[0.26, 1.4, 0]}>
+        <boxGeometry args={[0.48, 0.32, 0.02]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.4} />
       </mesh>
     </group>
   );
+
+  // Modelo de portería profesional FIFA (7.32m x 2.44m con estructura trasera de soporte y sin mallas en X)
+  const goalGoal = (xPos, isLeft) => {
+    const dir = isLeft ? 1 : -1;
+    const depth = 2.0;
+    return (
+      <group position={[xPos, 0, 0]}>
+        {/* Postes verticales blancos */}
+        <mesh position={[0, 1.22, -3.66]} castShadow>
+          <cylinderGeometry args={[0.08, 0.08, 2.44, 20]} />
+          {postMat}
+        </mesh>
+        <mesh position={[0, 1.22, 3.66]} castShadow>
+          <cylinderGeometry args={[0.08, 0.08, 2.44, 20]} />
+          {postMat}
+        </mesh>
+        {/* Travesaño superior */}
+        <mesh position={[0, 2.44, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.08, 0.08, 7.32, 20]} />
+          {postMat}
+        </mesh>
+
+        {/* Tubos de soporte trasero inferior y superior */}
+        <mesh position={[-dir * depth, 0.06, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.05, 0.05, 7.32, 16]} />
+          {postMat}
+        </mesh>
+        <mesh position={[-dir * (depth / 2), 0.06, -3.66]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.05, 0.05, depth, 16]} />
+          {postMat}
+        </mesh>
+        <mesh position={[-dir * (depth / 2), 0.06, 3.66]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.05, 0.05, depth, 16]} />
+          {postMat}
+        </mesh>
+
+        {/* Tirantes diagonales de red */}
+        <mesh position={[-dir * (depth / 2), 1.22, -3.66]} rotation={[0, 0, (isLeft ? 1 : -1) * 0.88]}>
+          <cylinderGeometry args={[0.04, 0.04, 3.15, 14]} />
+          {postMat}
+        </mesh>
+        <mesh position={[-dir * (depth / 2), 1.22, 3.66]} rotation={[0, 0, (isLeft ? 1 : -1) * 0.88]}>
+          <cylinderGeometry args={[0.04, 0.04, 3.15, 14]} />
+          {postMat}
+        </mesh>
+
+        {/* Pared trasera de red blanca semitransparente */}
+        <mesh position={[-dir * depth, 1.22, 0]} rotation={[0, isLeft ? -Math.PI / 2 : Math.PI / 2, 0]}>
+          <planeGeometry args={[7.32, 2.44]} />
+          <meshStandardMaterial color="#f1f5f9" opacity={0.45} transparent roughness={0.8} side={2} />
+        </mesh>
+      </group>
+    );
+  };
 
   return (
     <group>
@@ -280,7 +337,7 @@ function Pitch3D() {
         <meshStandardMaterial color="#195928" roughness={0.9} />
       </mesh>
 
-      {/* Franjas de corte de césped profesional */}
+      {/* Franjas profesionales de césped */}
       {Array.from({ length: 14 }).map((_, i) => (
         <mesh
           key={`stripe-${i}`}
@@ -296,7 +353,7 @@ function Pitch3D() {
         </mesh>
       ))}
 
-      {/* LÍNEAS PERIMETRALES (105m x 68m) */}
+      {/* LÍNEAS DE CONTORNO (105m x 68m) */}
       {line(0, -34, 105, 0.12, 'touch-top')}
       {line(0, 34, 105, 0.12, 'touch-bottom')}
       {line(-52.5, 0, 0.12, 68, 'goal-left')}
@@ -345,69 +402,25 @@ function Pitch3D() {
         {lineMat}
       </mesh>
 
-      {/* 4 CÓRNERS INTERNOS REGLAMENTARIOS */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-52.5, 0.036, -34]}>
-        <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
-        {lineMat}
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, -Math.PI / 2]} position={[-52.5, 0.036, 34]}>
-        <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
-        {lineMat}
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[52.5, 0.036, -34]}>
-        <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
-        {lineMat}
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, Math.PI]} position={[52.5, 0.036, 34]}>
-        <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
-        {lineMat}
-      </mesh>
+      {/* 4 CÓRNERS REGLAMENTARIOS (ORIENTADOS ESTRICTAMENTE HACIA EL CENTRO DEL CAMPO) */}
+      {/* Esquina Superior Izquierda */}
+      {innerCorner(-52.5, -34, 0, 'corner-tl')}
+      {/* Esquina Inferior Izquierda */}
+      {innerCorner(-52.5, 34, -Math.PI / 2, 'corner-bl')}
+      {/* Esquina Superior Derecha */}
+      {innerCorner(52.5, -34, Math.PI / 2, 'corner-tr')}
+      {/* Esquina Inferior Derecha */}
+      {innerCorner(52.5, 34, Math.PI, 'corner-br')}
 
-      {/* 4 BANDERINES DE CÓRNER */}
-      {cornerFlag(-52.5, -34, 0.4, 'flag-top-l')}
-      {cornerFlag(-52.5, 34, -0.4, 'flag-bot-l')}
-      {cornerFlag(52.5, -34, 2.7, 'flag-top-r')}
-      {cornerFlag(52.5, 34, -2.7, 'flag-bot-r')}
+      {/* BANDERINES DE CÓRNER VISIBLES */}
+      {cornerFlag(-52.5, -34, 0.35, 'flag-tl')}
+      {cornerFlag(-52.5, 34, -0.35, 'flag-bl')}
+      {cornerFlag(52.5, -34, 2.8, 'flag-tr')}
+      {cornerFlag(52.5, 34, -2.8, 'flag-br')}
 
-      {/* PORTERÍA / ARCO IZQUIERDO */}
-      <group position={[-52.5, 0, 0]}>
-        <mesh position={[0, 1.22, -3.66]} castShadow>
-          <cylinderGeometry args={[0.06, 0.06, 2.44, 16]} />
-          {goalPostMat}
-        </mesh>
-        <mesh position={[0, 1.22, 3.66]} castShadow>
-          <cylinderGeometry args={[0.06, 0.06, 2.44, 16]} />
-          {goalPostMat}
-        </mesh>
-        <mesh position={[0, 2.44, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.06, 0.06, 7.32, 16]} />
-          {goalPostMat}
-        </mesh>
-        <mesh position={[-1.0, 1.22, 0]}>
-          <boxGeometry args={[2.0, 2.44, 7.32]} />
-          {netMat}
-        </mesh>
-      </group>
-
-      {/* PORTERÍA / ARCO DERECHO */}
-      <group position={[52.5, 0, 0]}>
-        <mesh position={[0, 1.22, -3.66]} castShadow>
-          <cylinderGeometry args={[0.06, 0.06, 2.44, 16]} />
-          {goalPostMat}
-        </mesh>
-        <mesh position={[0, 1.22, 3.66]} castShadow>
-          <cylinderGeometry args={[0.06, 0.06, 2.44, 16]} />
-          {goalPostMat}
-        </mesh>
-        <mesh position={[0, 2.44, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.06, 0.06, 7.32, 16]} />
-          {goalPostMat}
-        </mesh>
-        <mesh position={[1.0, 1.22, 0]}>
-          <boxGeometry args={[2.0, 2.44, 7.32]} />
-          {netMat}
-        </mesh>
-      </group>
+      {/* PORTERÍAS REALES SIN "X" */}
+      {goalGoal(-52.5, true)}
+      {goalGoal(52.5, false)}
     </group>
   );
 }
@@ -817,23 +830,44 @@ function TrainingObject3D({ obj, position, onClick }) {
   );
 }
 
-function Ball3D({ position, onClick }) {
-  const ballRef = useRef();
-  useFrame(({ clock }) => {
-    if (ballRef.current) ballRef.current.rotation.z = clock.getElapsedTime() * 0.22;
-  });
+function Ball3D({ position, isSelected, onClick }) {
+  const posX = (position?.x ?? 52.5) - 52.5;
+  const posZ = (position?.y ?? 34) - 34;
+
   return (
-    <group ref={ballRef} position={[position.x - 52.5, 0.35, position.y - 34]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      <mesh castShadow>
-        <sphereGeometry args={[0.35, 32, 32]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.34} />
+    <group position={[posX, 0.32, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      {/* Sombra proyectada por el balón */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.3, 0]}>
+        <circleGeometry args={[0.34, 16]} />
+        <meshBasicMaterial color="#000000" opacity={0.45} transparent />
       </mesh>
-      {Array.from({length: 5}).map((_,i) => <mesh key={i} rotation={[0, i * Math.PI * 2 / 5, Math.PI / 2.7]} position={[0,0,0]}>
-        <torusGeometry args={[0.18,0.018,5,6]} /><meshBasicMaterial color="#111827" />
-      </mesh>)}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.33, 0]}>
-        <circleGeometry args={[0.4, 32]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.3} />
+
+      {/* Cuerpo principal del balón blanco con brillo de cuero sintético */}
+      <mesh castShadow>
+        <sphereGeometry args={[0.32, 28, 28]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.05} />
+      </mesh>
+
+      {/* Pentágonos / Cascos negros tradicionales */}
+      <mesh position={[0, 0.28, 0.12]} rotation={[0.4, 0, 0]}>
+        <circleGeometry args={[0.09, 5]} />
+        <meshBasicMaterial color="#0f172a" />
+      </mesh>
+      <mesh position={[0, -0.28, 0.12]} rotation={[-0.4, 0, 0]}>
+        <circleGeometry args={[0.09, 5]} />
+        <meshBasicMaterial color="#0f172a" />
+      </mesh>
+      <mesh position={[0.26, 0.08, 0.14]} rotation={[0.2, 0.6, 0]}>
+        <circleGeometry args={[0.09, 5]} />
+        <meshBasicMaterial color="#0f172a" />
+      </mesh>
+      <mesh position={[-0.26, 0.08, 0.14]} rotation={[0.2, -0.6, 0]}>
+        <circleGeometry args={[0.09, 5]} />
+        <meshBasicMaterial color="#0f172a" />
+      </mesh>
+      <mesh position={[0, 0.05, -0.31]} rotation={[Math.PI, 0, 0]}>
+        <circleGeometry args={[0.09, 5]} />
+        <meshBasicMaterial color="#0f172a" />
       </mesh>
     </group>
   );
