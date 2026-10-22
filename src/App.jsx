@@ -529,7 +529,7 @@ function ProceduralPlayer3D({ position, color, number, isSelected, onClick }) {
     }
   });
   return (
-    <group ref={groupRef} position={[position.x - 52.5, 0, position.y - 34]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
+    <group ref={groupRef} position={[0, 0, 0]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
       {/* Sombra de contacto */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
         <circleGeometry args={[0.53, 32]} />
