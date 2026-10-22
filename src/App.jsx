@@ -240,55 +240,101 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   );
 }
 
-// MOTOR 3D
+// MOTOR 3D PROFESIONAL ESTILO TACTICALPAD
 function Pitch3D() {
   return (
     <group>
+      {/* Entorno / Estadio circundante */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
+        <planeGeometry args={[140, 95]} />
+        <meshStandardMaterial color="#0f2415" roughness={0.9} />
+      </mesh>
+
+      {/* Césped Principal */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[105, 68]} />
-        <meshStandardMaterial color="#15803d" roughness={0.8} />
+        <meshStandardMaterial color="#15803d" roughness={0.75} />
       </mesh>
+
+      {/* Franjas de corte de césped reglamentarias */}
       {Array.from({ length: 14 }).map((_, i) => (
-        <mesh key={`stripe-3d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[-52.5 + i * 7.5 + 3.75, 0.01, 0]}>
-          <planeGeometry args={[7.4, 66]} />
-          <meshStandardMaterial color={i % 2 === 0 ? '#16a34a' : '#15803d'} roughness={0.8} />
+        <mesh key={`stripe-3d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[-52.5 + i * 7.5 + 3.75, 0.005, 0]}>
+          <planeGeometry args={[7.5, 68]} />
+          <meshStandardMaterial color={i % 2 === 0 ? '#16a34a' : '#15803d'} roughness={0.75} />
         </mesh>
       ))}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[9.1, 9.25, 64]} />
+
+      {/* Líneas Reglamentarias Blancas */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
+        <ringGeometry args={[9.15, 9.35, 64]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
+        <planeGeometry args={[0.2, 68]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <planeGeometry args={[0.2, 66]} />
+        <circleGeometry args={[0.4, 32]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-44.25, 0.02, 0]}>
+
+      {/* Áreas Grandes */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-44.25, 0.015, 0]}>
         <planeGeometry args={[16.5, 40.4]} />
         <meshBasicMaterial color="#ffffff" wireframe />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[44.25, 0.02, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[44.25, 0.015, 0]}>
         <planeGeometry args={[16.5, 40.4]} />
         <meshBasicMaterial color="#ffffff" wireframe />
       </mesh>
-      <mesh position={[-51, 1.22, 0]}>
-        <boxGeometry args={[0.4, 2.44, 7.32]} />
-        <meshStandardMaterial color="#ffffff" metalness={0.2} roughness={0.4} />
+
+      {/* Áreas Chicas */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-49.75, 0.016, 0]}>
+        <planeGeometry args={[5.5, 18.4]} />
+        <meshBasicMaterial color="#ffffff" wireframe />
       </mesh>
-      <mesh position={[51, 1.22, 0]}>
-        <boxGeometry args={[0.4, 2.44, 7.32]} />
-        <meshStandardMaterial color="#ffffff" metalness={0.2} roughness={0.4} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[49.75, 0.016, 0]}>
+        <planeGeometry args={[5.5, 18.4]} />
+        <meshBasicMaterial color="#ffffff" wireframe />
       </mesh>
+
+      {/* Puntos Penales */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-41.5, 0.02, 0]}>
+        <circleGeometry args={[0.3, 24]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[41.5, 0.02, 0]}>
+        <circleGeometry args={[0.3, 24]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+
+      {/* Porterías 3D volumétricas con redes */}
+      <group position={[-52.5, 0, 0]}>
+        <mesh position={[1.2, 1.22, 0]}>
+          <boxGeometry args={[0.2, 2.44, 7.32]} />
+          <meshStandardMaterial color="#ffffff" metalness={0.4} roughness={0.3} />
+        </mesh>
+        <mesh position={[0.2, 1.2, 0]}>
+          <boxGeometry args={[1.8, 2.3, 7.1]} />
+          <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} />
+        </mesh>
+      </group>
+      <group position={[52.5, 0, 0]}>
+        <mesh position={[-1.2, 1.22, 0]}>
+          <boxGeometry args={[0.2, 2.44, 7.32]} />
+          <meshStandardMaterial color="#ffffff" metalness={0.4} roughness={0.3} />
+        </mesh>
+        <mesh position={[-0.2, 1.2, 0]}>
+          <boxGeometry args={[1.8, 2.3, 7.1]} />
+          <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} />
+        </mesh>
+      </group>
     </group>
   );
 }
 
 function Player3D({ position, color, number, isSelected, onClick }) {
   const groupRef = useRef();
-  useFrame(() => {
-    if (groupRef.current && isSelected) {
-      groupRef.current.position.y = Math.sin(Date.now() * 0.005) * 0.15;
-    }
-  });
 
   return (
     <group
@@ -299,26 +345,61 @@ function Player3D({ position, color, number, isSelected, onClick }) {
         onClick();
       }}
     >
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[1.2, 32]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.3} />
+      {/* Sombra de contacto */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
+        <circleGeometry args={[0.9, 32]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.35} />
       </mesh>
-      <mesh position={[0, 1.3, 0]} castShadow>
-        <capsuleGeometry args={[0.55, 1.2, 8, 16]} />
+
+      {/* Piernas con medias deportivas */}
+      <mesh position={[-0.22, 0.5, 0]}>
+        <cylinderGeometry args={[0.11, 0.13, 1.0, 16]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.5} />
+      </mesh>
+      <mesh position={[0.22, 0.5, 0]}>
+        <cylinderGeometry args={[0.11, 0.13, 1.0, 16]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.5} />
+      </mesh>
+
+      {/* Pantalón corto */}
+      <mesh position={[0, 1.05, 0]}>
+        <cylinderGeometry args={[0.38, 0.36, 0.45, 16]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.6} />
+      </mesh>
+
+      {/* Torso atlético con camiseta */}
+      <mesh position={[0, 1.65, 0]} castShadow>
+        <cylinderGeometry args={[0.42, 0.36, 0.85, 16]} />
+        <meshStandardMaterial color={color} roughness={0.35} />
+      </mesh>
+
+      {/* Brazos */}
+      <mesh position={[-0.45, 1.55, 0]}>
+        <cylinderGeometry args={[0.09, 0.09, 0.65, 12]} />
         <meshStandardMaterial color={color} roughness={0.4} />
       </mesh>
-      <mesh position={[0, 2.3, 0]} castShadow>
-        <sphereGeometry args={[0.38, 16, 16]} />
-        <meshStandardMaterial color="#fcd34d" roughness={0.5} />
+      <mesh position={[0.45, 1.55, 0]}>
+        <cylinderGeometry args={[0.09, 0.09, 0.65, 12]} />
+        <meshStandardMaterial color={color} roughness={0.4} />
       </mesh>
-      <Html center position={[0, 1.4, 0.6]}>
-        <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '14px', textShadow: '0 1px 3px rgba(0,0,0,0.9)', pointerEvents: 'none' }}>
+
+      {/* Cabeza anatómica */}
+      <mesh position={[0, 2.3, 0]} castShadow>
+        <sphereGeometry args={[0.28, 20, 20]} />
+        <meshStandardMaterial color="#fcd34d" roughness={0.4} />
+      </mesh>
+
+      {/* Dorsal nítido */}
+      <Html center position={[0, 1.7, 0.48]}>
+        <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '13px', textShadow: '0 2px 4px rgba(0,0,0,0.95)', userSelect: 'none', pointerEvents: 'none' }}>
           {number}
         </div>
       </Html>
+
+      {/* Anillo de selección táctica al hacer clic */}
       {isSelected && (
         <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[1.3, 1.5, 32]} />
+          <ringGeometry args={[1.1, 1.35, 32]} />
           <meshBasicMaterial color="#facc15" />
         </mesh>
       )}
@@ -331,11 +412,11 @@ function Ball3D({ position, onClick }) {
     <group position={[position.x - 52.5, 0.35, position.y - 34]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
       <mesh castShadow>
         <sphereGeometry args={[0.35, 32, 32]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.3} />
+        <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.33, 0]}>
-        <circleGeometry args={[0.4, 32]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.3} />
+        <circleGeometry args={[0.45, 32]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.35} />
       </mesh>
     </group>
   );
@@ -344,10 +425,11 @@ function Ball3D({ position, onClick }) {
 function Scene3D({ objects, selectedObj, setSelectedObj, teamColors, cameraLocked }) {
   return (
     <>
-      <PerspectiveCamera makeDefault position={[0, 32, 42]} fov={55} />
-      <OrbitControls enabled={!cameraLocked} target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.05} minDistance={12} maxDistance={75} />
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[15, 30, 20]} intensity={1.2} castShadow />
+      <PerspectiveCamera makeDefault position={[0, 36, 44]} fov={50} />
+      <OrbitControls enabled={!cameraLocked} target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.08} minDistance={14} maxDistance={85} />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[20, 40, 25]} intensity={1.4} castShadow shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[-20, 20, -20]} intensity={0.4} />
       <Pitch3D />
       {objects.map((obj) => {
         if (obj.type === 'player') {
@@ -1053,11 +1135,11 @@ Devuelve estricta y únicamente el array JSON.`;
               <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.5" markerHeight="3.5" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
             </defs>
 
-            {/* CÉSPED PRO ORIGINAL CON 22 FRANJAS */}
-            <rect width="500" height="500" x="-200" y="-200" fill="#15803d" />
-            <g opacity="0.13">
-              {Array.from({ length: 22 }).map((_, i) => (
-                <rect key={i} x={-9.2 + i * 5.61} y="-50" width="2.805" height="220" fill="#ffffff" />
+            {/* CÉSPED PRO TOTAL DE BORDE A BORDE */}
+            <rect width="600" height="600" x="-250" y="-250" fill="#15803d" />
+            <g opacity="0.15">
+              {Array.from({ length: 40 }).map((_, i) => (
+                <rect key={i} x={-60 + i * 5.61} y="-100" width="2.805" height="300" fill={i % 2 === 0 ? "#ffffff" : "transparent"} />
               ))}
             </g>
 
