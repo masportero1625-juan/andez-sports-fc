@@ -242,92 +242,111 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
 
 // MOTOR 3D
 function Pitch3D() {
-  // Campo 105 x 68 m; coordenadas Three.js: X = largo, Z = ancho.
-  const line = (x, z, width, depth, key) => (
+  const lineMat = <meshBasicMaterial color="#ffffff" toneMapped={false} />;
+
+  // Generador de líneas rectas (grosor reglamentario 0.12 m)
+  const line = (x, z, w, d, key) => (
     <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.035, z]}>
-      <planeGeometry args={[width, depth]} />
-      <meshBasicMaterial color="#f8fafc" toneMapped={false} />
+      <planeGeometry args={[w, d]} />
+      {lineMat}
     </mesh>
   );
-  const arc = (x, z, radius, start, length, key) => (
-    <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.037, z]}>
-      <ringGeometry args={[radius - 0.075, radius + 0.075, 64, 1, start, length]} />
-      <meshBasicMaterial color="#f8fafc" toneMapped={false} />
+
+  // Generador de cuadrantes de córner de radio 1m exacto
+  const cornerArc = (x, z, rotZ, key) => (
+    <mesh key={key} rotation={[-Math.PI / 2, 0, rotZ]} position={[x, 0.036, z]}>
+      <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
+      {lineMat}
     </mesh>
   );
+
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
-        <planeGeometry args={[112, 75]} />
-        <meshStandardMaterial color="#123b28" roughness={1} />
+      {/* Césped exterior perimetral */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <planeGeometry args={[116, 78]} />
+        <meshStandardMaterial color="#195928" roughness={0.9} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[105, 68]} />
-        <meshStandardMaterial color="#16713b" roughness={0.96} />
-      </mesh>
+
+      {/* Franjas de corte de césped profesional (14 bandas de 7.5 m) */}
       {Array.from({ length: 14 }).map((_, i) => (
-        <mesh key={`stripe-3d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[-52.5 + i * 7.5 + 3.75, 0.008, 0]}>
-          <planeGeometry args={[7.48, 67.9]} />
-          <meshStandardMaterial color={i % 2 === 0 ? '#1b8043' : '#146735'} roughness={1} />
+        <mesh
+          key={`stripe-${i}`}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[-52.5 + i * 7.5 + 3.75, 0.005, 0]}
+          receiveShadow
+        >
+          <planeGeometry args={[7.5, 68]} />
+          <meshStandardMaterial
+            color={i % 2 === 0 ? '#237332' : '#1d632b'}
+            roughness={0.85}
+          />
         </mesh>
       ))}
-      {/* Líneas reglamentarias */}
-      {line(0, 0, 0.13, 68, 'halfway')}
-      {line(0, -33.95, 105, 0.13, 'touch-n')}
-      {line(0, 33.95, 105, 0.13, 'touch-s')}
-      {line(-52.45, 0, 0.13, 68, 'goal-line-l')}
-      {line(52.45, 0, 0.13, 68, 'goal-line-r')}
-      {/* Caja de área y área pequeña con esquinas limpias */}
-      {line(-36, -20.15, 33, 0.13, 'penalty-top-l')}
-      {line(-36, 20.15, 33, 0.13, 'penalty-bottom-l')}
-      {line(36, -20.15, 33, 0.13, 'penalty-top-r')}
-      {line(36, 20.15, 33, 0.13, 'penalty-bottom-r')}
-      {line(-19.5, 0, 0.13, 40.3, 'penalty-inner-l')}
-      {line(19.5, 0, 0.13, 40.3, 'penalty-inner-r')}
-      {line(-44.25, -12.2, 16.5, 0.13, 'six-top-l')}
-      {line(-44.25, 12.2, 16.5, 0.13, 'six-bottom-l')}
-      {line(44.25, -12.2, 16.5, 0.13, 'six-top-r')}
-      {line(44.25, 12.2, 16.5, 0.13, 'six-bottom-r')}
-      {line(-36, 0, 0.13, 24.4, 'six-inner-l')}
-      {line(36, 0, 0.13, 24.4, 'six-inner-r')}
-      {arc(0, 0, 9.15, 0, Math.PI * 2, 'center-circle')}
-      {arc(-44.25, 0, 9.15, -Math.PI / 2.15, Math.PI / 1.075, 'arc-left')}
-      {arc(44.25, 0, 9.15, Math.PI / 2.15, Math.PI / 1.075, 'arc-right')}
-      {arc(-52.45, -33.95, 1, 0, Math.PI / 2, 'corner-tl')}
-      {arc(-52.45, 33.95, 1, -Math.PI / 2, Math.PI / 2, 'corner-bl')}
-      {arc(52.45, -33.95, 1, Math.PI / 2, Math.PI / 2, 'corner-tr')}
-      {arc(52.45, 33.95, 1, Math.PI, Math.PI / 2, 'corner-br')}
-      {[[-41, 0, 'pen-l'], [41, 0, 'pen-r'], [0, 0, 'center-spot']].map(([x, z, key]) => (
-        <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.04, z]}>
-          <circleGeometry args={[0.16, 20]} />
-          <meshBasicMaterial color="#ffffff" toneMapped={false} />
-        </mesh>
-      ))}
-      {/* Arcos 3D: postes, travesaño y red sutil */}
-      {[-1, 1].map((side) => (
-        <group key={`goal-${side}`} position={[side * 52.5, 0, 0]}>
-          {[-3.66, 3.66].map((z) => (
-            <mesh key={`post-${z}`} position={[0, 1.22, z]} castShadow>
-              <cylinderGeometry args={[0.09, 0.09, 2.44, 16]} />
-              <meshStandardMaterial color="#f8fafc" metalness={0.25} roughness={0.35} />
-            </mesh>
-          ))}
-          <mesh position={[0, 2.44, 0]} castShadow>
-            <boxGeometry args={[0.17, 0.17, 7.32]} />
-            <meshStandardMaterial color="#f8fafc" metalness={0.25} roughness={0.35} />
-          </mesh>
-          {[-1, 1].map((zSide) => (
-            <mesh key={`net-side-${zSide}`} position={[side * 1.35, 1.1, zSide * 3.45]}>
-              <boxGeometry args={[2.7, 2.2, 0.035]} />
-              <meshBasicMaterial color="#f8fafc" transparent opacity={0.32} wireframe />
-            </mesh>
-          ))}
-          <mesh position={[side * 1.35, 1.1, 0]}>
-            <boxGeometry args={[2.7, 2.2, 7.0]} />
-            <meshBasicMaterial color="#f8fafc" transparent opacity={0.25} wireframe />
-          </mesh>
-        </group>
-      ))}
+
+      {/* LÍNEAS PERIMETRALES REGLAMENTARIAS (105m x 68m) */}
+      {line(0, -34, 105, 0.12, 'touch-top')}
+      {line(0, 34, 105, 0.12, 'touch-bottom')}
+      {line(-52.5, 0, 0.12, 68, 'goal-left')}
+      {line(52.5, 0, 0.12, 68, 'goal-right')}
+
+      {/* LÍNEA MEDIA Y CÍRCULO CENTRAL (Radio 9.15 m) */}
+      {line(0, 0, 0.12, 68, 'halfway')}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.036, 0]}>
+        <ringGeometry args={[9.09, 9.21, 64]} />
+        {lineMat}
+      </mesh>
+      {/* Punto central */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.037, 0]}>
+        <circleGeometry args={[0.22, 24]} />
+        {lineMat}
+      </mesh>
+
+      {/* ÁREAS LADO IZQUIERDO */}
+      {/* Área Grande (16.5m x 40.32m) */}
+      {line(-44.25, -20.16, 16.5, 0.12, 'pa-top-l')}
+      {line(-44.25, 20.16, 16.5, 0.12, 'pa-bottom-l')}
+      {line(-36.0, 0, 0.12, 40.32, 'pa-front-l')}
+      {/* Área Chica (5.5m x 18.32m) */}
+      {line(-49.75, -9.16, 5.5, 0.12, 'ga-top-l')}
+      {line(-49.75, 9.16, 5.5, 0.12, 'ga-bottom-l')}
+      {line(-47.0, 0, 0.12, 18.32, 'ga-front-l')}
+      {/* Punto Penal Izquierdo (a 11 m de la línea) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-41.5, 0.037, 0]}>
+        <circleGeometry args={[0.2, 20]} />
+        {lineMat}
+      </mesh>
+      {/* Medialuna Izquierda (Radio 9.15m desde el punto penal) */}
+      <mesh rotation={[-Math.PI / 2, 0, -0.925]} position={[-41.5, 0.036, 0]}>
+        <ringGeometry args={[9.09, 9.21, 36, 1, 0, 1.85]} />
+        {lineMat}
+      </mesh>
+
+      {/* ÁREAS LADO DERECHO */}
+      {/* Área Grande (16.5m x 40.32m) */}
+      {line(44.25, -20.16, 16.5, 0.12, 'pa-top-r')}
+      {line(44.25, 20.16, 16.5, 0.12, 'pa-bottom-r')}
+      {line(36.0, 0, 0.12, 40.32, 'pa-front-r')}
+      {/* Área Chica (5.5m x 18.32m) */}
+      {line(49.75, -9.16, 5.5, 0.12, 'ga-top-r')}
+      {line(49.75, 9.16, 5.5, 0.12, 'ga-bottom-r')}
+      {line(47.0, 0, 0.12, 18.32, 'ga-front-r')}
+      {/* Punto Penal Derecho (a 11 m de la línea) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[41.5, 0.037, 0]}>
+        <circleGeometry args={[0.2, 20]} />
+        {lineMat}
+      </mesh>
+      {/* Medialuna Derecha (Radio 9.15m desde el punto penal) */}
+      <mesh rotation={[-Math.PI / 2, 0, 2.215]} position={[41.5, 0.036, 0]}>
+        <ringGeometry args={[9.09, 9.21, 36, 1, 0, 1.85]} />
+        {lineMat}
+      </mesh>
+
+      {/* ARCOS DE CÓRNER EN LOS 4 VÉRTICES INTERNOS (Radio 1 m) */}
+      {cornerArc(-52.5, -34, 0, 'corner-top-l')}
+      {cornerArc(-52.5, 34, -Math.PI / 2, 'corner-bot-l')}
+      {cornerArc(52.5, -34, Math.PI / 2, 'corner-top-r')}
+      {cornerArc(52.5, 34, Math.PI, 'corner-bot-r')}
     </group>
   );
 }
