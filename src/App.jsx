@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, Users, DollarSign, Type, Shield, Move
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Html } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Html, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
 // CREDENCIALES SUPABASE
@@ -479,10 +479,83 @@ function ProceduralPlayer3D({ position, color, number, isSelected, onClick }) {
 }
 
 
-// Jugador 3D procedimental: no depende de peticiones GLB ni de módulos internos de Three.js.
-// Se conserva el fallback anatómico existente para que la escena cargue sin archivos externos.
+const PLAYER_MODEL_URL = `${import.meta.env.BASE_URL || '/'}models/andez-player.glb`;
+
+function PlayerModelGLTF({ position, color, number, isSelected, onClick }) {
+  const { scene } = useGLTF(PLAYER_MODEL_URL);
+  const cloned = useMemo(() => scene.clone(), [scene]);
+
+  useEffect(() => {
+    cloned.traverse((child) => {
+      if (child.isMesh && child.material) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (/shirt|jersey|top|body|cloth|character/i.test(child.name || child.material.name)) {
+          child.material = child.material.clone();
+          child.material.color.set(color || '#2563eb');
+        }
+      }
+    });
+  }, [cloned, color]);
+
+  return (
+    <group
+      position={[position.x - 52.5, 0, position.y - 34]}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+    >
+      <primitive object={cloned} scale={[1.15, 1.15, 1.15]} />
+      <Html center position={[0, 2.1, 0.2]} distanceFactor={16}>
+        <div
+          style={{
+            color: '#ffffff',
+            fontWeight: 900,
+            fontSize: '12px',
+            lineHeight: 1,
+            textShadow: '0 1px 3px rgba(0,0,0,0.98)',
+            pointerEvents: 'none',
+            userSelect: 'none',
+          }}
+        >
+          {number}
+        </div>
+      </Html>
+      {isSelected && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+          <ringGeometry args={[0.65, 0.76, 40]} />
+          <meshBasicMaterial color="#facc15" toneMapped={false} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+class PlayerModelBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(err) {
+    console.warn('Cargando respaldo procedimental:', err);
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
 function Player3D(props) {
-  return <ProceduralPlayer3D {...props} />;
+  return (
+    <PlayerModelBoundary fallback={<ProceduralPlayer3D {...props} />}>
+      <Suspense fallback={<ProceduralPlayer3D {...props} />}>
+        <PlayerModelGLTF {...props} />
+      </Suspense>
+    </PlayerModelBoundary>
+  );
 }
 
 function TrainingObject3D({ obj, position, onClick }) {
@@ -654,8 +727,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
 
   // En móvil usamos una perspectiva diagonal para conservar el volumen 3D y
   // encuadrar la cancha con sus dos porterías. Se mantiene el eje vertical natural de Three.js.
-  const camPos = isPC ? [0, 48, 54] : [0, 75, 78];
-  const camFov = isPC ? 48 : 56;
+  const camPos = isPC ? [0, 46, 56] : [0, 38, 44];
+  const camFov = isPC ? 50 : 62;
 
   return (
     <>
