@@ -482,144 +482,193 @@ function ProceduralPlayer3D({ position, color, number, isSelected, onClick }) {
 function Player3D({ position, color, number, isSelected, onClick }) {
   const shirtColor = color || '#2563eb';
   const shortsColor = '#ffffff';
-  const skinColor = '#dca783';
-  const hairColor = '#1f1b18';
+  const skinColor = '#c68642';
+  const hairColor = '#1a1105';
   const sockColor = color || '#2563eb';
   const bootColor = '#111827';
 
-  const bodyGroup = useRef();
+  const bodyRef = useRef();
   const leftArmRef = useRef();
   const rightArmRef = useRef();
-  const headRef = useRef();
 
-  const animOffset = useMemo(() => (Number(number) || 1) * 0.45, [number]);
-
+  const animOffset = useMemo(() => (Number(number) || 1) * 0.4, [number]);
   const posX = (position?.x ?? 52.5) - 52.5;
   const posZ = (position?.y ?? 34) - 34;
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime() * 2 + animOffset;
-    if (bodyGroup.current) {
-      bodyGroup.current.position.y = Math.sin(t) * 0.025;
-    }
-    if (leftArmRef.current && rightArmRef.current) {
-      leftArmRef.current.rotation.x = Math.sin(t) * 0.06;
-      rightArmRef.current.rotation.x = -Math.sin(t) * 0.06;
-    }
-    if (headRef.current) {
-      headRef.current.rotation.y = Math.sin(t * 0.5) * 0.05;
-    }
+    if (bodyRef.current) bodyRef.current.position.y = Math.sin(t) * 0.015;
+    if (leftArmRef.current) leftArmRef.current.rotation.x = Math.sin(t) * 0.04;
+    if (rightArmRef.current) rightArmRef.current.rotation.x = -Math.sin(t) * 0.04;
   });
 
   return (
     <group position={[posX, 0, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      {/* Halo de selección TacticalPad */}
       {isSelected && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
-          <ringGeometry args={[1.15, 1.4, 32]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+          <ringGeometry args={[1.05, 1.25, 32]} />
           <meshBasicMaterial color="#facc15" toneMapped={false} />
         </mesh>
       )}
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.9, 24]} />
-        <meshBasicMaterial color="#000000" opacity={0.35} transparent />
+      {/* Sombra de oclusión suave */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
+        <circleGeometry args={[0.85, 24]} />
+        <meshBasicMaterial color="#000000" opacity={0.4} transparent />
       </mesh>
 
-      <group ref={bodyGroup} position={[0, 0, 0]} scale={[1.35, 1.35, 1.35]}>
-        <group position={[-0.23, 0, 0]}>
-          <mesh position={[0, 0.1, 0.05]} castShadow>
-            <boxGeometry args={[0.18, 0.2, 0.44]} />
-            <meshStandardMaterial color={bootColor} roughness={0.6} />
+      {/* CUERPO DEL JUGADOR TACTICALPAD */}
+      <group ref={bodyRef} scale={[1.25, 1.25, 1.25]}>
+        {/* PIERNA IZQUIERDA */}
+        <group position={[-0.22, 0, 0]}>
+          {/* Botín con taco y lengüeta */}
+          <mesh position={[0, 0.08, 0.06]} castShadow>
+            <boxGeometry args={[0.16, 0.16, 0.42]} />
+            <meshStandardMaterial color={bootColor} roughness={0.5} />
           </mesh>
-          <mesh position={[0, 0.48, 0]} castShadow>
-            <cylinderGeometry args={[0.088, 0.098, 0.58, 14]} />
-            <meshStandardMaterial color={sockColor} roughness={0.5} />
+          <mesh position={[0, 0.02, -0.05]}>
+            <boxGeometry args={[0.14, 0.04, 0.2]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.3} />
           </mesh>
-          <mesh position={[0, 0.88, 0]} castShadow>
-            <cylinderGeometry args={[0.105, 0.092, 0.28, 14]} />
-            <meshStandardMaterial color={skinColor} roughness={0.7} />
+          {/* Calceta / Media */}
+          <mesh position={[0, 0.44, 0]} castShadow>
+            <cylinderGeometry args={[0.085, 0.095, 0.56, 16]} />
+            <meshStandardMaterial color={sockColor} roughness={0.4} />
           </mesh>
-        </group>
-
-        <group position={[0.23, 0, 0]}>
-          <mesh position={[0, 0.1, 0.05]} castShadow>
-            <boxGeometry args={[0.18, 0.2, 0.44]} />
-            <meshStandardMaterial color={bootColor} roughness={0.6} />
+          {/* Remate superior media */}
+          <mesh position={[0, 0.72, 0]}>
+            <cylinderGeometry args={[0.096, 0.092, 0.08, 16]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.3} />
           </mesh>
-          <mesh position={[0, 0.48, 0]} castShadow>
-            <cylinderGeometry args={[0.088, 0.098, 0.58, 14]} />
-            <meshStandardMaterial color={sockColor} roughness={0.5} />
-          </mesh>
-          <mesh position={[0, 0.88, 0]} castShadow>
-            <cylinderGeometry args={[0.105, 0.092, 0.28, 14]} />
-            <meshStandardMaterial color={skinColor} roughness={0.7} />
-          </mesh>
-        </group>
-
-        <mesh position={[0, 1.22, 0]} castShadow>
-          <cylinderGeometry args={[0.35, 0.38, 0.44, 16]} />
-          <meshStandardMaterial color={shortsColor} roughness={0.45} />
-        </mesh>
-
-        <mesh position={[0, 1.76, 0]} castShadow>
-          <cylinderGeometry args={[0.37, 0.33, 0.74, 16]} />
-          <meshStandardMaterial color={shirtColor} roughness={0.35} metalness={0.05} />
-        </mesh>
-
-        <group ref={leftArmRef} position={[-0.44, 1.82, 0]}>
-          <mesh position={[0, -0.18, 0]} rotation={[0, 0, 0.16]} castShadow>
-            <cylinderGeometry args={[0.078, 0.078, 0.34, 12]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.35} />
-          </mesh>
-          <mesh position={[0, -0.46, 0.02]} rotation={[0.08, 0, 0.12]} castShadow>
-            <cylinderGeometry args={[0.068, 0.062, 0.32, 12]} />
-            <meshStandardMaterial color={skinColor} roughness={0.7} />
+          {/* Rodilla y muslo visible */}
+          <mesh position={[0, 0.9, 0]} castShadow>
+            <cylinderGeometry args={[0.105, 0.095, 0.32, 16]} />
+            <meshStandardMaterial color={skinColor} roughness={0.65} />
           </mesh>
         </group>
 
-        <group ref={rightArmRef} position={[0.44, 1.82, 0]}>
-          <mesh position={[0, -0.18, 0]} rotation={[0, 0, -0.16]} castShadow>
-            <cylinderGeometry args={[0.078, 0.078, 0.34, 12]} />
-            <meshStandardMaterial color={shirtColor} roughness={0.35} />
+        {/* PIERNA DERECHA */}
+        <group position={[0.22, 0, 0]}>
+          <mesh position={[0, 0.08, 0.06]} castShadow>
+            <boxGeometry args={[0.16, 0.16, 0.42]} />
+            <meshStandardMaterial color={bootColor} roughness={0.5} />
           </mesh>
-          <mesh position={[0, -0.46, 0.02]} rotation={[0.08, 0, -0.12]} castShadow>
-            <cylinderGeometry args={[0.068, 0.062, 0.32, 12]} />
-            <meshStandardMaterial color={skinColor} roughness={0.7} />
+          <mesh position={[0, 0.02, -0.05]}>
+            <boxGeometry args={[0.14, 0.04, 0.2]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.3} />
+          </mesh>
+          <mesh position={[0, 0.44, 0]} castShadow>
+            <cylinderGeometry args={[0.085, 0.095, 0.56, 16]} />
+            <meshStandardMaterial color={sockColor} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 0.72, 0]}>
+            <cylinderGeometry args={[0.096, 0.092, 0.08, 16]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.3} />
+          </mesh>
+          <mesh position={[0, 0.9, 0]} castShadow>
+            <cylinderGeometry args={[0.105, 0.095, 0.32, 16]} />
+            <meshStandardMaterial color={skinColor} roughness={0.65} />
           </mesh>
         </group>
 
-        <mesh position={[0, 2.2, 0]} castShadow>
-          <cylinderGeometry args={[0.1, 0.115, 0.16, 12]} />
-          <meshStandardMaterial color={skinColor} roughness={0.7} />
-        </mesh>
-
-        <group ref={headRef} position={[0, 2.45, 0]}>
+        {/* PANTALÓN CORTO / SHORT DEPORTIVO */}
+        <group position={[0, 1.22, 0]}>
           <mesh castShadow>
-            <sphereGeometry args={[0.21, 20, 20]} />
-            <meshStandardMaterial color={skinColor} roughness={0.7} />
+            <cylinderGeometry args={[0.34, 0.38, 0.46, 18]} />
+            <meshStandardMaterial color={shortsColor} roughness={0.5} />
           </mesh>
-          <mesh position={[0, 0.07, -0.02]} castShadow>
-            <sphereGeometry args={[0.215, 16, 16]} />
-            <meshStandardMaterial color={hairColor} roughness={0.85} />
+          {/* Franjas laterales del short */}
+          <mesh position={[-0.34, 0, 0]}>
+            <boxGeometry args={[0.02, 0.44, 0.1]} />
+            <meshStandardMaterial color={shirtColor} />
+          </mesh>
+          <mesh position={[0.34, 0, 0]}>
+            <boxGeometry args={[0.02, 0.44, 0.1]} />
+            <meshStandardMaterial color={shirtColor} />
+          </mesh>
+        </group>
+
+        {/* TORSO / CAMISETA CON CORTE ATLÉTICO */}
+        <group position={[0, 1.76, 0]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.38, 0.32, 0.72, 18]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.35} metalness={0.08} />
+          </mesh>
+          {/* Cuello en V */}
+          <mesh position={[0, 0.33, 0.19]} rotation={[0.4, 0, 0]}>
+            <boxGeometry args={[0.14, 0.08, 0.03]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.3} />
+          </mesh>
+        </group>
+
+        {/* BRAZO IZQUIERDO CON MANGA Y ANTEBRAZO */}
+        <group ref={leftArmRef} position={[-0.44, 1.84, 0]}>
+          {/* Manga */}
+          <mesh position={[0, -0.12, 0]} rotation={[0, 0, 0.12]} castShadow>
+            <cylinderGeometry args={[0.085, 0.085, 0.24, 14]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.35} />
+          </mesh>
+          {/* Brazo y mano */}
+          <mesh position={[-0.03, -0.38, 0.02]} rotation={[0.06, 0, 0.1]} castShadow>
+            <cylinderGeometry args={[0.07, 0.06, 0.34, 12]} />
+            <meshStandardMaterial color={skinColor} roughness={0.65} />
+          </mesh>
+        </group>
+
+        {/* BRAZO DERECHO CON MANGA Y ANTEBRAZO */}
+        <group ref={rightArmRef} position={[0.44, 1.84, 0]}>
+          <mesh position={[0, -0.12, 0]} rotation={[0, 0, -0.12]} castShadow>
+            <cylinderGeometry args={[0.085, 0.085, 0.24, 14]} />
+            <meshStandardMaterial color={shirtColor} roughness={0.35} />
+          </mesh>
+          <mesh position={[0.03, -0.38, 0.02]} rotation={[0.06, 0, -0.1]} castShadow>
+            <cylinderGeometry args={[0.07, 0.06, 0.34, 12]} />
+            <meshStandardMaterial color={skinColor} roughness={0.65} />
+          </mesh>
+        </group>
+
+        {/* CUELLO */}
+        <mesh position={[0, 2.18, 0]} castShadow>
+          <cylinderGeometry args={[0.095, 0.11, 0.16, 14]} />
+          <meshStandardMaterial color={skinColor} roughness={0.65} />
+        </mesh>
+
+        {/* CABEZA Y CORTE DE CABELLO */}
+        <group position={[0, 2.42, 0]}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.2, 22, 22]} />
+            <meshStandardMaterial color={skinColor} roughness={0.65} />
+          </mesh>
+          {/* Nariz */}
+          <mesh position={[0, 0.01, 0.19]} castShadow>
+            <boxGeometry args={[0.04, 0.07, 0.06]} />
+            <meshStandardMaterial color={skinColor} roughness={0.65} />
+          </mesh>
+          {/* Cabello deportivo */}
+          <mesh position={[0, 0.06, -0.02]} castShadow>
+            <sphereGeometry args={[0.208, 18, 18]} />
+            <meshStandardMaterial color={hairColor} roughness={0.9} />
           </mesh>
         </group>
       </group>
 
-      <Html center position={[0, 4.15, 0]} distanceFactor={26}>
+      {/* DORSAL FLOTANTE DISCRETO TACTICALPAD */}
+      <Html center position={[0, 3.8, 0]} distanceFactor={30}>
         <div
           style={{
             backgroundColor: 'rgba(15, 23, 42, 0.92)',
             border: `2px solid ${shirtColor}`,
             color: '#ffffff',
-            fontWeight: 900,
-            fontSize: '12px',
-            width: '25px',
-            height: '25px',
+            fontWeight: 800,
+            fontSize: '11px',
+            width: '22px',
+            height: '22px',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 3px 6px rgba(0,0,0,0.6)',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.5)',
             pointerEvents: 'none',
             userSelect: 'none',
           }}
@@ -756,6 +805,38 @@ function TacticalText3D({ item }) {
     </div>
   </Html>;
 }
+function StadiumEnvironment() {
+  return (
+    <group>
+      {/* Gradería Fondo Norte */}
+      <mesh position={[0, 8, -55]} rotation={[0.4, 0, 0]}>
+        <boxGeometry args={[130, 20, 12]} />
+        <meshStandardMaterial color="#2c3e50" roughness={0.8} />
+      </mesh>
+      {/* Gradería Fondo Sur */}
+      <mesh position={[0, 8, 55]} rotation={[-0.4, 0, 0]}>
+        <boxGeometry args={[130, 20, 12]} />
+        <meshStandardMaterial color="#2c3e50" roughness={0.8} />
+      </mesh>
+      {/* Gradería Lateral Oeste */}
+      <mesh position={[-75, 8, 0]} rotation={[0, 0, -0.4]}>
+        <boxGeometry args={[12, 20, 100]} />
+        <meshStandardMaterial color="#34495e" roughness={0.8} />
+      </mesh>
+      {/* Gradería Lateral Este */}
+      <mesh position={[75, 8, 0]} rotation={[0, 0, 0.4]}>
+        <boxGeometry args={[12, 20, 100]} />
+        <meshStandardMaterial color="#34495e" roughness={0.8} />
+      </mesh>
+
+      {/* Suelo perimetral de hormigón */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+        <planeGeometry args={[160, 120]} />
+        <meshStandardMaterial color="#1e272e" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
 
 function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC }) {
   const isDragging = useRef(false);
@@ -822,6 +903,7 @@ const camFov = isPC ? 46 : 68;
 
       {/* Cancha 3D en coordenadas nativas, sin rotación CSS del viewport. */}
       <Pitch3D />
+      <StadiumEnvironment />
 
       {/* Malla receptora de interacción táctil y mouse con rango amplio */}
       <mesh
