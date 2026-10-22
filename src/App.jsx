@@ -252,22 +252,21 @@ function Pitch3D() {
     </mesh>
   );
 
-  // Cuadrante de córner exacto: radio 1m orientado estrictamente hacia el interior del campo
-  const innerCorner = (x, z, startAngle, key) => (
+  // Cuadrante de córner exacto hacia el interior de la cancha
+  const corner = (x, z, startAngle, key) => (
     <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.036, z]}>
       <ringGeometry args={[0.92, 1.04, 32, 1, startAngle, Math.PI / 2]} />
       {lineMat}
     </mesh>
   );
 
-  // Banderín reforzado para visibilidad nítida en tomas aéreas y móviles
-  const cornerFlag = (x, z, rotY, key) => (
+  // Banderines de córner oficiales
+  const flag = (x, z, rotY, key) => (
     <group key={key} position={[x, 0, z]} rotation={[0, rotY, 0]}>
       <mesh position={[0, 0.8, 0]} castShadow>
         <cylinderGeometry args={[0.045, 0.045, 1.6, 16]} />
         <meshStandardMaterial color="#f8fafc" roughness={0.3} />
       </mesh>
-      {/* Tela del banderín doble cara roja intensa */}
       <mesh position={[0.26, 1.4, 0]}>
         <boxGeometry args={[0.48, 0.32, 0.02]} />
         <meshStandardMaterial color="#dc2626" roughness={0.4} />
@@ -275,55 +274,79 @@ function Pitch3D() {
     </group>
   );
 
-  // Modelo de portería profesional FIFA (7.32m x 2.44m con estructura trasera de soporte y sin mallas en X)
-  const goalGoal = (xPos, isLeft) => {
-    const dir = isLeft ? 1 : -1;
+  // Portería profesional FIFA: 7.32m ancho x 2.44m alto x 2.0m profundidad hacia afuera de la cancha
+  const goal = (xPos, isLeft) => {
+    const dir = isLeft ? -1 : 1;
     const depth = 2.0;
     return (
       <group position={[xPos, 0, 0]}>
         {/* Postes verticales blancos */}
         <mesh position={[0, 1.22, -3.66]} castShadow>
-          <cylinderGeometry args={[0.08, 0.08, 2.44, 20]} />
+          <cylinderGeometry args={[0.07, 0.07, 2.44, 20]} />
           {postMat}
         </mesh>
         <mesh position={[0, 1.22, 3.66]} castShadow>
-          <cylinderGeometry args={[0.08, 0.08, 2.44, 20]} />
+          <cylinderGeometry args={[0.07, 0.07, 2.44, 20]} />
           {postMat}
         </mesh>
-        {/* Travesaño superior */}
+        {/* Travesaño horizontal */}
         <mesh position={[0, 2.44, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.08, 0.08, 7.32, 20]} />
+          <cylinderGeometry args={[0.07, 0.07, 7.32, 20]} />
           {postMat}
         </mesh>
 
-        {/* Tubos de soporte trasero inferior y superior */}
-        <mesh position={[-dir * depth, 0.06, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        {/* Marco inferior en el suelo */}
+        <mesh position={[dir * (depth / 2), 0.05, -3.66]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.05, 0.05, depth, 16]} />
+          {postMat}
+        </mesh>
+        <mesh position={[dir * (depth / 2), 0.05, 3.66]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.05, 0.05, depth, 16]} />
+          {postMat}
+        </mesh>
+        <mesh position={[dir * depth, 0.05, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.05, 0.05, 7.32, 16]} />
           {postMat}
         </mesh>
-        <mesh position={[-dir * (depth / 2), 0.06, -3.66]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.05, 0.05, depth, 16]} />
+
+        {/* Soportes traseros superiores */}
+        <mesh position={[dir * (depth / 2), 2.44, -3.66]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.04, 0.04, depth, 16]} />
           {postMat}
         </mesh>
-        <mesh position={[-dir * (depth / 2), 0.06, 3.66]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.05, 0.05, depth, 16]} />
+        <mesh position={[dir * (depth / 2), 2.44, 3.66]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.04, 0.04, depth, 16]} />
+          {postMat}
+        </mesh>
+        <mesh position={[dir * depth, 2.44, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.04, 7.32, 16]} />
           {postMat}
         </mesh>
 
-        {/* Tirantes diagonales de red */}
-        <mesh position={[-dir * (depth / 2), 1.22, -3.66]} rotation={[0, 0, (isLeft ? 1 : -1) * 0.88]}>
-          <cylinderGeometry args={[0.04, 0.04, 3.15, 14]} />
+        {/* Postes traseros verticales */}
+        <mesh position={[dir * depth, 1.22, -3.66]}>
+          <cylinderGeometry args={[0.04, 0.04, 2.44, 16]} />
           {postMat}
         </mesh>
-        <mesh position={[-dir * (depth / 2), 1.22, 3.66]} rotation={[0, 0, (isLeft ? 1 : -1) * 0.88]}>
-          <cylinderGeometry args={[0.04, 0.04, 3.15, 14]} />
+        <mesh position={[dir * depth, 1.22, 3.66]}>
+          <cylinderGeometry args={[0.04, 0.04, 2.44, 16]} />
           {postMat}
         </mesh>
 
-        {/* Pared trasera de red blanca semitransparente */}
-        <mesh position={[-dir * depth, 1.22, 0]} rotation={[0, isLeft ? -Math.PI / 2 : Math.PI / 2, 0]}>
+        {/* Red posterior */}
+        <mesh position={[dir * depth, 1.22, 0]} rotation={[0, isLeft ? Math.PI / 2 : -Math.PI / 2, 0]}>
           <planeGeometry args={[7.32, 2.44]} />
-          <meshStandardMaterial color="#f1f5f9" opacity={0.45} transparent roughness={0.8} side={2} />
+          <meshStandardMaterial color="#f8fafc" opacity={0.35} transparent roughness={0.9} side={2} />
+        </mesh>
+        {/* Red lateral superior */}
+        <mesh position={[dir * (depth / 2), 1.22, -3.66]}>
+          <planeGeometry args={[depth, 2.44]} />
+          <meshStandardMaterial color="#f8fafc" opacity={0.3} transparent roughness={0.9} side={2} />
+        </mesh>
+        {/* Red lateral inferior */}
+        <mesh position={[dir * (depth / 2), 1.22, 3.66]}>
+          <planeGeometry args={[depth, 2.44]} />
+          <meshStandardMaterial color="#f8fafc" opacity={0.3} transparent roughness={0.9} side={2} />
         </mesh>
       </group>
     );
@@ -331,13 +354,13 @@ function Pitch3D() {
 
   return (
     <group>
-      {/* Césped exterior perimetral */}
+      {/* Césped perimetral exterior */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
         <planeGeometry args={[116, 78]} />
         <meshStandardMaterial color="#195928" roughness={0.9} />
       </mesh>
 
-      {/* Franjas profesionales de césped */}
+      {/* Franjas reglamentarias de césped (14 bandas de 7.5 m) */}
       {Array.from({ length: 14 }).map((_, i) => (
         <mesh
           key={`stripe-${i}`}
@@ -353,13 +376,13 @@ function Pitch3D() {
         </mesh>
       ))}
 
-      {/* LÍNEAS DE CONTORNO (105m x 68m) */}
+      {/* LÍNEAS DE BANDA Y FONDO (105m x 68m) */}
       {line(0, -34, 105, 0.12, 'touch-top')}
       {line(0, 34, 105, 0.12, 'touch-bottom')}
       {line(-52.5, 0, 0.12, 68, 'goal-left')}
       {line(52.5, 0, 0.12, 68, 'goal-right')}
 
-      {/* MEDIO CAMPO Y CÍRCULO CENTRAL (9.15m) */}
+      {/* MEDIO CAMPO Y CÍRCULO CENTRAL (Radio 9.15 m) */}
       {line(0, 0, 0.12, 68, 'halfway')}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.036, 0]}>
         <ringGeometry args={[9.09, 9.21, 64]} />
@@ -370,7 +393,7 @@ function Pitch3D() {
         {lineMat}
       </mesh>
 
-      {/* ÁREA IZQUIERDA */}
+      {/* ÁREAS LADO IZQUIERDO */}
       {line(-44.25, -20.16, 16.5, 0.12, 'pa-top-l')}
       {line(-44.25, 20.16, 16.5, 0.12, 'pa-bottom-l')}
       {line(-36.0, 0, 0.12, 40.32, 'pa-front-l')}
@@ -386,7 +409,7 @@ function Pitch3D() {
         {lineMat}
       </mesh>
 
-      {/* ÁREA DERECHA */}
+      {/* ÁREAS LADO DERECHO */}
       {line(44.25, -20.16, 16.5, 0.12, 'pa-top-r')}
       {line(44.25, 20.16, 16.5, 0.12, 'pa-bottom-r')}
       {line(36.0, 0, 0.12, 40.32, 'pa-front-r')}
@@ -402,25 +425,25 @@ function Pitch3D() {
         {lineMat}
       </mesh>
 
-      {/* 4 CÓRNERS REGLAMENTARIOS (ORIENTADOS ESTRICTAMENTE HACIA EL CENTRO DEL CAMPO) */}
-      {/* Esquina Superior Izquierda */}
-      {innerCorner(-52.5, -34, 0, 'corner-tl')}
-      {/* Esquina Inferior Izquierda */}
-      {innerCorner(-52.5, 34, -Math.PI / 2, 'corner-bl')}
-      {/* Esquina Superior Derecha */}
-      {innerCorner(52.5, -34, Math.PI / 2, 'corner-tr')}
-      {/* Esquina Inferior Derecha */}
-      {innerCorner(52.5, 34, Math.PI, 'corner-br')}
+      {/* 4 CÓRNERS INTERNOS REGLAMENTARIOS (ORIENTADOS ESTRICTAMENTE HACIA EL CÉSPED) */}
+      {/* Superior Izquierdo: apunta al cuadrante X positivo, Z positivo */}
+      {corner(-52.5, -34, 0, 'c-tl')}
+      {/* Inferior Izquierdo: apunta al cuadrante X positivo, Z negativo */}
+      {corner(-52.5, 34, -Math.PI / 2, 'c-bl')}
+      {/* Superior Derecho: apunta al cuadrante X negativo, Z positivo */}
+      {corner(52.5, -34, Math.PI / 2, 'c-tr')}
+      {/* Inferior Derecho: apunta al cuadrante X negativo, Z negativo */}
+      {corner(52.5, 34, Math.PI, 'c-br')}
 
-      {/* BANDERINES DE CÓRNER VISIBLES */}
-      {cornerFlag(-52.5, -34, 0.35, 'flag-tl')}
-      {cornerFlag(-52.5, 34, -0.35, 'flag-bl')}
-      {cornerFlag(52.5, -34, 2.8, 'flag-tr')}
-      {cornerFlag(52.5, 34, -2.8, 'flag-br')}
+      {/* BANDERINES DE CÓRNER */}
+      {flag(-52.5, -34, 0.4, 'f-tl')}
+      {flag(-52.5, 34, -0.4, 'f-bl')}
+      {flag(52.5, -34, 2.7, 'f-tr')}
+      {flag(52.5, 34, -2.7, 'f-br')}
 
-      {/* PORTERÍAS REALES SIN "X" */}
-      {goalGoal(-52.5, true)}
-      {goalGoal(52.5, false)}
+      {/* PORTERÍAS PROFESIONALES TIPO CAJÓN FIFA */}
+      {goal(-52.5, true)}
+      {goal(52.5, false)}
     </group>
   );
 }
