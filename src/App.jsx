@@ -1174,11 +1174,12 @@ function StadiumEnvironment() {
 function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC }) {
   const isDragging = useRef(false);
   const dragId = useRef(null);
+  const dragOffset = useRef(new THREE.Vector3());
   const [activeDragId, setActiveDragId] = useState(null);
   const mathPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const planeIntersect = useMemo(() => new THREE.Vector3(), []);
 
-  // Proyección única para PC, tablet y móvil: X2D -> X3D; Y2D -> Z3D.
+  // Proyección universal 1:1
   const toWorld = (obj) => ({ x: obj.x - 52.5, z: obj.y - 34 });
 
   const handlePointerDown = (e, obj) => {
@@ -1188,16 +1189,36 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     dragId.current = obj.id;
     isDragging.current = true;
     setActiveDragId(obj.id);
+
+    // Fijar el anclaje exacto del puntero
+    if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
+      dragOffset.current.set(
+        planeIntersect.x - (obj.x - 52.5),
+        0,
+        planeIntersect.z - (obj.y - 34)
+      );
+    } else {
+      dragOffset.current.set(0, 0, 0);
+    }
   };
 
   const handlePointerMove = (e) => {
     if (!isDragging.current || !dragId.current || !cameraLocked) return;
     e.stopPropagation();
 
-    if (e.ray.intersectPlane(mathPlane, planeIntersect)) {
-      const clampedX = Math.max(1, Math.min(104, Number((planeIntersect.x + 52.5).toFixed(1))));
-      const clampedY = Math.max(1, Math.min(67, Number((planeIntersect.z + 34).toFixed(1))));
-      setObjects(prev => prev.map(o => o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o));
+    if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
+      // Arrastre continuo y suave sin saltos escalonados
+      const targetWorldX = planeIntersect.x - dragOffset.current.x;
+      const targetWorldZ = planeIntersect.z - dragOffset.current.z;
+
+      const clampedX = Math.max(1, Math.min(104, targetWorldX + 52.5));
+      const clampedY = Math.max(1, Math.min(67, targetWorldZ + 34));
+
+      setObjects((prev) =>
+        prev.map((o) =>
+          o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o
+        )
+      );
     }
   };
 
