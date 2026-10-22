@@ -243,8 +243,12 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
 // MOTOR 3D
 function Pitch3D() {
   const lineMat = <meshBasicMaterial color="#ffffff" toneMapped={false} />;
+  const goalPostMat = <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />;
+  const netMat = <meshStandardMaterial color="#e2e8f0" roughness={0.9} wireframe opacity={0.65} transparent />;
+  const flagPoleMat = <meshStandardMaterial color="#ffffff" roughness={0.3} />;
+  const flagMat = <meshStandardMaterial color="#ef4444" roughness={0.4} side={2} />;
 
-  // Generador de líneas rectas (grosor reglamentario 0.12 m)
+  // Generador de líneas planas reglamentarias
   const line = (x, z, w, d, key) => (
     <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.035, z]}>
       <planeGeometry args={[w, d]} />
@@ -252,12 +256,20 @@ function Pitch3D() {
     </mesh>
   );
 
-  // Generador de cuadrantes de córner de radio 1m exacto
-  const cornerArc = (x, z, rotZ, key) => (
-    <mesh key={key} rotation={[-Math.PI / 2, 0, rotZ]} position={[x, 0.036, z]}>
-      <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
-      {lineMat}
-    </mesh>
+  // Generador de banderín de córner reglamentario (mástil 1.5m + tela roja)
+  const cornerFlag = (x, z, rotY, key) => (
+    <group key={key} position={[x, 0, z]} rotation={[0, rotY, 0]}>
+      {/* Mástil vertical */}
+      <mesh position={[0, 0.75, 0]} castShadow>
+        <cylinderGeometry args={[0.02, 0.02, 1.5, 12]} />
+        {flagPoleMat}
+      </mesh>
+      {/* Tela del banderín */}
+      <mesh position={[0.18, 1.35, 0]}>
+        <planeGeometry args={[0.36, 0.24]} />
+        {flagMat}
+      </mesh>
+    </group>
   );
 
   return (
@@ -268,7 +280,7 @@ function Pitch3D() {
         <meshStandardMaterial color="#195928" roughness={0.9} />
       </mesh>
 
-      {/* Franjas de corte de césped profesional (14 bandas de 7.5 m) */}
+      {/* Franjas de corte de césped profesional */}
       {Array.from({ length: 14 }).map((_, i) => (
         <mesh
           key={`stripe-${i}`}
@@ -284,69 +296,118 @@ function Pitch3D() {
         </mesh>
       ))}
 
-      {/* LÍNEAS PERIMETRALES REGLAMENTARIAS (105m x 68m) */}
+      {/* LÍNEAS PERIMETRALES (105m x 68m) */}
       {line(0, -34, 105, 0.12, 'touch-top')}
       {line(0, 34, 105, 0.12, 'touch-bottom')}
       {line(-52.5, 0, 0.12, 68, 'goal-left')}
       {line(52.5, 0, 0.12, 68, 'goal-right')}
 
-      {/* LÍNEA MEDIA Y CÍRCULO CENTRAL (Radio 9.15 m) */}
+      {/* MEDIO CAMPO Y CÍRCULO CENTRAL (9.15m) */}
       {line(0, 0, 0.12, 68, 'halfway')}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.036, 0]}>
         <ringGeometry args={[9.09, 9.21, 64]} />
         {lineMat}
       </mesh>
-      {/* Punto central */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.037, 0]}>
         <circleGeometry args={[0.22, 24]} />
         {lineMat}
       </mesh>
 
-      {/* ÁREAS LADO IZQUIERDO */}
-      {/* Área Grande (16.5m x 40.32m) */}
+      {/* ÁREA IZQUIERDA */}
       {line(-44.25, -20.16, 16.5, 0.12, 'pa-top-l')}
       {line(-44.25, 20.16, 16.5, 0.12, 'pa-bottom-l')}
       {line(-36.0, 0, 0.12, 40.32, 'pa-front-l')}
-      {/* Área Chica (5.5m x 18.32m) */}
       {line(-49.75, -9.16, 5.5, 0.12, 'ga-top-l')}
       {line(-49.75, 9.16, 5.5, 0.12, 'ga-bottom-l')}
       {line(-47.0, 0, 0.12, 18.32, 'ga-front-l')}
-      {/* Punto Penal Izquierdo (a 11 m de la línea) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-41.5, 0.037, 0]}>
         <circleGeometry args={[0.2, 20]} />
         {lineMat}
       </mesh>
-      {/* Medialuna Izquierda (Radio 9.15m desde el punto penal) */}
       <mesh rotation={[-Math.PI / 2, 0, -0.925]} position={[-41.5, 0.036, 0]}>
         <ringGeometry args={[9.09, 9.21, 36, 1, 0, 1.85]} />
         {lineMat}
       </mesh>
 
-      {/* ÁREAS LADO DERECHO */}
-      {/* Área Grande (16.5m x 40.32m) */}
+      {/* ÁREA DERECHA */}
       {line(44.25, -20.16, 16.5, 0.12, 'pa-top-r')}
       {line(44.25, 20.16, 16.5, 0.12, 'pa-bottom-r')}
       {line(36.0, 0, 0.12, 40.32, 'pa-front-r')}
-      {/* Área Chica (5.5m x 18.32m) */}
       {line(49.75, -9.16, 5.5, 0.12, 'ga-top-r')}
       {line(49.75, 9.16, 5.5, 0.12, 'ga-bottom-r')}
       {line(47.0, 0, 0.12, 18.32, 'ga-front-r')}
-      {/* Punto Penal Derecho (a 11 m de la línea) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[41.5, 0.037, 0]}>
         <circleGeometry args={[0.2, 20]} />
         {lineMat}
       </mesh>
-      {/* Medialuna Derecha (Radio 9.15m desde el punto penal) */}
       <mesh rotation={[-Math.PI / 2, 0, 2.215]} position={[41.5, 0.036, 0]}>
         <ringGeometry args={[9.09, 9.21, 36, 1, 0, 1.85]} />
         {lineMat}
       </mesh>
 
-      {/* ARCOS DE CÓRNER EN LOS 4 VÉRTICES INTERNOS (Radio 1 m) */}
-      {cornerArc(-52.5, -34, 0, 'corner-top-l')}
-      {cornerArc(-52.5, 34, -Math.PI / 2, 'corner-bot-l')}
-      {cornerArc(52.5, -34, Math.PI / 2, 'corner-top-r')}
-      {cornerArc(52.5, 34, Math.PI, 'corner-bot-r')}
+      {/* 4 CÓRNERS INTERNOS REGLAMENTARIOS */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-52.5, 0.036, -34]}>
+        <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
+        {lineMat}
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, -Math.PI / 2]} position={[-52.5, 0.036, 34]}>
+        <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
+        {lineMat}
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[52.5, 0.036, -34]}>
+        <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
+        {lineMat}
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, Math.PI]} position={[52.5, 0.036, 34]}>
+        <ringGeometry args={[0.94, 1.06, 24, 1, 0, Math.PI / 2]} />
+        {lineMat}
+      </mesh>
+
+      {/* 4 BANDERINES DE CÓRNER */}
+      {cornerFlag(-52.5, -34, 0.4, 'flag-top-l')}
+      {cornerFlag(-52.5, 34, -0.4, 'flag-bot-l')}
+      {cornerFlag(52.5, -34, 2.7, 'flag-top-r')}
+      {cornerFlag(52.5, 34, -2.7, 'flag-bot-r')}
+
+      {/* PORTERÍA / ARCO IZQUIERDO */}
+      <group position={[-52.5, 0, 0]}>
+        <mesh position={[0, 1.22, -3.66]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, 2.44, 16]} />
+          {goalPostMat}
+        </mesh>
+        <mesh position={[0, 1.22, 3.66]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, 2.44, 16]} />
+          {goalPostMat}
+        </mesh>
+        <mesh position={[0, 2.44, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, 7.32, 16]} />
+          {goalPostMat}
+        </mesh>
+        <mesh position={[-1.0, 1.22, 0]}>
+          <boxGeometry args={[2.0, 2.44, 7.32]} />
+          {netMat}
+        </mesh>
+      </group>
+
+      {/* PORTERÍA / ARCO DERECHO */}
+      <group position={[52.5, 0, 0]}>
+        <mesh position={[0, 1.22, -3.66]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, 2.44, 16]} />
+          {goalPostMat}
+        </mesh>
+        <mesh position={[0, 1.22, 3.66]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, 2.44, 16]} />
+          {goalPostMat}
+        </mesh>
+        <mesh position={[0, 2.44, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.06, 0.06, 7.32, 16]} />
+          {goalPostMat}
+        </mesh>
+        <mesh position={[1.0, 1.22, 0]}>
+          <boxGeometry args={[2.0, 2.44, 7.32]} />
+          {netMat}
+        </mesh>
+      </group>
     </group>
   );
 }
