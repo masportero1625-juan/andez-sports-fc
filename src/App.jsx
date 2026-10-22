@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react';
 import {
   Folder, Play, RotateCcw, Save, Undo2, Redo2, Trash2, PenTool, X,
   Eraser, Lock, Plus, AlertTriangle, RotateCw, LogOut, MessageCircle,
@@ -240,217 +240,385 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   );
 }
 
-// MOTOR 3D PROFESIONAL ESTILO TACTICALPAD
+// MOTOR 3D
 function Pitch3D() {
+  // Campo 105 x 68 m; coordenadas Three.js: X = largo, Z = ancho.
+  const line = (x, z, width, depth, key) => (
+    <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.035, z]}>
+      <planeGeometry args={[width, depth]} />
+      <meshBasicMaterial color="#f8fafc" toneMapped={false} />
+    </mesh>
+  );
+  const arc = (x, z, radius, start, length, key) => (
+    <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.037, z]}>
+      <ringGeometry args={[radius - 0.075, radius + 0.075, 64, 1, start, length]} />
+      <meshBasicMaterial color="#f8fafc" toneMapped={false} />
+    </mesh>
+  );
   return (
     <group>
-      {/* Entorno / Estadio circundante */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
-        <planeGeometry args={[140, 95]} />
-        <meshStandardMaterial color="#0f2415" roughness={0.9} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
+        <planeGeometry args={[112, 75]} />
+        <meshStandardMaterial color="#123b28" roughness={1} />
       </mesh>
-
-      {/* Césped Principal */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[105, 68]} />
-        <meshStandardMaterial color="#15803d" roughness={0.75} />
+        <meshStandardMaterial color="#16713b" roughness={0.96} />
       </mesh>
-
-      {/* Franjas de corte de césped reglamentarias */}
       {Array.from({ length: 14 }).map((_, i) => (
-        <mesh key={`stripe-3d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[-52.5 + i * 7.5 + 3.75, 0.005, 0]}>
-          <planeGeometry args={[7.5, 68]} />
-          <meshStandardMaterial color={i % 2 === 0 ? '#16a34a' : '#15803d'} roughness={0.75} />
+        <mesh key={`stripe-3d-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[-52.5 + i * 7.5 + 3.75, 0.008, 0]}>
+          <planeGeometry args={[7.48, 67.9]} />
+          <meshStandardMaterial color={i % 2 === 0 ? '#1b8043' : '#146735'} roughness={1} />
         </mesh>
       ))}
-
-      {/* Líneas Reglamentarias Blancas */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <ringGeometry args={[9.15, 9.35, 64]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
-        <planeGeometry args={[0.2, 68]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.4, 32]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
-
-      {/* Áreas Grandes */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-44.25, 0.015, 0]}>
-        <planeGeometry args={[16.5, 40.4]} />
-        <meshBasicMaterial color="#ffffff" wireframe />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[44.25, 0.015, 0]}>
-        <planeGeometry args={[16.5, 40.4]} />
-        <meshBasicMaterial color="#ffffff" wireframe />
-      </mesh>
-
-      {/* Áreas Chicas */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-49.75, 0.016, 0]}>
-        <planeGeometry args={[5.5, 18.4]} />
-        <meshBasicMaterial color="#ffffff" wireframe />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[49.75, 0.016, 0]}>
-        <planeGeometry args={[5.5, 18.4]} />
-        <meshBasicMaterial color="#ffffff" wireframe />
-      </mesh>
-
-      {/* Puntos Penales */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-41.5, 0.02, 0]}>
-        <circleGeometry args={[0.3, 24]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[41.5, 0.02, 0]}>
-        <circleGeometry args={[0.3, 24]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
-
-      {/* Porterías 3D volumétricas con redes */}
-      <group position={[-52.5, 0, 0]}>
-        <mesh position={[1.2, 1.22, 0]}>
-          <boxGeometry args={[0.2, 2.44, 7.32]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.4} roughness={0.3} />
+      {/* Líneas reglamentarias */}
+      {line(0, 0, 0.13, 68, 'halfway')}
+      {line(0, -33.95, 105, 0.13, 'touch-n')}
+      {line(0, 33.95, 105, 0.13, 'touch-s')}
+      {line(-52.45, 0, 0.13, 68, 'goal-line-l')}
+      {line(52.45, 0, 0.13, 68, 'goal-line-r')}
+      {/* Caja de área y área pequeña con esquinas limpias */}
+      {line(-36, -20.15, 33, 0.13, 'penalty-top-l')}
+      {line(-36, 20.15, 33, 0.13, 'penalty-bottom-l')}
+      {line(36, -20.15, 33, 0.13, 'penalty-top-r')}
+      {line(36, 20.15, 33, 0.13, 'penalty-bottom-r')}
+      {line(-19.5, 0, 0.13, 40.3, 'penalty-inner-l')}
+      {line(19.5, 0, 0.13, 40.3, 'penalty-inner-r')}
+      {line(-44.25, -12.2, 16.5, 0.13, 'six-top-l')}
+      {line(-44.25, 12.2, 16.5, 0.13, 'six-bottom-l')}
+      {line(44.25, -12.2, 16.5, 0.13, 'six-top-r')}
+      {line(44.25, 12.2, 16.5, 0.13, 'six-bottom-r')}
+      {line(-36, 0, 0.13, 24.4, 'six-inner-l')}
+      {line(36, 0, 0.13, 24.4, 'six-inner-r')}
+      {arc(0, 0, 9.15, 0, Math.PI * 2, 'center-circle')}
+      {arc(-44.25, 0, 9.15, -Math.PI / 2.15, Math.PI / 1.075, 'arc-left')}
+      {arc(44.25, 0, 9.15, Math.PI / 2.15, Math.PI / 1.075, 'arc-right')}
+      {arc(-52.45, -33.95, 1, 0, Math.PI / 2, 'corner-tl')}
+      {arc(-52.45, 33.95, 1, -Math.PI / 2, Math.PI / 2, 'corner-bl')}
+      {arc(52.45, -33.95, 1, Math.PI / 2, Math.PI / 2, 'corner-tr')}
+      {arc(52.45, 33.95, 1, Math.PI, Math.PI / 2, 'corner-br')}
+      {[[-41, 0, 'pen-l'], [41, 0, 'pen-r'], [0, 0, 'center-spot']].map(([x, z, key]) => (
+        <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.04, z]}>
+          <circleGeometry args={[0.16, 20]} />
+          <meshBasicMaterial color="#ffffff" toneMapped={false} />
         </mesh>
-        <mesh position={[0.2, 1.2, 0]}>
-          <boxGeometry args={[1.8, 2.3, 7.1]} />
-          <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} />
-        </mesh>
-      </group>
-      <group position={[52.5, 0, 0]}>
-        <mesh position={[-1.2, 1.22, 0]}>
-          <boxGeometry args={[0.2, 2.44, 7.32]} />
-          <meshStandardMaterial color="#ffffff" metalness={0.4} roughness={0.3} />
-        </mesh>
-        <mesh position={[-0.2, 1.2, 0]}>
-          <boxGeometry args={[1.8, 2.3, 7.1]} />
-          <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.4} />
-        </mesh>
-      </group>
+      ))}
+      {/* Arcos 3D: postes, travesaño y red sutil */}
+      {[-1, 1].map((side) => (
+        <group key={`goal-${side}`} position={[side * 52.5, 0, 0]}>
+          {[-3.66, 3.66].map((z) => (
+            <mesh key={`post-${z}`} position={[0, 1.22, z]} castShadow>
+              <cylinderGeometry args={[0.075, 0.075, 2.44, 12]} />
+              <meshStandardMaterial color="#f8fafc" metalness={0.25} roughness={0.35} />
+            </mesh>
+          ))}
+          <mesh position={[0, 2.44, 0]} castShadow>
+            <boxGeometry args={[0.14, 0.14, 7.32]} />
+            <meshStandardMaterial color="#f8fafc" metalness={0.25} roughness={0.35} />
+          </mesh>
+          {[-1, 1].map((zSide) => (
+            <mesh key={`net-side-${zSide}`} position={[side * 1.35, 1.1, zSide * 3.45]}>
+              <boxGeometry args={[2.7, 2.2, 0.035]} />
+              <meshBasicMaterial color="#e2e8f0" transparent opacity={0.16} wireframe />
+            </mesh>
+          ))}
+          <mesh position={[side * 1.35, 1.1, 0]}>
+            <boxGeometry args={[2.7, 2.2, 7.0]} />
+            <meshBasicMaterial color="#e2e8f0" transparent opacity={0.12} wireframe />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
 
 function Player3D({ position, color, number, isSelected, onClick }) {
   const groupRef = useRef();
+  const leftArmRef = useRef();
+  const rightArmRef = useRef();
+  const leftLegRef = useRef();
+  const rightLegRef = useRef();
+  const jerseyColor = color || '#2563eb';
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (leftArmRef.current && rightArmRef.current && leftLegRef.current && rightLegRef.current) {
+      const swing = Math.sin(t * 4.1 + (Number(number) || 0) * 0.25) * (isSelected ? 0.19 : 0.035);
+      leftArmRef.current.rotation.x = swing;
+      rightArmRef.current.rotation.x = -swing;
+      leftLegRef.current.rotation.x = -swing * 0.75;
+      rightLegRef.current.rotation.x = swing * 0.75;
+    }
+    if (groupRef.current) {
+      const targetY = isSelected ? 0.035 + Math.sin(t * 3.2) * 0.035 : 0;
+      groupRef.current.position.y += (targetY - groupRef.current.position.y) * 0.16;
+    }
+  });
 
   return (
     <group
       ref={groupRef}
       position={[position.x - 52.5, 0, position.y - 34]}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
     >
       {/* Sombra de contacto */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
-        <circleGeometry args={[0.9, 32]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.35} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+        <circleGeometry args={[0.62, 32]} />
+        <meshBasicMaterial color="#020617" transparent opacity={0.34} />
       </mesh>
-
-      {/* Piernas con medias deportivas */}
-      <mesh position={[-0.22, 0.5, 0]}>
-        <cylinderGeometry args={[0.11, 0.13, 1.0, 16]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.5} />
+      {/* Botines y piernas articuladas */}
+      <group ref={leftLegRef} position={[-0.19, 0.82, 0]}>
+        <mesh position={[0, -0.34, 0]} castShadow>
+          <capsuleGeometry args={[0.105, 0.48, 5, 10]} />
+          <meshStandardMaterial color="#e8b995" roughness={0.86} />
+        </mesh>
+        <mesh position={[0, -0.68, 0.11]} castShadow>
+          <capsuleGeometry args={[0.11, 0.19, 4, 10]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.72} />
+        </mesh>
+        <mesh position={[0, -0.79, 0.2]} castShadow>
+          <boxGeometry args={[0.19, 0.12, 0.34]} />
+          <meshStandardMaterial color="#111827" roughness={0.48} />
+        </mesh>
+      </group>
+      <group ref={rightLegRef} position={[0.19, 0.82, 0]}>
+        <mesh position={[0, -0.34, 0]} castShadow>
+          <capsuleGeometry args={[0.105, 0.48, 5, 10]} />
+          <meshStandardMaterial color="#e8b995" roughness={0.86} />
+        </mesh>
+        <mesh position={[0, -0.68, 0.11]} castShadow>
+          <capsuleGeometry args={[0.11, 0.19, 4, 10]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.72} />
+        </mesh>
+        <mesh position={[0, -0.79, 0.2]} castShadow>
+          <boxGeometry args={[0.19, 0.12, 0.34]} />
+          <meshStandardMaterial color="#111827" roughness={0.48} />
+        </mesh>
+      </group>
+      {/* Tronco con camiseta, cuello y ribetes */}
+      <mesh position={[0, 1.28, 0]} castShadow>
+        <capsuleGeometry args={[0.29, 0.56, 8, 16]} />
+        <meshStandardMaterial color={jerseyColor} roughness={0.56} metalness={0.02} />
       </mesh>
-      <mesh position={[0.22, 0.5, 0]}>
-        <cylinderGeometry args={[0.11, 0.13, 1.0, 16]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.5} />
+      <mesh position={[0, 1.69, 0]}>
+        <cylinderGeometry args={[0.105, 0.12, 0.16, 12]} />
+        <meshStandardMaterial color="#d6a17e" roughness={0.9} />
       </mesh>
-
-      {/* Pantalón corto */}
-      <mesh position={[0, 1.05, 0]}>
-        <cylinderGeometry args={[0.38, 0.36, 0.45, 16]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.6} />
+      <mesh position={[0, 1.42, 0.286]}>
+        <boxGeometry args={[0.045, 0.56, 0.018]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.65} />
       </mesh>
-
-      {/* Torso atlético con camiseta */}
-      <mesh position={[0, 1.65, 0]} castShadow>
-        <cylinderGeometry args={[0.42, 0.36, 0.85, 16]} />
-        <meshStandardMaterial color={color} roughness={0.35} />
+      {/* Brazos y mangas */}
+      <group ref={leftArmRef} position={[-0.32, 1.46, 0]}>
+        <mesh rotation={[0, 0, -0.2]} position={[-0.025, -0.2, 0]} castShadow>
+          <capsuleGeometry args={[0.095, 0.34, 5, 10]} />
+          <meshStandardMaterial color={jerseyColor} roughness={0.6} />
+        </mesh>
+        <mesh position={[-0.055, -0.47, 0.015]} castShadow>
+          <capsuleGeometry args={[0.075, 0.18, 5, 10]} />
+          <meshStandardMaterial color="#e8b995" roughness={0.9} />
+        </mesh>
+      </group>
+      <group ref={rightArmRef} position={[0.32, 1.46, 0]}>
+        <mesh rotation={[0, 0, 0.2]} position={[0.025, -0.2, 0]} castShadow>
+          <capsuleGeometry args={[0.095, 0.34, 5, 10]} />
+          <meshStandardMaterial color={jerseyColor} roughness={0.6} />
+        </mesh>
+        <mesh position={[0.055, -0.47, 0.015]} castShadow>
+          <capsuleGeometry args={[0.075, 0.18, 5, 10]} />
+          <meshStandardMaterial color="#e8b995" roughness={0.9} />
+        </mesh>
+      </group>
+      {/* Cabeza, orejas y pelo estilizado */}
+      <mesh position={[0, 2.04, 0]} castShadow>
+        <sphereGeometry args={[0.245, 24, 20]} />
+        <meshStandardMaterial color="#e8b995" roughness={0.88} />
       </mesh>
-
-      {/* Brazos */}
-      <mesh position={[-0.45, 1.55, 0]}>
-        <cylinderGeometry args={[0.09, 0.09, 0.65, 12]} />
-        <meshStandardMaterial color={color} roughness={0.4} />
+      <mesh position={[0, 2.17, -0.015]} castShadow>
+        <sphereGeometry args={[0.247, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+        <meshStandardMaterial color="#30231e" roughness={0.95} />
       </mesh>
-      <mesh position={[0.45, 1.55, 0]}>
-        <cylinderGeometry args={[0.09, 0.09, 0.65, 12]} />
-        <meshStandardMaterial color={color} roughness={0.4} />
-      </mesh>
-
-      {/* Cabeza anatómica */}
-      <mesh position={[0, 2.3, 0]} castShadow>
-        <sphereGeometry args={[0.28, 20, 20]} />
-        <meshStandardMaterial color="#fcd34d" roughness={0.4} />
-      </mesh>
-
-      {/* Dorsal nítido */}
-      <Html center position={[0, 1.7, 0.48]}>
-        <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '13px', textShadow: '0 2px 4px rgba(0,0,0,0.95)', userSelect: 'none', pointerEvents: 'none' }}>
+      {[-1, 1].map(side => (
+        <mesh key={`ear-${side}`} position={[side * 0.238, 2.02, 0]}>
+          <sphereGeometry args={[0.055, 10, 10]} />
+          <meshStandardMaterial color="#d6a17e" roughness={0.9} />
+        </mesh>
+      ))}
+      {/* Dorsal orientado hacia la cámara táctica */}
+      <Html center position={[0, 1.35, 0.31]} distanceFactor={17}>
+        <div style={{ color: '#ffffff', fontWeight: 900, fontSize: '11px', lineHeight: 1, textShadow: '0 1px 3px rgba(0,0,0,0.95)', pointerEvents: 'none', userSelect: 'none' }}>
           {number}
         </div>
       </Html>
-
-      {/* Anillo de selección táctica al hacer clic */}
       {isSelected && (
-        <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[1.1, 1.35, 32]} />
-          <meshBasicMaterial color="#facc15" />
-        </mesh>
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+            <ringGeometry args={[0.69, 0.79, 40]} />
+            <meshBasicMaterial color="#facc15" toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 2.55, 0]}>
+            <sphereGeometry args={[0.055, 12, 12]} />
+            <meshBasicMaterial color="#facc15" toneMapped={false} />
+          </mesh>
+        </>
       )}
     </group>
   );
 }
 
-function Ball3D({ position, onClick }) {
+function TrainingObject3D({ obj, position, onClick }) {
+  const s = obj.scale || 1;
+  const color = obj.color || '#f97316';
+  const rotation = (obj.rotation || 0) * Math.PI / 180;
   return (
-    <group position={[position.x - 52.5, 0.35, position.y - 34]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
+    <group position={[position.x - 52.5, 0, position.y - 34]} rotation={[0, -rotation, 0]} scale={[s, s, s]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
+      {obj.type === 'cone' && <group position={[0, 0, 0]}>
+        <mesh position={[0, 0.08, 0]} castShadow><cylinderGeometry args={[0.42, 0.55, 0.16, 20]} /><meshStandardMaterial color={color} roughness={0.72} /></mesh>
+        <mesh position={[0, 0.46, 0]} castShadow><coneGeometry args={[0.38, 0.72, 20]} /><meshStandardMaterial color={color} roughness={0.65} /></mesh>
+        <mesh position={[0, 0.42, 0]}><cylinderGeometry args={[0.29, 0.32, 0.12, 20]} /><meshStandardMaterial color="#fff7ed" roughness={0.75} /></mesh>
+      </group>}
+      {obj.type === 'saucer' && <group position={[0, 0.12, 0]}>
+        <mesh castShadow><cylinderGeometry args={[0.46, 0.58, 0.18, 24]} /><meshStandardMaterial color={color} roughness={0.7} /></mesh>
+        <mesh position={[0, 0.1, 0]}><cylinderGeometry args={[0.22, 0.28, 0.04, 24]} /><meshStandardMaterial color="#f8fafc" roughness={0.65} /></mesh>
+      </group>}
+      {obj.type === 'ring' && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}><torusGeometry args={[0.72, 0.09, 8, 28]} /><meshStandardMaterial color={color} roughness={0.55} /></mesh>}
+      {obj.type === 'pole' && <group>
+        <mesh position={[0, 0.12, 0]}><cylinderGeometry args={[0.22, 0.27, 0.18, 16]} /><meshStandardMaterial color="#1f2937" /></mesh>
+        <mesh position={[0, 1.35, 0]} castShadow><cylinderGeometry args={[0.045, 0.055, 2.5, 10]} /><meshStandardMaterial color={color} roughness={0.45} /></mesh>
+        <mesh position={[0, 2.57, 0]}><sphereGeometry args={[0.09, 12, 12]} /><meshStandardMaterial color={color} /></mesh>
+      </group>}
+      {obj.type === 'hurdle' && <group>
+        {[-0.9, 0.9].map((x) => <mesh key={x} position={[x, 0.48, 0]} castShadow><cylinderGeometry args={[0.055, 0.07, 0.96, 10]} /><meshStandardMaterial color="#facc15" /></mesh>)}
+        <mesh position={[0, 0.91, 0]} castShadow><boxGeometry args={[2.05, 0.12, 0.12]} /><meshStandardMaterial color="#facc15" roughness={0.55} /></mesh>
+        <mesh position={[0, 0.91, 0.068]}><boxGeometry args={[0.48, 0.125, 0.015]} /><meshStandardMaterial color="#18181b" /></mesh>
+        {[-1.02, 1.02].map((x) => <mesh key={`foot-${x}`} position={[x, 0.07, 0]}><boxGeometry args={[0.42, 0.1, 0.34]} /><meshStandardMaterial color="#713f12" /></mesh>)}
+      </group>}
+      {obj.type === 'dummy' && <group>
+        <mesh position={[0, 0.16, 0]} castShadow><cylinderGeometry args={[0.34, 0.44, 0.24, 16]} /><meshStandardMaterial color="#374151" /></mesh>
+        <mesh position={[0, 1.15, 0]} castShadow><capsuleGeometry args={[0.35, 1.15, 6, 12]} /><meshStandardMaterial color="#eab308" roughness={0.68} /></mesh>
+        <mesh position={[0, 2.0, 0]} castShadow><sphereGeometry args={[0.26, 16, 14]} /><meshStandardMaterial color="#f8d1b0" roughness={0.9} /></mesh>
+        <mesh position={[0, 1.5, 0.345]}><boxGeometry args={[0.42, 0.38, 0.02]} /><meshStandardMaterial color="#fef3c7" /></mesh>
+      </group>}
+      {obj.type === 'mini_goal' && <group>
+        {[-1, 1].map(side => <mesh key={side} position={[0, 0.55, side * 1.2]} castShadow><cylinderGeometry args={[0.045, 0.045, 1.1, 10]} /><meshStandardMaterial color="#f8fafc" metalness={0.25} /></mesh>)}
+        <mesh position={[0, 1.08, 0]} castShadow><boxGeometry args={[0.08, 0.08, 2.45]} /><meshStandardMaterial color="#f8fafc" metalness={0.25} /></mesh>
+        <mesh position={[-0.62, 0.54, 0]}><boxGeometry args={[1.25, 1.0, 2.35]} /><meshBasicMaterial color="#e2e8f0" transparent opacity={0.18} wireframe /></mesh>
+      </group>}
+      {obj.type === 'ladder' && <group rotation={[0, 0, 0]}>
+        {[-0.65, 0.65].map(x => <mesh key={x} position={[x, 0.045, 0]}><boxGeometry args={[0.06, 0.08, 3.3]} /><meshStandardMaterial color="#f8fafc" /></mesh>)}
+        {[-1.35, -0.81, -0.27, 0.27, 0.81, 1.35].map(z => <mesh key={z} position={[0, 0.09, z]}><boxGeometry args={[1.35, 0.07, 0.055]} /><meshStandardMaterial color="#facc15" /></mesh>)}
+      </group>}
+      {obj.type === 'rebounder' && <group rotation={[Math.PI / 5, 0, 0]}>
+        <mesh position={[0, 0.7, 0]} castShadow><boxGeometry args={[2.5, 1.4, 0.12]} /><meshStandardMaterial color="#f59e0b" roughness={0.55} /></mesh>
+        <mesh position={[0, 0.7, 0.075]}><boxGeometry args={[2.28, 1.18, 0.03]} /><meshBasicMaterial color="#f8fafc" wireframe transparent opacity={0.55} /></mesh>
+        {[-0.9, 0.9].map(x => <mesh key={x} position={[x, 0.25, -0.35]}><cylinderGeometry args={[0.055, 0.07, 0.6, 8]} /><meshStandardMaterial color="#374151" /></mesh>)}
+      </group>}
+      {obj.type === 'trampoline' && <group position={[0, 0.18, 0]}>
+        <mesh position={[0, 0.06, 0]}><cylinderGeometry args={[0.9, 0.95, 0.12, 24]} /><meshStandardMaterial color="#1e293b" /></mesh>
+        <mesh position={[0, 0.13, 0]}><cylinderGeometry args={[0.78, 0.78, 0.035, 24]} /><meshStandardMaterial color="#0284c7" roughness={0.8} /></mesh>
+        {[-0.58, 0.58].flatMap(x => [-0.58, 0.58].map(z => <mesh key={`${x}-${z}`} position={[x, -0.08, z]}><cylinderGeometry args={[0.045, 0.06, 0.42, 8]} /><meshStandardMaterial color="#475569" /></mesh>))}
+      </group>}
+      {obj.type === 'mat' && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, 0]} receiveShadow><boxGeometry args={[2.6, 1.35, 0.12]} /><meshStandardMaterial color={color === '#f97316' ? '#2563eb' : color} roughness={0.86} /></mesh>}
+    </group>
+  );
+}
+
+function Ball3D({ position, onClick }) {
+  const ballRef = useRef();
+  useFrame(({ clock }) => {
+    if (ballRef.current) ballRef.current.rotation.z = clock.getElapsedTime() * 0.22;
+  });
+  return (
+    <group ref={ballRef} position={[position.x - 52.5, 0.35, position.y - 34]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
       <mesh castShadow>
         <sphereGeometry args={[0.35, 32, 32]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
+        <meshStandardMaterial color="#ffffff" roughness={0.34} />
       </mesh>
+      {Array.from({length: 5}).map((_,i) => <mesh key={i} rotation={[0, i * Math.PI * 2 / 5, Math.PI / 2.7]} position={[0,0,0]}>
+        <torusGeometry args={[0.18,0.018,5,6]} /><meshBasicMaterial color="#111827" />
+      </mesh>)}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.33, 0]}>
-        <circleGeometry args={[0.45, 32]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.35} />
+        <circleGeometry args={[0.4, 32]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.3} />
       </mesh>
     </group>
   );
 }
 
-function Scene3D({ objects, selectedObj, setSelectedObj, teamColors, cameraLocked }) {
+function TacticalDrawing3D({ drawing, isPC }) {
+  const geometry = useMemo(() => {
+    const convert = (p) => isPC
+      ? new THREE.Vector3(p.x - 52.5, 0.14, p.y - 34)
+      : new THREE.Vector3(p.y - 52.5, 0.14, p.x - 34);
+    const a = convert(drawing.start);
+    const b = convert(drawing.end);
+    const delta = b.clone().sub(a);
+    const length = Math.max(delta.length(), 0.001);
+    const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.clone().normalize());
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const head = b.clone().add(new THREE.Vector3(0, 0, 0));
+    const direction = delta.normalize();
+    const dashSegments = [];
+    for (let offset = 0; offset < length; offset += 1.35) {
+      const segmentLength = Math.min(0.72, length - offset);
+      if (segmentLength > 0.02) dashSegments.push({ mid: a.clone().add(direction.clone().multiplyScalar(offset + segmentLength / 2)), length: segmentLength });
+    }
+    return { a, b, length, quaternion, mid, head, direction, dashSegments };
+  }, [drawing.start.x, drawing.start.y, drawing.end.x, drawing.end.y, isPC]);
+  const radius = Math.max(0.025, Math.min(0.075, (drawing.width || 1.2) * 0.025));
+  return (
+    <group>
+      {drawing.type === 'dashed' ? geometry.dashSegments.map((segment, index) => <mesh key={index} position={segment.mid} quaternion={geometry.quaternion}>
+        <cylinderGeometry args={[radius, radius, segment.length, 7]} />
+        <meshBasicMaterial color={drawing.color || '#ffffff'} toneMapped={false} />
+      </mesh>) : <mesh position={geometry.mid} quaternion={geometry.quaternion}>
+        <cylinderGeometry args={[radius, radius, geometry.length, 7]} />
+        <meshBasicMaterial color={drawing.color || '#ffffff'} toneMapped={false} />
+      </mesh>}
+      {drawing.type !== 'straight' && drawing.type !== 'dashed' && <mesh position={geometry.head} quaternion={new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), geometry.direction)}>
+        <coneGeometry args={[radius * 3.2, 0.52, 8]} />
+        <meshBasicMaterial color={drawing.color || '#ffffff'} toneMapped={false} />
+      </mesh>}
+    </group>
+  );
+}
+
+function TacticalText3D({ item, isPC }) {
+  const x = isPC ? item.x - 52.5 : item.y - 52.5;
+  const z = isPC ? item.y - 34 : item.x - 34;
+  return <Html position={[x, 0.3, z]} center distanceFactor={24}>
+    <div style={{ color: item.color || '#ffffff', fontWeight: item.isBold === false ? 600 : 900, fontSize: `${Math.max(10, Math.min(22, (item.size || 2.8) * 4))}px`, textDecoration: item.isUnderline ? 'underline' : 'none', textShadow: '0 1px 4px rgba(0,0,0,.95)', whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none' }}>
+      {item.text}
+    </div>
+  </Html>;
+}
+
+function Scene3D({ objects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, isPC }) {
+  const toWorld = (obj) => isPC
+    ? { x: obj.x, y: obj.y }
+    : { x: (obj.y / 105) * 105, y: (obj.x / 68) * 68 };
   return (
     <>
-      <PerspectiveCamera makeDefault position={[0, 36, 44]} fov={50} />
-      <OrbitControls enabled={!cameraLocked} target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.08} minDistance={14} maxDistance={85} />
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[20, 40, 25]} intensity={1.4} castShadow shadow-mapSize={[1024, 1024]} />
-      <directionalLight position={[-20, 20, -20]} intensity={0.4} />
+      <PerspectiveCamera makeDefault position={[0, 39, 47]} fov={48} />
+      <OrbitControls enabled={!cameraLocked} target={[0, 0, 0]} maxPolarAngle={Math.PI / 2.03} minPolarAngle={0.22} minDistance={15} maxDistance={92} enableDamping dampingFactor={0.08} />
+      <ambientLight intensity={0.9} />
+      <hemisphereLight args={["#e0f2fe", "#14532d", 0.6]} />
+      <directionalLight position={[12, 32, 18]} intensity={1.65} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
       <Pitch3D />
+      {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} isPC={isPC} />)}
+      {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} isPC={isPC} />)}
       {objects.map((obj) => {
+        const pos = toWorld(obj);
         if (obj.type === 'player') {
           const col = obj.customColor || (
             obj.role === 'GK'
               ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk)
               : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
           );
-          return (
-            <Player3D
-              key={obj.id}
-              position={{ x: obj.x, y: obj.y }}
-              color={col}
-              number={obj.number}
-              isSelected={selectedObj?.id === obj.id}
-              onClick={() => setSelectedObj(obj)}
-            />
-          );
+          return <Player3D key={obj.id} position={pos} color={col} number={obj.number} isSelected={selectedObj?.id === obj.id} onClick={() => setSelectedObj(obj)} />;
         }
-        if (obj.type === 'ball') {
-          return <Ball3D key={obj.id} position={{ x: obj.x, y: obj.y }} onClick={() => setSelectedObj(obj)} />;
+        if (obj.type === 'ball') return <Ball3D key={obj.id} position={pos} onClick={() => setSelectedObj(obj)} />;
+        if (['cone', 'saucer', 'ring', 'pole', 'hurdle', 'dummy', 'mini_goal', 'ladder', 'rebounder', 'trampoline', 'mat'].includes(obj.type)) {
+          return <TrainingObject3D key={obj.id} obj={obj} position={pos} onClick={() => setSelectedObj(obj)} />;
         }
         return null;
       })}
@@ -1237,7 +1405,7 @@ Devuelve estricta y únicamente el array JSON.`;
 
             {/* TEXTOS TÁCTICOS CON BOTONES AGRANDAR, ACHICAR Y ROTAR */}
             {textBlocks.map(tb => {
-              const isSelected = selectedTextId === tb.id;
+              const isSelected = selectedObj?.id === tb.id;
               const rot = tb.rotation || 0;
               const size = tb.size || 2.8;
               const col = tb.color || '#ffffff';
@@ -1413,8 +1581,8 @@ Devuelve estricta y únicamente el array JSON.`;
               </button>
             </div>
             <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
-              <Canvas frameloop="demand" dpr={[1, 1.5]} shadows className="w-full h-full">
-                <Scene3D objects={objects} selectedObj={selectedObj} setSelectedObj={setSelectedObj} teamColors={teamColors} cameraLocked={cameraLocked} />
+              <Canvas frameloop="always" dpr={[1, 1.5]} shadows gl={{ antialias: true, powerPreference: "high-performance" }} className="w-full h-full">
+                <Scene3D objects={objects} drawings={drawings} textBlocks={textBlocks} selectedObj={selectedObj} setSelectedObj={setSelectedObj} teamColors={teamColors} cameraLocked={cameraLocked} isPC={isPC} />
               </Canvas>
             </Suspense>
           </div>
