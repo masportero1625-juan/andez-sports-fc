@@ -714,13 +714,13 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = 0 }) {
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra de contacto suave */}
+      {/* Sombra de contacto */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.55, 24]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.35} depthWrite={false} />
       </mesh>
 
-      {/* Selector táctico tipo TacticalPad */}
+      {/* Selector táctico en césped */}
       {isSelected && (
         <group>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
@@ -734,9 +734,9 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = 0 }) {
         </group>
       )}
 
-      {/* Cuerpo atlético de futbolista proporcional (Altura total: 1.82m) */}
+      {/* Silueta deportiva estilizada (Altura real: 1.80m) */}
       <group rotation={[0, facing, 0]}>
-        {/* Zapatos / Botines */}
+        {/* Calzado / Botines */}
         <mesh position={[-0.14, 0.08, 0.04]} castShadow>
           <boxGeometry args={[0.13, 0.12, 0.28]} />
           <meshStandardMaterial color="#111827" roughness={0.7} />
@@ -746,7 +746,7 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = 0 }) {
           <meshStandardMaterial color="#111827" roughness={0.7} />
         </mesh>
 
-        {/* Medias / Piernas inferiores */}
+        {/* Medias */}
         <mesh position={[-0.14, 0.32, 0]} castShadow>
           <cylinderGeometry args={[0.07, 0.065, 0.38, 16]} />
           <meshStandardMaterial color="#ffffff" roughness={0.6} />
@@ -756,7 +756,7 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = 0 }) {
           <meshStandardMaterial color="#ffffff" roughness={0.6} />
         </mesh>
 
-        {/* Rodillas y Muslos */}
+        {/* Piernas */}
         <mesh position={[-0.14, 0.62, 0]} castShadow>
           <cylinderGeometry args={[0.09, 0.075, 0.28, 16]} />
           <meshStandardMaterial color="#d4a373" roughness={0.8} />
@@ -778,13 +778,13 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = 0 }) {
           <meshStandardMaterial color={jerseyColor} roughness={0.4} metalness={0.1} />
         </mesh>
 
-        {/* Pecho y Hombros */}
+        {/* Hombros */}
         <mesh position={[0, 1.45, 0]} castShadow>
           <boxGeometry args={[0.62, 0.14, 0.26]} />
           <meshStandardMaterial color={jerseyColor} roughness={0.4} metalness={0.1} />
         </mesh>
 
-        {/* Brazos en postura orgánica deportiva */}
+        {/* Brazos */}
         <group position={[-0.32, 1.30, 0]} rotation={[0.12, 0, 0.15]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.065, 0.055, 0.42, 14]} />
@@ -804,24 +804,11 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = 0 }) {
           <meshStandardMaterial color="#d4a373" roughness={0.8} />
         </mesh>
 
-        {/* Cabeza atlética */}
+        {/* Cabeza */}
         <mesh position={[0, 1.68, 0]} castShadow>
           <sphereGeometry args={[0.13, 20, 20]} />
           <meshStandardMaterial color="#d4a373" roughness={0.8} />
         </mesh>
-
-        {/* Dorsal numérico */}
-        {number && (
-          <Text
-            position={[0, 1.25, 0.15]}
-            fontSize={0.2}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {String(number)}
-          </Text>
-        )}
       </group>
     </group>
   );
