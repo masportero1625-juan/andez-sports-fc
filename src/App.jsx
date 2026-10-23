@@ -709,12 +709,32 @@ function getPlayerNumberMaterial(number, darkText) {
   return mat;
 }
 
-function TacticalPlayer3D({ color, number, isSelected, onClick, facing = 0 }) {
+function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI }) {
+  // Modelo humanoide atlético oficial Three.js (Malla continua, proporciones humanas reales)
+  const { scene } = useGLTF('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Xbot.glb');
+  const clone = useMemo(() => scene.clone(), [scene]);
   const jerseyColor = color || '#2563eb';
+
+  // Aplicar colores de equipación deportiva sobre la malla continua
+  useEffect(() => {
+    clone.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (child.material) {
+          child.material = child.material.clone();
+          // Asigna el color del equipo al torso/pecho
+          if (child.name.toLowerCase().includes('body') || child.name.toLowerCase().includes('mesh')) {
+            child.material.color.set(jerseyColor);
+          }
+        }
+      }
+    });
+  }, [clone, jerseyColor]);
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra de contacto */}
+      {/* Sombra de contacto suave */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.55, 24]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.35} depthWrite={false} />
@@ -734,85 +754,15 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = 0 }) {
         </group>
       )}
 
-      {/* Silueta deportiva estilizada (Altura real: 1.80m) */}
-      <group rotation={[0, facing, 0]}>
-        {/* Calzado / Botines */}
-        <mesh position={[-0.14, 0.08, 0.04]} castShadow>
-          <boxGeometry args={[0.13, 0.12, 0.28]} />
-          <meshStandardMaterial color="#111827" roughness={0.7} />
-        </mesh>
-        <mesh position={[0.14, 0.08, 0.04]} castShadow>
-          <boxGeometry args={[0.13, 0.12, 0.28]} />
-          <meshStandardMaterial color="#111827" roughness={0.7} />
-        </mesh>
-
-        {/* Medias */}
-        <mesh position={[-0.14, 0.32, 0]} castShadow>
-          <cylinderGeometry args={[0.07, 0.065, 0.38, 16]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.6} />
-        </mesh>
-        <mesh position={[0.14, 0.32, 0]} castShadow>
-          <cylinderGeometry args={[0.07, 0.065, 0.38, 16]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.6} />
-        </mesh>
-
-        {/* Piernas */}
-        <mesh position={[-0.14, 0.62, 0]} castShadow>
-          <cylinderGeometry args={[0.09, 0.075, 0.28, 16]} />
-          <meshStandardMaterial color="#d4a373" roughness={0.8} />
-        </mesh>
-        <mesh position={[0.14, 0.62, 0]} castShadow>
-          <cylinderGeometry args={[0.09, 0.075, 0.28, 16]} />
-          <meshStandardMaterial color="#d4a373" roughness={0.8} />
-        </mesh>
-
-        {/* Pantalón corto */}
-        <mesh position={[0, 0.88, 0]} castShadow>
-          <cylinderGeometry args={[0.26, 0.28, 0.32, 20]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.6} />
-        </mesh>
-
-        {/* Torso atlético / Camiseta oficial */}
-        <mesh position={[0, 1.22, 0]} castShadow>
-          <cylinderGeometry args={[0.29, 0.24, 0.44, 20]} />
-          <meshStandardMaterial color={jerseyColor} roughness={0.4} metalness={0.1} />
-        </mesh>
-
-        {/* Hombros */}
-        <mesh position={[0, 1.45, 0]} castShadow>
-          <boxGeometry args={[0.62, 0.14, 0.26]} />
-          <meshStandardMaterial color={jerseyColor} roughness={0.4} metalness={0.1} />
-        </mesh>
-
-        {/* Brazos */}
-        <group position={[-0.32, 1.30, 0]} rotation={[0.12, 0, 0.15]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.065, 0.055, 0.42, 14]} />
-            <meshStandardMaterial color="#d4a373" roughness={0.8} />
-          </mesh>
-        </group>
-        <group position={[0.32, 1.30, 0]} rotation={[0.12, 0, -0.15]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.065, 0.055, 0.42, 14]} />
-            <meshStandardMaterial color="#d4a373" roughness={0.8} />
-          </mesh>
-        </group>
-
-        {/* Cuello */}
-        <mesh position={[0, 1.54, 0]} castShadow>
-          <cylinderGeometry args={[0.08, 0.08, 0.1, 16]} />
-          <meshStandardMaterial color="#d4a373" roughness={0.8} />
-        </mesh>
-
-        {/* Cabeza */}
-        <mesh position={[0, 1.68, 0]} castShadow>
-          <sphereGeometry args={[0.13, 20, 20]} />
-          <meshStandardMaterial color="#d4a373" roughness={0.8} />
-        </mesh>
+      {/* Humanoide con orientación hacia la cámara principal y escala reglamentaria 1.80m */}
+      <group rotation={[0, facing, 0]} scale={[0.0102, 0.0102, 0.0102]}>
+        <primitive object={clone} />
       </group>
     </group>
   );
 }
+
+useGLTF.preload('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Xbot.glb');
 
 
 
