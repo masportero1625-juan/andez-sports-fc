@@ -709,70 +709,63 @@ function getPlayerNumberMaterial(number, darkText) {
   return mat;
 }
 
-function TacticalPlayer3D({ color, number, role, isSelected, onClick, facing = Math.PI }) {
-  const bodyRef = useRef();
-  const isGK = role === 'GK';
-  const model = useMemo(() => getPlayerModel(isGK), [isGK]);
-  const jersey = color || '#2563eb';
-  const light = playerHexLuma(jersey) > 0.78;
+function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI }) {
+  const { scene } = useGLTF('/player.glb');
+  const clone = useMemo(() => scene.clone(), [scene]);
+  const jerseyColor = color || '#2563eb';
 
-  const mats = useMemo(() => ({
-    jersey: playerStdMat(jersey, 0.64),
-    shorts: playerStdMat(light ? '#1f2937' : '#f8fafc', 0.72),
-    sock: playerStdMat('#f8fafc', 0.7),
-    ribete: playerStdMat(light ? '#111827' : jersey, 0.65),
-    collar: playerStdMat(light ? '#111827' : '#f8fafc', 0.65),
-    skin: playerStdMat('#b9825f', 0.88),
-    hair: playerStdMat('#30231e', 0.94),
-    boot: playerStdMat('#15191f', 0.42),
-    sole: playerStdMat('#d1d5db', 0.6),
-    glove: playerStdMat('#f8fafc', 0.55),
-  }), [jersey, light]);
-  const numberMat = getPlayerNumberMaterial(number, light);
-
-  // Rebote leve solo cuando está seleccionado (costo mínimo)
-  useFrame(({ clock }) => {
-    if (!bodyRef.current) return;
-    const target = isSelected ? Math.abs(Math.sin(clock.getElapsedTime() * 5)) * 0.03 : 0;
-    bodyRef.current.position.y += (target - bodyRef.current.position.y) * 0.2;
-  });
+  useEffect(() => {
+    clone.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        // Asignar color de camiseta
+        if (child.material) {
+          const matName = (child.material.name || '').toLowerCase();
+          if (matName.includes('shirt') || matName.includes('top') || matName.includes('body')) {
+            child.material = child.material.clone();
+            child.material.color.set(jerseyColor);
+          }
+        }
+      }
+    });
+  }, [clone, jerseyColor]);
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra de contacto */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <circleGeometry args={[0.55, 28]} />
-        <meshBasicMaterial color="#020617" transparent opacity={0.32} depthWrite={false} />
+      {/* Sombra suave de contacto */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <circleGeometry args={[0.55, 24]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.35} depthWrite={false} />
       </mesh>
 
-      {/* Selector táctico en el césped: aro nítido + disco translúcido */}
+      {/* Selector táctico en el césped */}
       {isSelected && (
         <group>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
-            <circleGeometry args={[0.82, 40]} />
-            <meshBasicMaterial color={SELECTOR_COLOR} transparent opacity={0.35} depthWrite={false} toneMapped={false} polygonOffset polygonOffsetFactor={-2} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+            <circleGeometry args={[0.85, 32]} />
+            <meshBasicMaterial color="#facc15" transparent opacity={0.35} depthWrite={false} />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
-            <ringGeometry args={[0.82, 0.95, 48]} />
-            <meshBasicMaterial color={SELECTOR_COLOR} toneMapped={false} depthWrite={false} polygonOffset polygonOffsetFactor={-3} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.035, 0]}>
+            <ringGeometry args={[0.85, 0.98, 36]} />
+            <meshBasicMaterial color="#facc15" depthWrite={false} toneMapped={false} />
           </mesh>
         </group>
       )}
 
-      <group ref={bodyRef} rotation={[0, facing, 0]}>
-        {Object.keys(model.geos).map((slot) => (
-          <mesh key={slot} geometry={model.geos[slot]} material={mats[slot]} castShadow />
-        ))}
-        {/* Dorsal en la espalda (sigue la inclinación del torso) */}
-        <group position={[0, model.hipY + 0.06, 0]} rotation={[model.lean, 0, 0]}>
-          <mesh position={[0, 0.33, -0.153]} rotation={[-0.11, 0, 0]} material={numberMat}>
-            <planeGeometry args={[0.3, 0.3]} />
-          </mesh>
-        </group>
-      </group>
+      {/* Modelo Mixamo a escala real calibrada (1.8m de altura) */}
+      <primitive
+        object={clone}
+        scale={[0.018, 0.018, 0.018]}
+        rotation={[0, facing, 0]}
+        position={[0, 0, 0]}
+      />
     </group>
   );
 }
+
+// Precarga del modelo para que aparezca al instante sin parpadeos
+useGLTF.preload('/player.glb');
 
 
 
