@@ -297,6 +297,38 @@ function NetPanel({ position, rotation = [0, 0, 0], width, height, opacity = 0.5
   );
 }
 
+// ===== CIELO DIURNO REALISTA (DOMO CELESTE 360°) =====
+function SkyDome3D() {
+  const skyMat = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0, '#2563eb');    // Azul cenit intenso
+    grad.addColorStop(0.5, '#60a5fa');  // Azul cielo diurno
+    grad.addColorStop(0.85, '#93c5fd'); // Horizonte luminoso
+    grad.addColorStop(1.0, '#e0f2fe');  // Neblina de horizonte
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return new THREE.MeshBasicMaterial({
+      map: tex,
+      side: THREE.BackSide,
+      depthWrite: false,
+      toneMapped: false
+    });
+  }, []);
+
+  return (
+    <mesh position={[0, -5, 0]}>
+      <sphereGeometry args={[260, 32, 24]} />
+      <primitive object={skyMat} attach="material" />
+    </mesh>
+  );
+}
+
 // MOTOR 3D: PITCH & GOAL FIFA TACTICALPAD
 function Pitch3D() {
   const lineMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false }), []);
@@ -1104,144 +1136,6 @@ function TacticalText3D({ item }) {
     </div>
   </Html>;
 }
-// ===== GRADERÍAS ESCALONADAS CON VISERA =====
-const STAND_STYLES = {
-  red:  { seat: '#b91c1c', fans: ['#f8fafc', '#fbbf24', '#1f2937', '#fca5a5'], accent: '#dc2626' },
-  blue: { seat: '#1d4ed8', fans: ['#f8fafc', '#fbbf24', '#93c5fd', '#111827'], accent: '#2563eb' },
-};
-
-function makeCrowdTexture(style, seed, length, rowDepth) {
-  const cols = 32, rowsPx = 2, cell = 16; // 32 x 2 asientos de 0.5 m  => 16 m x 1 m por baldosa
-  const c = document.createElement('canvas');
-  c.width = cols * cell; c.height = rowsPx * cell;
-  const ctx = c.getContext('2d');
-  let s = ((seed * 7919 + 13) % 2147483646) + 1;
-  const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-  const skins = ['#e0b08a', '#c68642', '#8d5524', '#f1c27d'];
-  ctx.fillStyle = style.seat;
-  ctx.fillRect(0, 0, c.width, c.height);
-  for (let r = 0; r < rowsPx; r++) {
-    for (let k = 0; k < cols; k++) {
-      const x = k * cell, y = r * cell;
-      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-      ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
-      if (rnd() < 0.6) {
-        ctx.fillStyle = style.fans[Math.floor(rnd() * style.fans.length)];
-        ctx.beginPath(); ctx.arc(x + cell / 2, y + cell * 0.68, 5.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = skins[Math.floor(rnd() * skins.length)];
-        ctx.beginPath(); ctx.arc(x + cell / 2, y + cell * 0.3, 3, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = THREE.RepeatWrapping;
-  t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(length / 16, rowDepth);
-  t.anisotropy = 8;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.needsUpdate = true;
-  return t;
-}
-
-// Marco local de la tribuna: X = largo paralelo a la línea, Y = arriba, Z = hacia AFUERA de la cancha.
-function Stand({ position, rotationY = 0, length, variant = 'blue', rows = 12, rowDepth = 1.1, rise = 0.55 }) {
-  const seatColor = variant === 'red' ? '#b91c1c' : '#1d4ed8';
-  const concreteColor = '#94a3b8';
-  const roofColor = '#334155';
-  const fasciaColor = variant === 'red' ? '#ef4444' : '#3b82f6';
-
-  const depth = rows * rowDepth;
-  const topH = rows * rise;
-  const nCols = Math.max(2, Math.round(length / 16));
-
-  return (
-    <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Gradas escalonadas de hormigón */}
-      {Array.from({ length: rows }).map((_, i) => {
-        const h = (i + 1) * rise;
-        const zPos = i * rowDepth + rowDepth / 2;
-        return (
-          <group key={`row-${i}`}>
-            {/* Escalón de hormigón */}
-            <mesh position={[0, h / 2, zPos]}>
-              <boxGeometry args={[length, h, rowDepth]} />
-              <meshStandardMaterial color={concreteColor} roughness={0.9} />
-            </mesh>
-            {/* Fila corrida de butacas de color nítido */}
-            <mesh position={[0, h + 0.1, zPos]}>
-              <boxGeometry args={[length - 0.4, 0.2, rowDepth * 0.65]} />
-              <meshStandardMaterial color={seatColor} roughness={0.6} />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* Visera / Techo del estadio */}
-      <mesh position={[0, topH + 5.2, depth / 2 + 1.5]} rotation={[-0.14, 0, 0]}>
-        <boxGeometry args={[length, 0.35, depth + 4]} />
-        <meshStandardMaterial color={roofColor} roughness={0.7} metalness={0.15} />
-      </mesh>
-      {/* Borde frontal decorativo con color del club */}
-      <mesh position={[0, topH + 4.9, 0]}>
-        <boxGeometry args={[length, 0.5, 0.25]} />
-        <meshStandardMaterial color={fasciaColor} roughness={0.5} />
-      </mesh>
-
-      {/* Pilares de soporte metálicos */}
-      {Array.from({ length: nCols + 1 }).map((_, k) => (
-        <mesh key={`col-${k}`} position={[-length / 2 + (k * length) / nCols, (topH + 5) / 2, depth - 0.5]}>
-          <cylinderGeometry args={[0.26, 0.32, topH + 5, 12]} />
-          <meshStandardMaterial color="#cbd5e1" roughness={0.4} metalness={0.4} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function StadiumEnvironment() {
-  const towers = [[-68, -50], [68, -50], [-68, 50], [68, 50]];
-  return (
-    <group>
-      {/* Fondos (norte y sur): largo 118 m, empiezan a 41 m del centro, justo fuera del césped perimetral */}
-      <Stand position={[0, 0, -41]} rotationY={Math.PI} length={118} variant="red" seed={1} />
-      <Stand position={[0, 0, 41]} rotationY={0} length={118} variant="red" seed={2} />
-      {/* Laterales (oeste y este): largo 84 m, empiezan a 61 m del centro */}
-      <Stand position={[-61, 0, 0]} rotationY={-Math.PI / 2} length={84} variant="blue" seed={3} />
-      <Stand position={[61, 0, 0]} rotationY={Math.PI / 2} length={84} variant="blue" seed={4} />
-
-      {/* Vallas publicitarias alrededor de la cancha (fuera de las líneas) */}
-      {[-36.8, 36.8].map((z) => (
-        <group key={`ad-z-${z}`}>
-          <mesh position={[0, 0.5, z]}><boxGeometry args={[110, 1, 0.15]} /><meshStandardMaterial color="#0f2f6b" roughness={0.6} /></mesh>
-          <mesh position={[0, 1.04, z]}><boxGeometry args={[110, 0.08, 0.18]} /><meshStandardMaterial color="#f8fafc" roughness={0.5} /></mesh>
-        </group>
-      ))}
-      {[-55.8, 55.8].map((x) => (
-        <group key={`ad-x-${x}`}>
-          <mesh position={[x, 0.5, 0]}><boxGeometry args={[0.15, 1, 74]} /><meshStandardMaterial color="#0f2f6b" roughness={0.6} /></mesh>
-          <mesh position={[x, 1.04, 0]}><boxGeometry args={[0.18, 0.08, 74]} /><meshStandardMaterial color="#f8fafc" roughness={0.5} /></mesh>
-        </group>
-      ))}
-
-      {/* Torres de iluminación en las esquinas */}
-      {towers.map(([x, z]) => (
-        <group key={`tower-${x}-${z}`} position={[x, 0, z]}>
-          <mesh position={[0, 15, 0]}><cylinderGeometry args={[0.3, 0.45, 30, 10]} /><meshStandardMaterial color="#94a3b8" roughness={0.5} metalness={0.4} /></mesh>
-          <group position={[0, 30, 0]} rotation={[0, Math.atan2(-x, -z), 0]}>
-            <mesh><boxGeometry args={[6, 3.4, 0.5]} /><meshStandardMaterial color="#e2e8f0" emissive="#fef9c3" emissiveIntensity={1.1} roughness={0.4} /></mesh>
-          </group>
-        </group>
-      ))}
-
-      {/* Suelo perimetral de hormigón */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-        <planeGeometry args={[160, 120]} />
-        <meshStandardMaterial color="#3b4350" roughness={0.9} />
-      </mesh>
-    </group>
-  );
-}
-
 function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC }) {
   const isDragging = useRef(false);
   const dragId = useRef(null);
@@ -1305,8 +1199,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
 
   // En móvil usamos una perspectiva diagonal para conservar el volumen 3D y
   // encuadrar la cancha con sus dos porterías. Se mantiene el eje vertical natural de Three.js.
-  const camPos = isPC ? [0, 64, 58] : [0, 85, 48];
-const camFov = isPC ? 46 : 68;
+  const camPos = isPC ? [0, 26, 46] : [0, 38, 52];
+  const camFov = isPC ? 45 : 55;
 
   return (
     <>
@@ -1337,6 +1231,7 @@ const camFov = isPC ? 46 : 68;
       <directionalLight position={[-25, 25, -20]} intensity={0.5} color="#e0f2fe" />
 
       {/* Cancha 3D y Estadio con Butacas Individuales Realistas */}
+      <SkyDome3D />
       <Pitch3D />
       <StadiumEnvironment />
 
