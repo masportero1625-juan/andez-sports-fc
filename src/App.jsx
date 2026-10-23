@@ -710,8 +710,9 @@ function getPlayerNumberMaterial(number, darkText) {
 }
 
 function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI }) {
-  const { scene } = useGLTF('/player.glb');
-  const clone = useMemo(() => scene.clone(true), [scene]);
+  // Modelo estándar oficial Three.js (Optimizado para web, 0 problemas de escala)
+  const { scene } = useGLTF('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/RobotExpressive/RobotExpressive.glb');
+  const clone = useMemo(() => scene.clone(), [scene]);
   const jerseyColor = color || '#2563eb';
 
   useEffect(() => {
@@ -719,11 +720,10 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
-        child.material = new THREE.MeshStandardMaterial({
-          color: jerseyColor,
-          roughness: 0.4,
-          metalness: 0.1
-        });
+        if (child.material) {
+          child.material = child.material.clone();
+          child.material.color.set(jerseyColor);
+        }
       }
     });
   }, [clone, jerseyColor]);
@@ -750,15 +750,15 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI
         </group>
       )}
 
-      {/* Reducción drástica del contenedor principal */}
-      <group rotation={[0, facing, 0]} scale={[0.00001, 0.00001, 0.00001]}>
+      {/* Escala calibrada exacta para altura de 1.8 metros */}
+      <group rotation={[0, facing, 0]} scale={[0.45, 0.45, 0.45]}>
         <primitive object={clone} />
       </group>
     </group>
   );
 }
 
-useGLTF.preload('/player.glb');
+useGLTF.preload('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/RobotExpressive/RobotExpressive.glb');
 
 
 
