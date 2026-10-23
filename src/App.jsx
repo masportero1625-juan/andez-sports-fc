@@ -714,26 +714,24 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI
   const clone = useMemo(() => scene.clone(), [scene]);
   const jerseyColor = color || '#2563eb';
 
+  // Asignar material uniforme visible
   useEffect(() => {
     clone.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
-        // Asignar color de camiseta
-        if (child.material) {
-          const matName = (child.material.name || '').toLowerCase();
-          if (matName.includes('shirt') || matName.includes('top') || matName.includes('body')) {
-            child.material = child.material.clone();
-            child.material.color.set(jerseyColor);
-          }
-        }
+        child.material = new THREE.MeshStandardMaterial({
+          color: jerseyColor,
+          roughness: 0.4,
+          metalness: 0.1
+        });
       }
     });
   }, [clone, jerseyColor]);
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra suave de contacto */}
+      {/* Sombra de contacto */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.55, 24]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.35} depthWrite={false} />
@@ -753,10 +751,10 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI
         </group>
       )}
 
-      {/* Modelo Mixamo a escala real calibrada (1.8m de altura) */}
+      {/* Modelo Mixamo a escala real de cancha (1.8m) */}
       <primitive
         object={clone}
-        scale={[0.018, 0.018, 0.018]}
+        scale={[0.0009, 0.0009, 0.0009]}
         rotation={[0, facing, 0]}
         position={[0, 0, 0]}
       />
@@ -764,7 +762,6 @@ function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI
   );
 }
 
-// Precarga del modelo para que aparezca al instante sin parpadeos
 useGLTF.preload('/player.glb');
 
 
