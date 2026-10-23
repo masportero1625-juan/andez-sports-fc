@@ -711,67 +711,48 @@ function getPlayerNumberMaterial(number, darkText) {
 
 function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI }) {
   const { scene } = useGLTF('/player.glb');
+  const clone = useMemo(() => scene.clone(true), [scene]);
   const jerseyColor = color || '#2563eb';
 
-  // Normalización automática de tamaño a 1.8 metros reales
-  const playerModel = useMemo(() => {
-    const clone = scene.clone();
-
-    // 1. Calcular medidas reales del archivo
-    const box = new THREE.Box3().setFromObject(clone);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-
-    // 2. Escalar exactamente a 1.8m de altura
-    const targetHeight = 1.8;
-    const factor = size.y > 0 ? targetHeight / size.y : 0.01;
-    clone.scale.set(factor, factor, factor);
-
-    // 3. Apoyar los pies exactamente en el suelo (y = 0)
-    box.setFromObject(clone);
-    clone.position.y = -box.min.y;
-
-    // 4. Material y sombras
+  useEffect(() => {
     clone.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
         child.material = new THREE.MeshStandardMaterial({
           color: jerseyColor,
-          roughness: 0.35,
+          roughness: 0.4,
           metalness: 0.1
         });
       }
     });
-
-    return clone;
-  }, [scene, jerseyColor]);
+  }, [clone, jerseyColor]);
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
       {/* Sombra de contacto */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.5, 24]} />
+        <circleGeometry args={[0.55, 24]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.35} depthWrite={false} />
       </mesh>
 
-      {/* Selector táctico en el césped */}
+      {/* Selector táctico en el suelo */}
       {isSelected && (
         <group>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-            <circleGeometry args={[0.8, 32]} />
+            <circleGeometry args={[0.85, 32]} />
             <meshBasicMaterial color="#facc15" transparent opacity={0.35} depthWrite={false} />
           </mesh>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.035, 0]}>
-            <ringGeometry args={[0.8, 0.95, 36]} />
+            <ringGeometry args={[0.85, 0.98, 36]} />
             <meshBasicMaterial color="#facc15" depthWrite={false} toneMapped={false} />
           </mesh>
         </group>
       )}
 
-      {/* Jugador con orientación táctica */}
-      <group rotation={[0, facing, 0]}>
-        <primitive object={playerModel} />
+      {/* Reducción drástica del contenedor principal */}
+      <group rotation={[0, facing, 0]} scale={[0.00001, 0.00001, 0.00001]}>
+        <primitive object={clone} />
       </group>
     </group>
   );
