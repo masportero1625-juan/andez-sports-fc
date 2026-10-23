@@ -240,36 +240,38 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   );
 }
 
-// ===== RED DE PORTERÍA PROCEDURAL DE ALTA DEFINICIÓN =====
-const NET_CELL = 0.22;
+// ===== RED DE PORTERÍA PROCEDURAL (sin imágenes externas) =====
+// Malla romboidal con nudos dibujada en un canvas; se usa como alphaMap para que solo se vean los hilos.
+const NET_CELL = 0.35; // tamaño de cada rombo de la red en metros (sube el valor para hilos más gruesos a la distancia)
 let _netCanvas = null;
 function getNetCanvas() {
   if (_netCanvas) return _netCanvas;
-  const S = 128;
+  const S = 64;
   const c = document.createElement('canvas');
   c.width = S; c.height = S;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, S, S);
   ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2.8;
+  ctx.lineWidth = 3.2;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  // Malla hexagonal / romboidal FIFA
+  // Rombo que conecta los puntos medios de los bordes: el patrón teselado forma la malla continua.
   ctx.moveTo(0, S / 2); ctx.lineTo(S / 2, 0);
   ctx.moveTo(S / 2, 0); ctx.lineTo(S, S / 2);
   ctx.moveTo(S, S / 2); ctx.lineTo(S / 2, S);
   ctx.moveTo(S / 2, S); ctx.lineTo(0, S / 2);
   ctx.stroke();
+  // Nudos en los cruces
   ctx.fillStyle = '#ffffff';
-  [[0, S / 2], [S, S / 2], [S / 2, 0], [S / 2, S], [S / 2, S / 2]].forEach(([x, y]) => {
-    ctx.beginPath(); ctx.arc(x, y, 2.8, 0, Math.PI * 2); ctx.fill();
+  [[0, S / 2], [S, S / 2], [S / 2, 0], [S / 2, S]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 3.6, 0, Math.PI * 2); ctx.fill();
   });
   _netCanvas = c;
   return c;
 }
 
-function NetPanel({ position, rotation = [0, 0, 0], width, height, opacity = 0.55 }) {
+function NetPanel({ position, rotation = [0, 0, 0], width, height }) {
   const texture = useMemo(() => {
     const t = new THREE.CanvasTexture(getNetCanvas());
     t.wrapS = THREE.RepeatWrapping;
@@ -283,175 +285,74 @@ function NetPanel({ position, rotation = [0, 0, 0], width, height, opacity = 0.5
   return (
     <mesh position={position} rotation={rotation}>
       <planeGeometry args={[width, height]} />
-      <meshStandardMaterial
-        color="#f8fafc"
+      <meshBasicMaterial
+        color="#f1f5f9"
         alphaMap={texture}
         transparent
-        opacity={opacity}
-        alphaTest={0.03}
+        alphaTest={0.04}
         side={THREE.DoubleSide}
         depthWrite={false}
-        roughness={0.6}
+        toneMapped={false}
       />
     </mesh>
   );
 }
 
-// ===== CIELO DIURNO REALISTA (DOMO CELESTE 360°) =====
-function SkyDome3D() {
-  const skyMat = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, '#2563eb');    // Azul cenit intenso
-    grad.addColorStop(0.5, '#60a5fa');  // Azul cielo diurno
-    grad.addColorStop(0.85, '#93c5fd'); // Horizonte luminoso
-    grad.addColorStop(1.0, '#e0f2fe');  // Neblina de horizonte
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 512, 512);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    return new THREE.MeshBasicMaterial({
-      map: tex,
-      side: THREE.BackSide,
-      depthWrite: false,
-      toneMapped: false
-    });
-  }, []);
-
-  return (
-    <mesh position={[0, -5, 0]}>
-      <sphereGeometry args={[260, 32, 24]} />
-      <primitive object={skyMat} attach="material" />
-    </mesh>
-  );
-}
-
-// MOTOR 3D: PITCH & GOAL FIFA TACTICALPAD
+// MOTOR 3D
 function Pitch3D() {
-  const lineMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false }), []);
-  const postMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#f8fafc', roughness: 0.18, metalness: 0.25 }), []);
-  const darkPostMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.4, metalness: 0.6 }), []);
+  const lineMat = <meshBasicMaterial color="#ffffff" toneMapped={false} />;
+  const postMat = <meshStandardMaterial color="#ffffff" roughness={0.15} metalness={0.05} />;
+  const stripeGrassTex = useMemo(() => getGrassTexture(2, 17), []);
+  const outerGrassTex = useMemo(() => getGrassTexture(29, 19), []);
 
   const line = (x, z, w, d, key) => (
     <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.035, z]}>
       <planeGeometry args={[w, d]} />
-      <primitive object={lineMat} attach="material" />
+      {lineMat}
     </mesh>
   );
 
+  // Cuadrante de córner hacia el INTERIOR de la cancha.
+  // El mesh se rota -PI/2 en X, por eso el ángulo local θ del anillo cae en el mundo como (x = cosθ, z = -sinθ).
+  // Dirección hacia el interior desde el vértice (x, z): (-sign(x), -sign(z))  ->  θ_medio = atan2(sign(z), -sign(x)).
+  // El arco de 90° se centra en esa dirección:  startAngle = θ_medio - PI/4.
+  //   [-52.5,-34] -> -PI/2   [-52.5, 34] -> 0   [52.5,-34] -> PI (=-PI)   [52.5, 34] -> PI/2
   const corner = (x, z, key) => {
     const startAngle = Math.atan2(Math.sign(z), -Math.sign(x)) - Math.PI / 4;
     return (
       <mesh key={key} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.036, z]}>
         <ringGeometry args={[0.92, 1.04, 32, 1, startAngle, Math.PI / 2]} />
-        <primitive object={lineMat} attach="material" />
+        {lineMat}
       </mesh>
     );
   };
 
+  // Banderines de córner oficiales
   const flag = (x, z, rotY, key) => (
     <group key={key} position={[x, 0, z]} rotation={[0, rotY, 0]}>
-      <mesh position={[0, 0.75, 0]} castShadow>
-        <cylinderGeometry args={[0.035, 0.035, 1.5, 16]} />
-        <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} />
+      <mesh position={[0, 0.8, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.045, 1.6, 16]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.3} />
       </mesh>
-      <mesh position={[0.22, 1.35, 0]}>
-        <boxGeometry args={[0.42, 0.28, 0.015]} />
-        <meshStandardMaterial color="#ef4444" roughness={0.5} />
-      </mesh>
-      <mesh position={[0, 0.04, 0]}>
-        <cylinderGeometry args={[0.09, 0.12, 0.08, 12]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.8} />
+      <mesh position={[0.26, 1.4, 0]}>
+        <boxGeometry args={[0.48, 0.32, 0.02]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.4} />
       </mesh>
     </group>
   );
 
-  // Portería profesional FIFA reglamentaria: 7.32m x 2.44m con caída de red profesional (estilo TacticalPad)
-  const goal = (xPos, isLeft) => {
-    const dir = isLeft ? -1 : 1;
-    const depthTop = 1.0;
-    const depthBottom = 2.2;
-    return (
-      <group position={[xPos, 0, 0]}>
-        {/* Postes principales circulares oficiales */}
-        <mesh position={[0, 1.22, -3.66]} castShadow>
-          <cylinderGeometry args={[0.065, 0.065, 2.44, 24]} />
-          <primitive object={postMat} attach="material" />
-        </mesh>
-        <mesh position={[0, 1.22, 3.66]} castShadow>
-          <cylinderGeometry args={[0.065, 0.065, 2.44, 24]} />
-          <primitive object={postMat} attach="material" />
-        </mesh>
-        {/* Travesaño */}
-        <mesh position={[0, 2.44, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.065, 0.065, 7.32, 24]} />
-          <primitive object={postMat} attach="material" />
-        </mesh>
-
-        {/* Estructura trasera de suelo */}
-        <mesh position={[dir * (depthBottom / 2), 0.04, -3.66]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.045, 0.045, depthBottom, 16]} />
-          <primitive object={postMat} attach="material" />
-        </mesh>
-        <mesh position={[dir * (depthBottom / 2), 0.04, 3.66]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.045, 0.045, depthBottom, 16]} />
-          <primitive object={postMat} attach="material" />
-        </mesh>
-        <mesh position={[dir * depthBottom, 0.04, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.045, 0.045, 7.32, 16]} />
-          <primitive object={postMat} attach="material" />
-        </mesh>
-
-        {/* Tensores superiores (brazos traseros de la visera) */}
-        <mesh position={[dir * (depthTop / 2), 2.44, -3.66]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.035, 0.035, depthTop, 16]} />
-          <primitive object={darkPostMat} attach="material" />
-        </mesh>
-        <mesh position={[dir * (depthTop / 2), 2.44, 3.66]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.035, 0.035, depthTop, 16]} />
-          <primitive object={darkPostMat} attach="material" />
-        </mesh>
-
-        {/* Tensores inclinados de sujeción de red */}
-        <mesh position={[dir * ((depthBottom + depthTop) / 2), 1.22, -3.66]} rotation={[0, 0, dir * Math.atan2(2.44, depthBottom - depthTop)]}>
-          <cylinderGeometry args={[0.025, 0.025, Math.hypot(2.44, depthBottom - depthTop), 12]} />
-          <primitive object={darkPostMat} attach="material" />
-        </mesh>
-        <mesh position={[dir * ((depthBottom + depthTop) / 2), 1.22, 3.66]} rotation={[0, 0, dir * Math.atan2(2.44, depthBottom - depthTop)]}>
-          <cylinderGeometry args={[0.025, 0.025, Math.hypot(2.44, depthBottom - depthTop), 12]} />
-          <primitive object={darkPostMat} attach="material" />
-        </mesh>
-
-        {/* Paneles de red procedural con caída realista */}
-        {/* Techo de la red */}
-        <NetPanel position={[dir * (depthTop / 2), 2.44, 0]} rotation={[-Math.PI / 2, 0, 0]} width={depthTop} height={7.32} opacity={0.65} />
-        {/* Fondo inclinado de la red */}
-        <NetPanel
-          position={[dir * ((depthBottom + depthTop) / 2), 1.22, 0]}
-          rotation={[0, dir * Math.PI / 2, (dir < 0 ? 1 : -1) * (Math.PI / 2 - Math.atan2(2.44, depthBottom - depthTop))]}
-          width={7.32}
-          height={Math.hypot(2.44, depthBottom - depthTop)}
-          opacity={0.6}
-        />
-        {/* Laterales de la red */}
-        <NetPanel position={[dir * (depthBottom / 2), 1.22, -3.66]} width={depthBottom} height={2.44} opacity={0.45} />
-        <NetPanel position={[dir * (depthBottom / 2), 1.22, 3.66]} width={depthBottom} height={2.44} opacity={0.45} />
-      </group>
-    );
-  };
+  // Portería profesional FIFA 7.32 x 2.44 m (marco trasero inclinado y red tensada): ver <GoalFrame />
+  const goal = (xPos, isLeft) => <GoalFrame key={`goal-${xPos}`} xPos={xPos} dir={isLeft ? -1 : 1} />;
 
   return (
     <group>
-      {/* Césped exterior amplio con textura realista de campo */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]} receiveShadow>
-        <planeGeometry args={[120, 84]} />
-        <meshStandardMaterial color="#1b4d29" roughness={0.94} metalness={0.02} />
+      {/* Césped perimetral exterior */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <planeGeometry args={[116, 78]} />
+        <meshStandardMaterial color="#1f6b30" roughness={0.92} map={outerGrassTex} />
       </mesh>
 
-      {/* Terreno de juego con bandas de corte reglamentarias (14 franjas) */}
+      {/* Franjas reglamentarias de césped (14 bandas de 7.5 m) */}
       {Array.from({ length: 14 }).map((_, i) => (
         <mesh
           key={`stripe-${i}`}
@@ -460,29 +361,25 @@ function Pitch3D() {
           receiveShadow
         >
           <planeGeometry args={[7.5, 68]} />
-          <meshStandardMaterial
-            color={i % 2 === 0 ? '#266f36' : '#1e5f2e'}
-            roughness={0.88}
-            metalness={0.03}
-          />
+          <meshStandardMaterial color={i % 2 === 0 ? '#2a8a3c' : '#237532'} roughness={0.88} map={stripeGrassTex} />
         </mesh>
       ))}
 
-      {/* LÍNEAS DE BANDA Y FONDO OFICIALES (105m x 68m) */}
+      {/* LÍNEAS DE BANDA Y FONDO (105m x 68m) */}
       {line(0, -34, 105, 0.12, 'touch-top')}
       {line(0, 34, 105, 0.12, 'touch-bottom')}
       {line(-52.5, 0, 0.12, 68, 'goal-left')}
       {line(52.5, 0, 0.12, 68, 'goal-right')}
 
-      {/* MEDIO CAMPO Y CÍRCULO CENTRAL */}
+      {/* MEDIO CAMPO Y CÍRCULO CENTRAL (Radio 9.15 m) */}
       {line(0, 0, 0.12, 68, 'halfway')}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.036, 0]}>
         <ringGeometry args={[9.09, 9.21, 64]} />
-        <primitive object={lineMat} attach="material" />
+        {lineMat}
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.037, 0]}>
         <circleGeometry args={[0.22, 24]} />
-        <primitive object={lineMat} attach="material" />
+        {lineMat}
       </mesh>
 
       {/* ÁREAS LADO IZQUIERDO */}
@@ -494,11 +391,11 @@ function Pitch3D() {
       {line(-47.0, 0, 0.12, 18.32, 'ga-front-l')}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-41.5, 0.037, 0]}>
         <circleGeometry args={[0.2, 20]} />
-        <primitive object={lineMat} attach="material" />
+        {lineMat}
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, -0.925]} position={[-41.5, 0.036, 0]}>
         <ringGeometry args={[9.09, 9.21, 36, 1, 0, 1.85]} />
-        <primitive object={lineMat} attach="material" />
+        {lineMat}
       </mesh>
 
       {/* ÁREAS LADO DERECHO */}
@@ -510,180 +407,47 @@ function Pitch3D() {
       {line(47.0, 0, 0.12, 18.32, 'ga-front-r')}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[41.5, 0.037, 0]}>
         <circleGeometry args={[0.2, 20]} />
-        <primitive object={lineMat} attach="material" />
+        {lineMat}
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 2.215]} position={[41.5, 0.036, 0]}>
         <ringGeometry args={[9.09, 9.21, 36, 1, 0, 1.85]} />
-        <primitive object={lineMat} attach="material" />
+        {lineMat}
       </mesh>
 
-      {/* CÓRNERS Y BANDERINES */}
+      {/* 4 CÓRNERS INTERNOS REGLAMENTARIOS (startAngle calculado dentro de corner(), siempre hacia el césped) */}
       {corner(-52.5, -34, 'c-tl')}
       {corner(-52.5, 34, 'c-bl')}
       {corner(52.5, -34, 'c-tr')}
       {corner(52.5, 34, 'c-br')}
 
+      {/* BANDERINES DE CÓRNER */}
       {flag(-52.5, -34, 0.4, 'f-tl')}
       {flag(-52.5, 34, -0.4, 'f-bl')}
       {flag(52.5, -34, 2.7, 'f-tr')}
       {flag(52.5, 34, -2.7, 'f-br')}
 
-      {/* PORTERÍAS PROFESIONALES FIFA */}
+      {/* PORTERÍAS PROFESIONALES TIPO CAJÓN FIFA */}
       {goal(-52.5, true)}
       {goal(52.5, false)}
     </group>
   );
 }
 
-// ===== ESTADIO REALISTA DE ENTRENAMIENTO (CON BUTACAS INDIVIDUALES REALISTAS, SIN PÚBLICO FALSO) =====
-function RealisticStand({ position, rotationY = 0, length, variant = 'blue', rows = 10, rowDepth = 1.15, rise = 0.52 }) {
-  const concreteColor = '#94a3b8';
-  const seatColor = variant === 'red' ? '#b91c1c' : '#1d4ed8';
-  const seatBackColor = variant === 'red' ? '#dc2626' : '#2563eb';
-  const roofColor = '#1e293b';
-  const fasciaColor = variant === 'red' ? '#ef4444' : '#38bdf8';
-
-  const depth = rows * rowDepth;
-  const topH = rows * rise;
-  const numSeats = Math.floor(length / 0.65);
-
-  return (
-    <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Gradas de hormigón escalonadas */}
-      {Array.from({ length: rows }).map((_, i) => {
-        const h = (i + 1) * rise;
-        const zPos = i * rowDepth + rowDepth / 2;
-        return (
-          <group key={`row-step-${i}`}>
-            {/* Escalón sólido de hormigón */}
-            <mesh position={[0, h / 2, zPos]}>
-              <boxGeometry args={[length, h, rowDepth]} />
-              <meshStandardMaterial color={concreteColor} roughness={0.92} />
-            </mesh>
-            {/* Riel / Soporte de butacas */}
-            <mesh position={[0, h + 0.05, zPos - 0.15]}>
-              <boxGeometry args={[length - 0.5, 0.06, 0.08]} />
-              <meshStandardMaterial color="#334155" roughness={0.4} metalness={0.6} />
-            </mesh>
-            {/* Filas continuas de butacas individuales de plástico de estadio */}
-            {Array.from({ length: Math.min(numSeats, 64) }).map((_, sIdx) => {
-              const xPos = -length / 2 + 0.6 + sIdx * 0.65;
-              if (sIdx % 16 === 0) return null; // Pasillos de evacuación cada 16 asientos
-              return (
-                <group key={`seat-${i}-${sIdx}`} position={[xPos, h + 0.14, zPos]}>
-                  {/* Base de asiento ergonómico con leve curvatura */}
-                  <mesh castShadow>
-                    <boxGeometry args={[0.52, 0.1, 0.44]} />
-                    <meshStandardMaterial color={seatColor} roughness={0.65} metalness={0.05} />
-                  </mesh>
-                  {/* Respaldo individual de la butaca */}
-                  <mesh position={[0, 0.28, 0.18]} rotation={[-0.15, 0, 0]} castShadow>
-                    <boxGeometry args={[0.52, 0.44, 0.08]} />
-                    <meshStandardMaterial color={seatBackColor} roughness={0.65} metalness={0.05} />
-                  </mesh>
-                </group>
-              );
-            })}
-          </group>
-        );
-      })}
-
-      {/* Visera / Techo moderno en voladizo */}
-      <mesh position={[0, topH + 5.6, depth / 2 + 1.2]} rotation={[-0.12, 0, 0]}>
-        <boxGeometry args={[length + 2, 0.35, depth + 4.5]} />
-        <meshStandardMaterial color={roofColor} roughness={0.65} metalness={0.25} />
-      </mesh>
-      {/* Cenefa frontal del club */}
-      <mesh position={[0, topH + 5.3, 0]}>
-        <boxGeometry args={[length + 2, 0.55, 0.25]} />
-        <meshStandardMaterial color={fasciaColor} roughness={0.4} metalness={0.3} />
-      </mesh>
-
-      {/* Columnas estructurales de soporte de acero */}
-      {[-length * 0.42, 0, length * 0.42].map((xCol, idx) => (
-        <mesh key={`col-${idx}`} position={[xCol, (topH + 5.2) / 2, depth + 0.4]}>
-          <cylinderGeometry args={[0.3, 0.36, topH + 5.2, 16]} />
-          <meshStandardMaterial color="#cbd5e1" roughness={0.3} metalness={0.5} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function StadiumEnvironment() {
-  const towers = [[-68, -48], [68, -48], [-68, 48], [68, 48]];
-  return (
-    <group>
-      {/* Tribunas Norte y Sur (Fondos) con gradas de butacas rojas reales */}
-      <RealisticStand position={[0, 0, -42]} rotationY={Math.PI} length={118} variant="red" rows={10} />
-      <RealisticStand position={[0, 0, 42]} rotationY={0} length={118} variant="red" rows={10} />
-
-      {/* Tribunas Laterales (Este y Oeste) con butacas azules reales */}
-      <RealisticStand position={[-62, 0, 0]} rotationY={-Math.PI / 2} length={86} variant="blue" rows={10} />
-      <RealisticStand position={[62, 0, 0]} rotationY={Math.PI / 2} length={86} variant="blue" rows={10} />
-
-      {/* Vallas publicitarias LED periféricas profesionales */}
-      {[-36.5, 36.5].map((z) => (
-        <group key={`ad-z-${z}`}>
-          <mesh position={[0, 0.55, z]}>
-            <boxGeometry args={[112, 1.05, 0.16]} />
-            <meshStandardMaterial color="#0b1b3d" roughness={0.4} />
-          </mesh>
-          <mesh position={[0, 1.1, z]}>
-            <boxGeometry args={[112, 0.08, 0.2]} />
-            <meshStandardMaterial color="#e2e8f0" roughness={0.3} />
-          </mesh>
-        </group>
-      ))}
-      {[-56.5, 56.5].map((x) => (
-        <group key={`ad-x-${x}`}>
-          <mesh position={[x, 0.55, 0]}>
-            <boxGeometry args={[0.16, 1.05, 75]} />
-            <meshStandardMaterial color="#0b1b3d" roughness={0.4} />
-          </mesh>
-          <mesh position={[x, 1.1, 0]}>
-            <boxGeometry args={[0.2, 0.08, 75]} />
-            <meshStandardMaterial color="#e2e8f0" roughness={0.3} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* Torres de iluminación de estadio en las 4 esquinas */}
-      {towers.map(([x, z]) => (
-        <group key={`tower-${x}-${z}`} position={[x, 0, z]}>
-          <mesh position={[0, 16, 0]}>
-            <cylinderGeometry args={[0.35, 0.55, 32, 12]} />
-            <meshStandardMaterial color="#94a3b8" roughness={0.4} metalness={0.5} />
-          </mesh>
-          <group position={[0, 32, 0]} rotation={[0, Math.atan2(-x, -z), 0]}>
-            <mesh>
-              <boxGeometry args={[6.8, 3.8, 0.6]} />
-              <meshStandardMaterial color="#e2e8f0" emissive="#fef08a" emissiveIntensity={0.85} roughness={0.3} />
-            </mesh>
-          </group>
-        </group>
-      ))}
-
-      {/* Piso exterior de hormigón limpio */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.025, 0]}>
-        <planeGeometry args={[165, 125]} />
-        <meshStandardMaterial color="#475569" roughness={0.92} />
-      </mesh>
-    </group>
-  );
-}
-
-// ===== JUGADORES ATLÉTICOS PROCEDURALES PROFESIONALES (NIVEL TACTICALPAD) =====
-// Creados con mallas anatómicas continuas con suavizado orgánico:
-// - Siluetas de futbolistas estilizados con hombros, caída muscular, mangas, pantalón holgado y medias.
-// - Manos anatómicamente completas con dedos en postura natural de reposo.
-// - Rostro y cabello atlético natural (no cascos de legos).
-// - Postura del arquero realista (flexión atlética natural de 15°, NO cuclillas de rana exageradas).
-const SELECTOR_COLOR = '#facc15';
-const PLAYER_HEIGHT_M = 1.80;
+// ===== JUGADOR TÁCTICO PROCEDURAL v2 (siluetas orgánicas, sin archivos externos) =====
+// Cada extremidad es una superficie "loft": una malla suave barrida a lo largo del hueso con secciones elípticas
+// de radio variable (músculo, rodilla, gemelo, bíceps...). Todo se fusiona en pocas mallas por rol -> ~10 draw calls/jugador.
+// Origen local = [0,0,0] en la planta de los pies. El <group> padre de Scene3D ya lo posiciona en la cancha.
+const SELECTOR_COLOR = '#facc15'; // aro/disco del selector (dorado). Para azul: '#2563eb'
+const PLAYER_HEIGHT_M = 1.8;      // altura real del jugador de campo erguido
+const PLAYER_ANKLE = 0.08;        // altura del tobillo sobre el césped
+const PLAYER_THIGH = 0.42;        // cadera -> rodilla
+const PLAYER_SHIN = 0.42;         // rodilla -> tobillo
+const PLAYER_HIP_DROP = 0.03;     // la articulación de la cadera queda 3 cm bajo el centro de la pelvis
+const PLAYER_SKINS = ['#d9a47e', '#b9825f', '#8d5a3b', '#f0c29b'];
+const PLAYER_HAIRS = ['#1c1411', '#3a2a1f', '#5a3d2b', '#2b2b2b'];
 
 const _playerMatCache = new Map();
-function playerStdMat(color, roughness = 0.65, metalness = 0.05) {
+function playerStdMat(color, roughness = 0.7, metalness = 0) {
   const key = `${color}|${roughness}|${metalness}`;
   if (!_playerMatCache.has(key)) {
     _playerMatCache.set(key, new THREE.MeshStandardMaterial({ color, roughness, metalness }));
@@ -701,26 +465,377 @@ function playerHexLuma(hex) {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 }
 
-// Dorsal táctico de alta resolución con Canvas WebGL nativo
+// Flexión de rodilla (beta) para que el pie quede a ras de césped dado el alto de cadera y la flexión del muslo (alpha)
+function solvePlayerKnee(hipY, alpha) {
+  const c = (hipY - PLAYER_HIP_DROP - PLAYER_ANKLE - PLAYER_THIGH * Math.cos(alpha)) / PLAYER_SHIN;
+  return alpha + Math.acos(Math.min(1, Math.max(-1, c)));
+}
+
+// ---------- Superficies loft ----------
+// Sección: u = posición a lo largo del eje, a/b = semiejes de la elipse, ca/cb = desplazamiento del centro de la elipse
+const PK = (u, a, b, ca = 0, cb = 0) => ({ u, a, b, ca, cb });
+
+function playerCatmull(p0, p1, p2, p3, t) {
+  return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
+}
+
+function playerProfileAt(keys, u) {
+  let i = 0;
+  while (i < keys.length - 2 && u > keys[i + 1].u) i++;
+  const k0 = keys[Math.max(0, i - 1)], k1 = keys[i], k2 = keys[i + 1], k3 = keys[Math.min(keys.length - 1, i + 2)];
+  const span = k2.u - k1.u;
+  const t = span > 0 ? Math.min(1, Math.max(0, (u - k1.u) / span)) : 0;
+  const f = (n) => playerCatmull(k0[n], k1[n], k2[n], k3[n], t);
+  return { u, a: Math.max(0.002, f('a')), b: Math.max(0.002, f('b')), ca: f('ca'), cb: f('cb') };
+}
+
+// Recorta un tramo del perfil (opcionalmente "inflado" para prendas que cubren la piel)
+function playerSlice(keys, u0, u1, n, inflate = 0) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const p = playerProfileAt(keys, u0 + ((u1 - u0) * i) / (n - 1));
+    out.push(PK(p.u, p.a + inflate, p.b + inflate, p.ca, p.cb));
+  }
+  return out;
+}
+
+// axis: '+y' (hacia arriba), '-y' (hacia abajo; u crece hacia abajo), '+z' (hacia adelante)
+function playerLoft(axis, keys, opts = {}) {
+  const rings = opts.rings || 10;
+  const seg = opts.seg || 12;
+  const stride = seg + 1; // la última columna duplica la primera para tener UV continuas
+  const u0 = keys[0].u;
+  const u1 = keys[keys.length - 1].u;
+  const pt = (p, th) => {
+    const x = p.ca + p.a * Math.cos(th);
+    const y = p.cb + p.b * Math.sin(th);
+    if (axis === '+y') return [x, p.u, y];
+    if (axis === '-y') return [x, -p.u, y];
+    return [x, y, p.u];
+  };
+  const pos = [];
+  const uv = [];
+  for (let i = 0; i < rings; i++) {
+    const lin = rings === 1 ? 0 : i / (rings - 1);
+    const s = 0.5 * lin + 0.5 * (0.5 - 0.5 * Math.cos(Math.PI * lin)); // más anillos hacia los extremos
+    const p = playerProfileAt(keys, u0 + (u1 - u0) * s);
+    for (let j = 0; j <= seg; j++) {
+      const v = pt(p, (2 * Math.PI * (j % seg)) / seg);
+      pos.push(v[0], v[1], v[2]);
+      uv.push(j / seg, lin);
+    }
+  }
+  const idx = [];
+  for (let i = 0; i < rings - 1; i++) {
+    for (let j = 0; j < seg; j++) {
+      const a = i * stride + j;
+      const b = a + 1;
+      const c = (i + 1) * stride + j;
+      const d = c + 1;
+      idx.push(a, c, b, b, c, d);
+    }
+  }
+  if (opts.capStart) {
+    const p0 = playerProfileAt(keys, u0);
+    const c = pt({ ...p0, a: 0, b: 0 }, 0);
+    const ci = pos.length / 3;
+    pos.push(c[0], c[1], c[2]); uv.push(0.5, 0);
+    for (let j = 0; j < seg; j++) idx.push(j, j + 1, ci);
+  }
+  if (opts.capEnd) {
+    const p1 = playerProfileAt(keys, u1);
+    const c = pt({ ...p1, a: 0, b: 0 }, 0);
+    const ci = pos.length / 3;
+    pos.push(c[0], c[1], c[2]); uv.push(0.5, 1);
+    const base = (rings - 1) * stride;
+    for (let j = 0; j < seg; j++) idx.push(base + j + 1, base + j, ci);
+  }
+  // En '+y' el orden (a,c,b) mira hacia afuera; en los otros ejes hay que invertirlo
+  if (axis !== '+y') {
+    for (let k = 0; k < idx.length; k += 3) { const t = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = t; }
+  }
+  // Normales suaves (área ponderada); la columna de costura comparte normal con la columna 0
+  const ringVerts = rings * stride;
+  const canon = (vi) => (vi < ringVerts && vi % stride === seg ? vi - seg : vi);
+  const nor = new Float32Array(pos.length);
+  for (let k = 0; k < idx.length; k += 3) {
+    const ia = idx[k] * 3, ib = idx[k + 1] * 3, ic = idx[k + 2] * 3;
+    const ux = pos[ib] - pos[ia], uy = pos[ib + 1] - pos[ia + 1], uz = pos[ib + 2] - pos[ia + 2];
+    const vx = pos[ic] - pos[ia], vy = pos[ic + 1] - pos[ia + 1], vz = pos[ic + 2] - pos[ia + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    [idx[k], idx[k + 1], idx[k + 2]].forEach((vi) => {
+      const o = canon(vi) * 3;
+      nor[o] += nx; nor[o + 1] += ny; nor[o + 2] += nz;
+    });
+  }
+  for (let o = 0; o < nor.length; o += 3) {
+    const l = Math.hypot(nor[o], nor[o + 1], nor[o + 2]) || 1;
+    nor[o] /= l; nor[o + 1] /= l; nor[o + 2] /= l;
+  }
+  for (let i = 0; i < rings; i++) {
+    const from = (i * stride) * 3;
+    const to = (i * stride + seg) * 3;
+    nor[to] = nor[from]; nor[to + 1] = nor[from + 1]; nor[to + 2] = nor[from + 2];
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
+  g.setIndex(new THREE.BufferAttribute(new Uint16Array(idx), 1));
+  return g;
+}
+
+// Elipsoide suave (articulaciones, deltoides, nariz, orejas...)
+function playerEllipsoid(rx, ry, rz, seg = 10, rings = 9) {
+  const keys = [];
+  for (let i = 0; i <= 8; i++) {
+    const th = (Math.PI * i) / 8;
+    keys.push(PK(-ry * Math.cos(th), rx * Math.sin(th), rz * Math.sin(th)));
+  }
+  return playerLoft('+y', keys, { rings, seg, capStart: true, capEnd: true });
+}
+
+// Fusiona geometrías (position + normal + uv + index) en una sola
+function mergePlayerGeos(list) {
+  let vCount = 0;
+  let iCount = 0;
+  list.forEach((g) => {
+    vCount += g.attributes.position.count;
+    iCount += g.index ? g.index.count : g.attributes.position.count;
+  });
+  const pos = new Float32Array(vCount * 3);
+  const nor = new Float32Array(vCount * 3);
+  const uvs = new Float32Array(vCount * 2);
+  const idx = vCount > 65000 ? new Uint32Array(iCount) : new Uint16Array(iCount);
+  let vOff = 0;
+  let iOff = 0;
+  list.forEach((g) => {
+    const p = g.attributes.position;
+    const n = g.attributes.normal;
+    const t = g.attributes.uv;
+    for (let i = 0; i < p.count; i++) {
+      pos[(vOff + i) * 3] = p.getX(i); pos[(vOff + i) * 3 + 1] = p.getY(i); pos[(vOff + i) * 3 + 2] = p.getZ(i);
+      nor[(vOff + i) * 3] = n.getX(i); nor[(vOff + i) * 3 + 1] = n.getY(i); nor[(vOff + i) * 3 + 2] = n.getZ(i);
+      if (t) { uvs[(vOff + i) * 2] = t.getX(i); uvs[(vOff + i) * 2 + 1] = t.getY(i); }
+    }
+    if (g.index) {
+      for (let i = 0; i < g.index.count; i++) idx[iOff + i] = g.index.getX(i) + vOff;
+      iOff += g.index.count;
+    } else {
+      for (let i = 0; i < p.count; i++) idx[iOff + i] = vOff + i;
+      iOff += p.count;
+    }
+    vOff += p.count;
+  });
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  merged.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  merged.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  merged.setIndex(new THREE.BufferAttribute(idx, 1));
+  return merged;
+}
+
+// ---------- Perfiles anatómicos (metros; el modelo mira hacia +Z) ----------
+const P_THIGH = [PK(0, 0.100, 0.106), PK(0.07, 0.108, 0.114, 0, 0.004), PK(0.18, 0.103, 0.110, 0, 0.012), PK(0.30, 0.084, 0.090, 0, 0.012), PK(0.39, 0.066, 0.072, 0, 0.008), PK(0.42, 0.062, 0.066, 0, 0.004)];
+const P_SHORTS_LEG = [PK(0, 0.080, 0.086, 0, 0.004), PK(0.03, 0.114, 0.120, 0, 0.006), PK(0.10, 0.121, 0.126, 0, 0.010), PK(0.20, 0.120, 0.124, 0, 0.014), PK(0.245, 0.118, 0.122, 0, 0.014), PK(0.262, 0.100, 0.108, 0, 0.013)];
+const P_PELVIS = [PK(-0.11, 0.138, 0.098), PK(-0.06, 0.168, 0.114), PK(0, 0.172, 0.116), PK(0.05, 0.166, 0.114), PK(0.10, 0.150, 0.106), PK(0.12, 0.146, 0.104)];
+const P_SHIN = [PK(0, 0.066, 0.070), PK(0.06, 0.068, 0.075, 0, -0.004), PK(0.13, 0.074, 0.082, 0, -0.010), PK(0.22, 0.062, 0.066, 0, -0.006), PK(0.32, 0.048, 0.050, 0, -0.002), PK(0.40, 0.043, 0.046), PK(0.42, 0.043, 0.045)];
+const P_BOOT = [PK(-0.075, 0.032, 0.045, 0, -0.036), PK(-0.05, 0.044, 0.052, 0, -0.028), PK(0.02, 0.048, 0.050, 0, -0.030), PK(0.10, 0.053, 0.040, 0, -0.040), PK(0.17, 0.045, 0.031, 0, -0.049), PK(0.205, 0.027, 0.022, 0, -0.054)];
+const P_SOLE = [PK(-0.078, 0.031, 0.012, 0, -0.072), PK(-0.05, 0.044, 0.012, 0, -0.072), PK(0.02, 0.049, 0.012, 0, -0.072), PK(0.10, 0.054, 0.012, 0, -0.074), PK(0.17, 0.046, 0.011, 0, -0.074), PK(0.21, 0.028, 0.010, 0, -0.072)];
+const P_TORSO = [PK(0.02, 0.188, 0.134, 0, -0.002), PK(0.10, 0.162, 0.122), PK(0.21, 0.170, 0.122, 0, 0.005), PK(0.32, 0.205, 0.130, 0, 0.012), PK(0.42, 0.230, 0.140, 0, 0.018), PK(0.50, 0.245, 0.132, 0, 0.008), PK(0.57, 0.185, 0.105, 0, 0.004), PK(0.60, 0.092, 0.080), PK(0.62, 0.066, 0.066)];
+const P_NECK = [PK(0.56, 0.060, 0.062), PK(0.66, 0.052, 0.056, 0, 0.006), PK(0.72, 0.050, 0.054, 0, 0.008)];
+const P_COLLAR = [PK(0.585, 0.086, 0.084, 0, 0.003), PK(0.60, 0.080, 0.078, 0, 0.004), PK(0.625, 0.070, 0.070, 0, 0.005)];
+const P_HEAD = [PK(0, 0.028, 0.040, 0, 0.045), PK(0.025, 0.060, 0.070, 0, 0.035), PK(0.06, 0.078, 0.088, 0, 0.020), PK(0.105, 0.083, 0.097, 0, 0.010), PK(0.15, 0.084, 0.100, 0, 0.005), PK(0.19, 0.076, 0.092), PK(0.22, 0.050, 0.065, 0, -0.005), PK(0.23, 0.020, 0.030, 0, -0.008)];
+const P_HAIR = [PK(0.085, 0.090, 0.104, 0, -0.030), PK(0.13, 0.091, 0.104, 0, -0.014), PK(0.165, 0.086, 0.102, 0, -0.002), PK(0.20, 0.074, 0.092, 0, -0.004), PK(0.225, 0.048, 0.064, 0, -0.008), PK(0.236, 0.022, 0.030)];
+const P_ARM = [PK(0, 0.064, 0.066), PK(0.06, 0.071, 0.073), PK(0.14, 0.063, 0.067, 0, 0.004), PK(0.24, 0.050, 0.052), PK(0.30, 0.043, 0.045)];
+const P_FOREARM = [PK(0, 0.043, 0.045), PK(0.06, 0.049, 0.049), PK(0.16, 0.041, 0.040), PK(0.25, 0.029, 0.026), PK(0.28, 0.028, 0.024)];
+const P_PALM = [PK(0, 0.020, 0.034), PK(0.04, 0.018, 0.041), PK(0.085, 0.014, 0.040)];
+
+// ---------- Construcción del modelo (una vez por rol) ----------
+const _playerModelCache = {};
+function getPlayerModel(isGK) {
+  const cacheKey = isGK ? 'gk' : 'field';
+  if (_playerModelCache[cacheKey]) return _playerModelCache[cacheKey];
+
+  // Postura por rol: portero en "posición de espera" (rodillas flexionadas, brazos abiertos y listos), campo erguido y dinámico
+  const pose = isGK
+    ? { hipY: 0.8, lean: 0.18, legX: 0.13, abd: 0.06, alphaL: 0.5, alphaR: 0.5, armX: [-0.45, -0.45], armZ: 0.55, elbow: [0.6, 0.6], headTilt: 0.9 }
+    : { hipY: 0.92, lean: 0.06, legX: 0.095, abd: 0.03, alphaL: 0.28, alphaR: -0.1, armX: [-0.28, 0.22], armZ: 0.12, elbow: [0.85, 0.6], headTilt: 0.8 };
+
+  const root = new THREE.Group();
+  const node = (parent, pos, rot, scl) => {
+    const g = new THREE.Group();
+    if (pos) g.position.set(pos[0], pos[1], pos[2]);
+    if (rot) g.rotation.set(rot[0], rot[1], rot[2]);
+    if (scl) g.scale.set(scl, scl, scl);
+    parent.add(g);
+    return g;
+  };
+  const part = (parent, slot, geo, pos, rot) => {
+    const m = new THREE.Mesh(geo);
+    m.userData.slot = slot;
+    if (pos) m.position.set(pos[0], pos[1], pos[2]);
+    if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
+    parent.add(m);
+    return m;
+  };
+
+  const hips = node(root, [0, pose.hipY, 0]);
+  part(hips, 'shorts', playerLoft('+y', P_PELVIS, { rings: 8, seg: 18, capStart: true }));
+
+  // Piernas
+  [-1, 1].forEach((side) => {
+    const alpha = side < 0 ? pose.alphaL : pose.alphaR;
+    const beta = solvePlayerKnee(pose.hipY, alpha);
+    const hip = node(hips, [side * pose.legX, -PLAYER_HIP_DROP, 0], [-alpha, 0, side * pose.abd]);
+    part(hip, 'skin', playerLoft('-y', P_THIGH, { rings: 9, seg: 14, capStart: true, capEnd: true }));
+    part(hip, 'shorts', playerLoft('-y', P_SHORTS_LEG, { rings: 8, seg: 16, capStart: true }));
+    const knee = node(hip, [0, -PLAYER_THIGH, 0], [beta, 0, 0]);
+    part(knee, 'skin', playerEllipsoid(0.066, 0.066, 0.07, 10, 9));
+    part(knee, 'skin', playerLoft('-y', playerSlice(P_SHIN, 0, 0.09, 4), { rings: 4, seg: 14, capEnd: true }));
+    part(knee, 'sock', playerLoft('-y', playerSlice(P_SHIN, 0.075, 0.42, 9, 0.003), { rings: 10, seg: 14, capEnd: true }));
+    part(knee, 'ribete', playerLoft('-y', playerSlice(P_SHIN, 0.06, 0.11, 3, 0.008), { rings: 3, seg: 14 }));
+    const foot = node(knee, [0, -PLAYER_SHIN, 0], [alpha - beta, 0, 0]);
+    part(foot, 'boot', playerLoft('+z', P_BOOT, { rings: 10, seg: 14, capStart: true, capEnd: true }));
+    part(foot, 'sole', playerLoft('+z', P_SOLE, { rings: 8, seg: 12, capStart: true, capEnd: true }));
+  });
+
+  // Torso con caída en V, cuello y cabeza
+  const torso = node(hips, [0, 0, 0], [pose.lean, 0, 0]);
+  part(torso, 'jersey', playerLoft('+y', P_TORSO, { rings: 16, seg: 22, capEnd: true }));
+  part(torso, 'collar', playerLoft('+y', P_COLLAR, { rings: 3, seg: 18 }));
+  part(torso, 'skin', playerLoft('+y', P_NECK, { rings: 4, seg: 12 }));
+
+  const head = node(torso, [0, 0.7, 0.015], [-pose.lean * pose.headTilt, 0, 0]);
+  part(head, 'skin', playerLoft('+y', P_HEAD, { rings: 14, seg: 20, capStart: true, capEnd: true }));
+  // Pelo: casquete + mechones con caída natural hacia atrás/arriba
+  part(head, 'hair', playerLoft('+y', P_HAIR, { rings: 8, seg: 20, capEnd: true }));
+  // [x, y, z, inclinación X (adelante +), inclinación Z, largo, ancho]
+  const tufts = [
+    [-0.05, 0.205, 0.07, 1.05, 0.2, 0.04, 0.022], [-0.016, 0.21, 0.074, 1.1, 0.05, 0.042, 0.022], [0.016, 0.21, 0.074, 1.1, -0.05, 0.042, 0.022], [0.05, 0.205, 0.07, 1.05, -0.2, 0.04, 0.022],
+    [-0.078, 0.18, 0.03, 0.1, 1.15, 0.036, 0.02], [0.078, 0.18, 0.03, 0.1, -1.15, 0.036, 0.02],
+    [-0.035, 0.228, 0.0, -0.55, 0.2, 0.045, 0.024], [0.035, 0.228, 0.0, -0.55, -0.2, 0.045, 0.024], [0.0, 0.232, -0.02, -0.6, 0, 0.046, 0.025],
+    [-0.055, 0.2, -0.07, -1.0, 0.25, 0.045, 0.023], [0.0, 0.205, -0.085, -1.1, 0, 0.05, 0.025], [0.055, 0.2, -0.07, -1.0, -0.25, 0.045, 0.023],
+    [-0.07, 0.14, -0.065, -0.8, 0.5, 0.04, 0.02], [0.07, 0.14, -0.065, -0.8, -0.5, 0.04, 0.02], [0.0, 0.12, -0.09, -1.0, 0, 0.04, 0.022],
+  ];
+  tufts.forEach(([x, y, z, rx, rz, len, w]) => {
+    part(head, 'hair', playerLoft('+y', [PK(0, w, w * 0.8), PK(len * 0.5, w * 0.9, w * 0.7), PK(len, w * 0.2, w * 0.15)], { rings: 4, seg: 6, capEnd: true }), [x, y, z], [rx, 0, rz]);
+  });
+  [-1, 1].forEach((s) => {
+    part(head, 'hair', playerEllipsoid(0.01, 0.03, 0.02, 6, 5), [s * 0.082, 0.12, 0.03]);                       // patillas
+    part(head, 'hair', playerEllipsoid(0.022, 0.0045, 0.007, 6, 5), [s * 0.034, 0.148, 0.094], [0.1, 0, -s * 0.15]); // cejas
+    part(head, 'sclera', playerEllipsoid(0.0115, 0.0075, 0.005, 8, 6), [s * 0.034, 0.128, 0.092]);              // ojos (esclerótica)
+    part(head, 'hair', playerEllipsoid(0.0058, 0.0058, 0.003, 6, 5), [s * 0.034, 0.128, 0.0955]);               // iris
+    part(head, 'skin', playerEllipsoid(0.01, 0.026, 0.018, 8, 7), [s * 0.083, 0.1, -0.004]);                    // orejas
+  });
+  part(head, 'skin', playerEllipsoid(0.011, 0.022, 0.017, 8, 7), [0, 0.094, 0.106], [0.3, 0, 0]);                // nariz
+  part(head, 'lip', playerEllipsoid(0.024, 0.0055, 0.008, 8, 6), [0, 0.056, 0.093], [0.12, 0, 0]);              // boca
+
+  // Brazos con codos semi-doblados y manos con dedos
+  [-1, 1].forEach((side) => {
+    const i = side < 0 ? 0 : 1;
+    const shoulder = node(torso, [side * 0.238, 0.52, 0], [pose.armX[i], 0, side * pose.armZ]);
+    part(shoulder, 'jersey', playerEllipsoid(0.064, 0.068, 0.062, 10, 9));                                      // deltoides
+    part(shoulder, 'jersey', playerLoft('-y', playerSlice(P_ARM, 0, 0.17, 5, 0.007), { rings: 6, seg: 14, capStart: true }));
+    part(shoulder, 'collar', playerLoft('-y', playerSlice(P_ARM, 0.15, 0.185, 3, 0.011), { rings: 3, seg: 14 })); // puño de manga
+    part(shoulder, 'skin', playerLoft('-y', playerSlice(P_ARM, 0.12, 0.3, 6), { rings: 6, seg: 12, capStart: true, capEnd: true }));
+    const elbow = node(shoulder, [0, -0.3, 0], [-pose.elbow[i], 0, 0]);
+    part(elbow, 'skin', playerEllipsoid(0.042, 0.042, 0.044, 8, 7));
+    part(elbow, 'skin', playerLoft('-y', P_FOREARM, { rings: 8, seg: 12, capStart: true, capEnd: true }));
+
+    // Mano: palma + 4 dedos (2 falanges) + pulgar. El arquero usa guantes (más grandes) con puño oscuro.
+    const handSlot = isGK ? 'glove' : 'skin';
+    if (isGK) part(elbow, 'boot', playerLoft('-y', playerSlice(P_FOREARM, 0.17, 0.27, 3, 0.008), { rings: 3, seg: 12 }));
+    const hand = node(elbow, [0, -0.275, 0], [0, 0, 0], isGK ? 1.18 : 1);
+    part(hand, handSlot, playerLoft('-y', P_PALM, { rings: 5, seg: 10, capStart: true, capEnd: true }));
+    const L1 = [0.042, 0.047, 0.044, 0.034];
+    const L2 = [0.03, 0.034, 0.031, 0.025];
+    for (let k = 0; k < 4; k++) {
+      const zOff = -0.0285 + k * 0.019;
+      const f1 = node(hand, [0, -0.085, zOff], [0, 0, -side * 0.2]);
+      part(f1, handSlot, playerLoft('-y', [PK(0, 0.009, 0.009), PK(L1[k], 0.0075, 0.0075)], { rings: 3, seg: 7, capStart: true, capEnd: true }));
+      const f2 = node(f1, [0, -L1[k], 0], [0, 0, -side * 0.45]);
+      part(f2, handSlot, playerLoft('-y', [PK(0, 0.0075, 0.0075), PK(L2[k], 0.0058, 0.0058)], { rings: 3, seg: 7, capStart: true, capEnd: true }));
+    }
+    const t1 = node(hand, [0, -0.02, 0.034], [-0.75, 0, 0]);
+    part(t1, handSlot, playerLoft('-y', [PK(0, 0.012, 0.012), PK(0.038, 0.009, 0.009)], { rings: 3, seg: 7, capStart: true, capEnd: true }));
+    const t2 = node(t1, [0, -0.038, 0], [-0.35, 0, 0]);
+    part(t2, handSlot, playerLoft('-y', [PK(0, 0.009, 0.009), PK(0.03, 0.007, 0.007)], { rings: 3, seg: 7, capStart: true, capEnd: true }));
+  });
+
+  // Hornear jerarquía -> mallas fusionadas por material
+  root.updateMatrixWorld(true);
+  const buckets = {};
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.geometry.applyMatrix4(o.matrixWorld);
+    (buckets[o.userData.slot] = buckets[o.userData.slot] || []).push(o.geometry);
+  });
+  const geos = {};
+  let minY = Infinity;
+  let maxY = -Infinity;
+  Object.keys(buckets).forEach((slot) => {
+    const g = mergePlayerGeos(buckets[slot]);
+    buckets[slot].forEach((src) => src.dispose());
+    g.computeBoundingBox();
+    minY = Math.min(minY, g.boundingBox.min.y);
+    maxY = Math.max(maxY, g.boundingBox.max.y);
+    geos[slot] = g;
+  });
+  // Apoyar exactamente la suela más baja en y = 0
+  Object.keys(geos).forEach((slot) => {
+    geos[slot].translate(0, -minY, 0);
+    geos[slot].computeBoundingBox();
+    geos[slot].computeBoundingSphere();
+  });
+
+  const model = { geos, hipY: pose.hipY - minY, lean: pose.lean, height: maxY - minY };
+  _playerModelCache[cacheKey] = model;
+  return model;
+}
+
+// Camiseta con rayas tono sobre tono (como en TacticalPad): textura procedural cacheada por color
+const _jerseyMatCache = new Map();
+function getJerseyMaterial(color) {
+  if (_jerseyMatCache.has(color)) return _jerseyMatCache.get(color);
+  const base = new THREE.Color(color);
+  const alt = base.clone().offsetHSL(0, 0, playerHexLuma(color) > 0.6 ? -0.07 : 0.07);
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 8;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = `#${base.getHexString()}`; ctx.fillRect(0, 0, 32, 8);
+  ctx.fillStyle = `#${alt.getHexString()}`; ctx.fillRect(32, 0, 32, 8);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.repeat.set(5, 1);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 });
+  _jerseyMatCache.set(color, mat);
+  return mat;
+}
+
+// Dorsal procedural: textura de canvas cacheada por número y contraste (sin <Html>, sin DOM)
 const _playerNumMatCache = new Map();
 function getPlayerNumberMaterial(number, darkText) {
   const label = String(number ?? '');
   const key = `${label}|${darkText ? 'd' : 'l'}`;
   if (_playerNumMatCache.has(key)) return _playerNumMatCache.get(key);
   const c = document.createElement('canvas');
-  c.width = 256; c.height = 256;
+  c.width = 128; c.height = 128;
   const ctx = c.getContext('2d');
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `900 ${label.length > 1 ? 140 : 170}px Arial, Helvetica, sans-serif`;
+  ctx.font = `900 ${label.length > 1 ? 80 : 100}px Arial, Helvetica, sans-serif`;
   ctx.lineJoin = 'round';
-  ctx.lineWidth = 14;
-  ctx.strokeStyle = darkText ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.85)';
-  ctx.strokeText(label, 128, 136);
-  ctx.fillStyle = darkText ? '#0f172a' : '#ffffff';
-  ctx.fillText(label, 128, 136);
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = darkText ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.65)';
+  ctx.strokeText(label, 64, 68);
+  ctx.fillStyle = darkText ? '#111827' : '#ffffff';
+  ctx.fillText(label, 64, 68);
   const tex = new THREE.CanvasTexture(c);
-  tex.anisotropy = 8;
+  tex.anisotropy = 4;
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.needsUpdate = true;
   const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -1 });
@@ -728,222 +843,77 @@ function getPlayerNumberMaterial(number, darkText) {
   return mat;
 }
 
+// El jugador de campo erguido mide exactamente PLAYER_HEIGHT_M (1.80 m) en el mundo (la cancha está en metros reales)
+function getPlayerScale() {
+  return PLAYER_HEIGHT_M / getPlayerModel(false).height;
+}
+
+// facing = 0 -> encara +Z (hacia la cámara táctica inicial). facing = Math.PI -> de espaldas a la cámara.
 function TacticalPlayer3D({ color, number, role, isSelected, onClick, facing = 0 }) {
+  const bodyRef = useRef();
   const isGK = role === 'GK';
-  const jerseyColor = color || (isGK ? '#f59e0b' : '#2563eb');
-  const light = playerHexLuma(jerseyColor) > 0.75;
-  const numberMat = getPlayerNumberMaterial(number, light);
+  const model = useMemo(() => getPlayerModel(isGK), [isGK]);
+  const scale = useMemo(() => getPlayerScale(), []);
+  const jersey = color || '#2563eb';
+  const light = playerHexLuma(jersey) > 0.78;
   const n = parseInt(number, 10) || 0;
 
-  // Paleta de piel y pelo realista
-  const skins = ['#e0b088', '#c68642', '#8d5524', '#f5c69d'];
-  const hairs = ['#18181b', '#3b2414', '#593a22', '#262626'];
-  const skinColor = skins[n % skins.length];
-  const hairColor = hairs[(n * 3 + 1) % hairs.length];
-  const shortsColor = light ? '#1e293b' : '#f8fafc';
+  const mats = useMemo(() => ({
+    jersey: getJerseyMaterial(jersey),
+    shorts: playerStdMat(light ? '#1f2937' : '#f8fafc', 0.7),
+    sock: playerStdMat(light ? '#f8fafc' : jersey, 0.75),
+    ribete: playerStdMat(light ? '#111827' : '#f8fafc', 0.6),
+    collar: playerStdMat(light ? '#111827' : '#f8fafc', 0.6),
+    skin: playerStdMat(PLAYER_SKINS[n % PLAYER_SKINS.length], 0.8),
+    hair: playerStdMat(PLAYER_HAIRS[(n * 3 + 1) % PLAYER_HAIRS.length], 0.9),
+    boot: playerStdMat('#15191f', 0.4),
+    sole: playerStdMat('#d1d5db', 0.6),
+    glove: playerStdMat('#f8fafc', 0.5),
+    sclera: playerStdMat('#f8fafc', 0.4),
+    lip: playerStdMat('#a8645a', 0.7),
+  }), [jersey, light, n]);
+  const numberMat = getPlayerNumberMaterial(number, light);
 
-  // Configuración de postura natural TacticalPad:
-  // El portero NO hace sentadillas de rana: tiene una flexión atlética lista de 15° con brazos abiertos de cobertura.
-  const kneeBend = isGK ? 0.28 : 0.08;
-  const torsoLean = isGK ? 0.16 : 0.04;
+  // Rebote leve solo cuando está seleccionado (costo mínimo)
+  useFrame(({ clock }) => {
+    if (!bodyRef.current) return;
+    const target = isSelected ? Math.abs(Math.sin(clock.getElapsedTime() * 5)) * 0.03 : 0;
+    bodyRef.current.position.y += (target - bodyRef.current.position.y) * 0.2;
+  });
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra de contacto suave proyectada en césped */}
+      {/* Sombra de contacto suave */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <circleGeometry args={[0.55, 32]} />
-        <meshBasicMaterial color="#020617" transparent opacity={0.34} depthWrite={false} />
+        <circleGeometry args={[0.5, 28]} />
+        <meshBasicMaterial color="#020617" transparent opacity={0.32} depthWrite={false} />
       </mesh>
 
-      {/* Selector táctico circular brillante cuando está seleccionado */}
+      {/* Selector táctico amarillo en el césped: aro nítido + disco translúcido */}
       {isSelected && (
         <group>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.038, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
             <circleGeometry args={[0.85, 40]} />
-            <meshBasicMaterial color={SELECTOR_COLOR} transparent opacity={0.35} depthWrite={false} toneMapped={false} />
+            <meshBasicMaterial color={SELECTOR_COLOR} transparent opacity={0.35} depthWrite={false} toneMapped={false} polygonOffset polygonOffsetFactor={-2} />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.042, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
             <ringGeometry args={[0.85, 0.98, 48]} />
-            <meshBasicMaterial color={SELECTOR_COLOR} toneMapped={false} depthWrite={false} />
+            <meshBasicMaterial color={SELECTOR_COLOR} toneMapped={false} depthWrite={false} polygonOffset polygonOffsetFactor={-3} />
           </mesh>
         </group>
       )}
 
-      {/* Modelo anatómico continuo escala exacta a 1.80m, encarando la perspectiva táctica */}
-      <group rotation={[0, facing, 0]}>
-        {/* PIERNAS, MEDIAS Y CALZADO DE FÚTBOL */}
-        {[-1, 1].map((side) => {
-          const legX = side * (isGK ? 0.19 : 0.14);
-          return (
-            <group key={`leg-${side}`} position={[legX, 0, 0]}>
-              {/* Botín / Chimpún con empeine curvado y suela */}
-              <group position={[0, 0.05, 0.03]}>
-                <mesh position={[0, 0.02, 0.04]} castShadow>
-                  <boxGeometry args={[0.13, 0.09, 0.28]} />
-                  <meshStandardMaterial color="#111827" roughness={0.4} metalness={0.2} />
-                </mesh>
-                <mesh position={[0, -0.03, 0.04]}>
-                  <boxGeometry args={[0.135, 0.03, 0.29]} />
-                  <meshStandardMaterial color="#e2e8f0" roughness={0.6} metalness={0.1} />
-                </mesh>
-              </group>
-
-              {/* Media de fútbol con textura de compresión */}
-              <mesh position={[0, 0.28, 0]} castShadow>
-                <cylinderGeometry args={[0.076, 0.064, 0.42, 16]} />
-                <meshStandardMaterial color="#f8fafc" roughness={0.7} />
-              </mesh>
-              {/* Ribete superior elástico de la media */}
-              <mesh position={[0, 0.48, 0]}>
-                <cylinderGeometry args={[0.082, 0.078, 0.05, 16]} />
-                <meshStandardMaterial color={jerseyColor} roughness={0.6} />
-              </mesh>
-
-              {/* Rodilla y Muslo atlético con ligera flexión orgánica */}
-              <group position={[0, 0.52, 0]} rotation={[side * 0.02, 0, 0]}>
-                <mesh position={[0, 0.18, 0]} rotation={[kneeBend, 0, 0]} castShadow>
-                  <cylinderGeometry args={[0.102, 0.082, 0.36, 16]} />
-                  <meshStandardMaterial color={skinColor} roughness={0.85} />
-                </mesh>
-              </group>
-
-              {/* Pernera del pantalón corto holgado */}
-              <mesh position={[0, 0.79, 0]} castShadow>
-                <cylinderGeometry args={[0.135, 0.125, 0.28, 18]} />
-                <meshStandardMaterial color={shortsColor} roughness={0.7} />
-              </mesh>
-            </group>
-          );
-        })}
-
-        {/* CINTURA Y PANTALÓN CORTO DEPORTIVO */}
-        <mesh position={[0, 0.94, 0]} castShadow>
-          <cylinderGeometry args={[0.26, 0.28, 0.22, 22]} />
-          <meshStandardMaterial color={shortsColor} roughness={0.7} />
-        </mesh>
-
-        {/* TORSO ATLÉTICO EN V CON INCLINACIÓN DEPORTIVA */}
-        <group position={[0, 1.05, 0]} rotation={[torsoLean, 0, 0]}>
-          {/* Tronco / Camiseta oficial ajustada */}
-          <mesh position={[0, 0.24, 0]} castShadow>
-            <cylinderGeometry args={[0.285, 0.24, 0.48, 22]} />
-            <meshStandardMaterial color={jerseyColor} roughness={0.48} metalness={0.08} />
-          </mesh>
-
-          {/* Espalda superior y hombros atléticos */}
-          <mesh position={[0, 0.44, 0]} castShadow>
-            <boxGeometry args={[0.62, 0.15, 0.27]} />
-            <meshStandardMaterial color={jerseyColor} roughness={0.48} metalness={0.08} />
-          </mesh>
-
-          {/* Cuello deportivo con ribete */}
-          <mesh position={[0, 0.54, 0]}>
-            <cylinderGeometry args={[0.088, 0.092, 0.09, 16]} />
-            <meshStandardMaterial color={skinColor} roughness={0.85} />
-          </mesh>
-          <mesh position={[0, 0.52, 0]}>
-            <torusGeometry args={[0.094, 0.016, 8, 20]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.5} />
-          </mesh>
-
-          {/* CABEZA Y CABELLO ESTILIZADO CON VOLUMEN */}
-          <group position={[0, 0.69, 0]}>
-            {/* Rostro y cabeza perfilada */}
-            <mesh castShadow>
-              <sphereGeometry args={[0.138, 22, 20]} />
-              <meshStandardMaterial color={skinColor} roughness={0.85} />
-            </mesh>
-            {/* Cabello deportivo con relieve y textura */}
-            <mesh position={[0, 0.04, -0.01]} castShadow>
-              <sphereGeometry args={[0.144, 22, 16, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
-              <meshStandardMaterial color={hairColor} roughness={0.95} />
-            </mesh>
-            {/* Mechón / Corte moderno frontal */}
-            <mesh position={[0, 0.12, 0.08]} rotation={[0.2, 0, 0]} castShadow>
-              <boxGeometry args={[0.14, 0.05, 0.12]} />
-              <meshStandardMaterial color={hairColor} roughness={0.95} />
-            </mesh>
-            {/* Nariz estilizada */}
-            <mesh position={[0, -0.01, 0.14]}>
-              <coneGeometry args={[0.018, 0.04, 8]} />
-              <meshStandardMaterial color={skinColor} roughness={0.85} />
-            </mesh>
-          </group>
-
-          {/* EXTREMIDADES SUPERIORES (BRAZOS, ANTEBRAZOS Y MANOS CON DEDOS) */}
-          {[-1, 1].map((side) => {
-            const armAngleZ = isGK ? side * 0.45 : side * 0.18;
-            const armAngleX = isGK ? -0.22 : 0.08;
-            return (
-              <group key={`arm-${side}`} position={[side * 0.32, 0.44, 0]}>
-                {/* Manga corta de la camiseta */}
-                <mesh position={[side * 0.05, -0.08, 0]} rotation={[armAngleX, 0, armAngleZ]} castShadow>
-                  <cylinderGeometry args={[0.092, 0.084, 0.18, 16]} />
-                  <meshStandardMaterial color={jerseyColor} roughness={0.48} metalness={0.08} />
-                </mesh>
-
-                {/* Brazo y codo */}
-                <group position={[side * 0.08, -0.16, 0]} rotation={[armAngleX * 1.2, 0, armAngleZ]}>
-                  <mesh position={[0, -0.12, 0]} castShadow>
-                    <cylinderGeometry args={[0.062, 0.052, 0.25, 14]} />
-                    <meshStandardMaterial color={skinColor} roughness={0.85} />
-                  </mesh>
-
-                  {/* Antebrazo */}
-                  <group position={[0, -0.24, 0]} rotation={[isGK ? 0.35 : 0.15, 0, 0]}>
-                    <mesh position={[0, -0.11, 0]} castShadow>
-                      <cylinderGeometry args={[0.052, 0.044, 0.24, 14]} />
-                      <meshStandardMaterial color={skinColor} roughness={0.85} />
-                    </mesh>
-
-                    {/* MANO / GUANTE PROFESIONAL */}
-                    {isGK ? (
-                      /* Guante acolchado de arquero profesional */
-                      <group position={[0, -0.24, 0]}>
-                        <mesh castShadow>
-                          <boxGeometry args={[0.11, 0.14, 0.06]} />
-                          <meshStandardMaterial color="#f8fafc" roughness={0.5} metalness={0.1} />
-                        </mesh>
-                        <mesh position={[side * 0.045, -0.02, 0.02]} rotation={[0, 0, side * 0.3]}>
-                          <boxGeometry args={[0.04, 0.08, 0.04]} />
-                          <meshStandardMaterial color="#0284c7" roughness={0.5} />
-                        </mesh>
-                      </group>
-                    ) : (
-                      /* Mano anatómica en descanso natural con dedos modelados */
-                      <group position={[0, -0.23, 0]}>
-                        {/* Palma de la mano */}
-                        <mesh castShadow>
-                          <boxGeometry args={[0.065, 0.085, 0.038]} />
-                          <meshStandardMaterial color={skinColor} roughness={0.85} />
-                        </mesh>
-                        {/* Pulgar semi-flexionado */}
-                        <mesh position={[side * 0.035, -0.01, 0.015]} rotation={[0.2, 0, side * 0.25]}>
-                          <capsuleGeometry args={[0.012, 0.04, 4, 8]} />
-                          <meshStandardMaterial color={skinColor} roughness={0.85} />
-                        </mesh>
-                        {/* Dedos en postura de reposo relajado */}
-                        {[-0.02, -0.007, 0.007, 0.02].map((fX, fIdx) => (
-                          <mesh key={`finger-${fIdx}`} position={[fX, -0.055, 0]}>
-                            <capsuleGeometry args={[0.009, 0.042, 4, 6]} />
-                            <meshStandardMaterial color={skinColor} roughness={0.85} />
-                          </mesh>
-                        ))}
-                      </group>
-                    )}
-                  </group>
-                </group>
-              </group>
-            );
-          })}
-
-          {/* DORSAL TRASERO Y NÚMERO FRONTAL NÍTIDO EN WEBGL */}
-          {/* Dorsal en la espalda */}
-          <mesh position={[0, 0.28, -0.14]} rotation={[0, Math.PI, 0]} material={numberMat}>
+      {/* Cuerpo orgánico a escala real, encarando la cámara */}
+      <group ref={bodyRef} rotation={[0, facing, 0]} scale={[scale, scale, scale]}>
+        {Object.keys(model.geos).map((slot) => (
+          <mesh key={slot} geometry={model.geos[slot]} material={mats[slot]} />
+        ))}
+        {/* Dorsal en la espalda y número pequeño en el pecho (siguen la inclinación del torso) */}
+        <group position={[0, model.hipY, 0]} rotation={[model.lean, 0, 0]}>
+          <mesh position={[0, 0.32, -0.127]} rotation={[-0.035, Math.PI, 0]} material={numberMat}>
             <planeGeometry args={[0.26, 0.26]} />
           </mesh>
-          {/* Número pequeño en el pecho */}
-          <mesh position={[0, 0.34, 0.14]} rotation={[0, 0, 0]} material={numberMat}>
+          <mesh position={[0, 0.4, 0.163]} rotation={[0.15, 0, 0]} material={numberMat}>
             <planeGeometry args={[0.13, 0.13]} />
           </mesh>
         </group>
@@ -1136,6 +1106,465 @@ function TacticalText3D({ item }) {
     </div>
   </Html>;
 }
+// ===== ENTORNO REALISTA: CIELO, CÉSPED, VALLAS, PORTERÍAS Y GRADERÍAS CON BUTACAS (todo procedural) =====
+
+// ---- Utilidades de textura de canvas (cacheadas) ----
+const _envTexCache = new Map();
+function envCanvasTexture(key, w, h, draw, opts = {}) {
+  if (_envTexCache.has(key)) return _envTexCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = opts.clampT ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
+  if (opts.repeat) t.repeat.set(opts.repeat[0], opts.repeat[1]);
+  t.anisotropy = 8;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  _envTexCache.set(key, t);
+  return t;
+}
+
+// Césped: ruido de briznas sin costuras (cada trazo se repite en los bordes)
+function getGrassTexture(rx, ry) {
+  return envCanvasTexture(`grass|${rx}|${ry}`, 256, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#d4d9d0';
+    ctx.fillRect(0, 0, w, h);
+    let s = 1234567;
+    const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+    for (let i = 0; i < 5200; i++) {
+      const x = rnd() * w, y = rnd() * h, len = 4 + rnd() * 9, lean = (rnd() - 0.5) * 3;
+      const v = Math.floor(170 + rnd() * 85);
+      ctx.strokeStyle = `rgba(${v},${Math.min(255, v + 12)},${Math.max(0, v - 18)},${0.25 + rnd() * 0.35})`;
+      ctx.lineWidth = 1 + rnd() * 1.2;
+      for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) {
+        ctx.beginPath(); ctx.moveTo(x + ox, y + oy); ctx.lineTo(x + ox + lean, y + oy - len); ctx.stroke();
+      }
+    }
+    for (let i = 0; i < 900; i++) {
+      const x = rnd() * w, y = rnd() * h;
+      ctx.fillStyle = `rgba(60,70,50,${0.05 + rnd() * 0.08})`;
+      for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) ctx.fillRect(x + ox, y + oy, 2, 2);
+    }
+  }, { repeat: [rx, ry] });
+}
+
+// Cielo azul con degradado, sol suave y nubes (esfera interior)
+function getSkyTexture() {
+  return envCanvasTexture('sky', 2048, 1024, (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#1c64c7');
+    g.addColorStop(0.32, '#3d8fe0');
+    g.addColorStop(0.46, '#8cc4f2');
+    g.addColorStop(0.5, '#d6ecfb');
+    g.addColorStop(0.56, '#cfe6f7');
+    g.addColorStop(1, '#a9c9e2');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    let s = 987654;
+    const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+    // sol
+    const sun = ctx.createRadialGradient(w * 0.62, h * 0.3, 0, w * 0.62, h * 0.3, 150);
+    sun.addColorStop(0, 'rgba(255,252,230,0.95)');
+    sun.addColorStop(0.25, 'rgba(255,248,215,0.45)');
+    sun.addColorStop(1, 'rgba(255,248,215,0)');
+    ctx.fillStyle = sun; ctx.fillRect(0, 0, w, h);
+    // nubes (grupos de manchas suaves, repetidas en los bordes para cerrar el panorama)
+    for (let n = 0; n < 34; n++) {
+      const cx = rnd() * w, cy = h * (0.2 + rnd() * 0.27), size = 50 + rnd() * 120;
+      const blobs = 6 + Math.floor(rnd() * 7);
+      for (let b = 0; b < blobs; b++) {
+        const bx = cx + (rnd() - 0.5) * size * 2.2, by = cy + (rnd() - 0.5) * size * 0.35, br = size * (0.35 + rnd() * 0.45);
+        for (const ox of [-w, 0, w]) {
+          const rg = ctx.createRadialGradient(bx + ox, by, 0, bx + ox, by, br);
+          rg.addColorStop(0, 'rgba(255,255,255,0.62)');
+          rg.addColorStop(0.55, 'rgba(255,255,255,0.28)');
+          rg.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(bx + ox - br, by - br, br * 2, br * 2);
+        }
+      }
+    }
+  }, { clampT: true });
+}
+
+// Publicidad perimetral genérica (sin marcas reales)
+function getAdTexture() {
+  return envCanvasTexture('ads', 1024, 64, (ctx, w, h) => {
+    const panels = [
+      ['#0f2f6b', '#ffffff', 'ANDEZ SPORTS FC'], ['#d62828', '#ffffff', 'FÚTBOL TÁCTICO'], ['#f8fafc', '#0f2f6b', 'PIZARRA 3D'],
+      ['#0b7a3b', '#ffffff', 'ENTRENA MEJOR'], ['#fbbf24', '#111827', 'PROFESOR PRO'], ['#1e293b', '#ffffff', 'ANDEZ SPORTS FC'],
+    ];
+    const pw = w / panels.length;
+    panels.forEach(([bg, fg, label], i) => {
+      ctx.fillStyle = bg; ctx.fillRect(i * pw, 0, pw, h);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(i * pw, 0, pw, 5);
+      ctx.fillStyle = fg;
+      ctx.font = '900 30px Arial, Helvetica, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, i * pw + pw / 2, h / 2 + 3);
+    });
+  }, { repeat: [1, 1] });
+}
+
+const _envMatCache = new Map();
+function envMat(key, make) {
+  if (!_envMatCache.has(key)) _envMatCache.set(key, make());
+  return _envMatCache.get(key);
+}
+
+// ---- Cielo + suelo exterior ----
+function SkyAndGround() {
+  const sky = useMemo(() => getSkyTexture(), []);
+  return (
+    <group dispose={null} raycast={() => null}>
+      <mesh renderOrder={-10} raycast={() => null}>
+        <sphereGeometry args={[480, 48, 24]} />
+        <meshBasicMaterial map={sky} side={THREE.BackSide} depthWrite={false} fog={false} toneMapped={false} />
+      </mesh>
+      {/* Terreno exterior al estadio */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} raycast={() => null}>
+        <circleGeometry args={[470, 48]} />
+        <meshStandardMaterial color="#4f7a3f" roughness={1} />
+      </mesh>
+    </group>
+  );
+}
+
+// ---- Red de portería (malla romboidal procedural, UV en metros) ----
+const GOAL_NET_CELL = 0.2;
+let _goalNetMat = null;
+function getGoalNetMaterial() {
+  if (_goalNetMat) return _goalNetMat;
+  const S = 64;
+  const c = document.createElement('canvas');
+  c.width = S; c.height = S;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, S, S);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4.6; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, S / 2); ctx.lineTo(S / 2, 0); ctx.moveTo(S / 2, 0); ctx.lineTo(S, S / 2);
+  ctx.moveTo(S, S / 2); ctx.lineTo(S / 2, S); ctx.moveTo(S / 2, S); ctx.lineTo(0, S / 2);
+  ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  [[0, S / 2], [S, S / 2], [S / 2, 0], [S / 2, S]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 4.6, 0, Math.PI * 2); ctx.fill(); });
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.needsUpdate = true;
+  _goalNetMat = new THREE.MeshBasicMaterial({ color: '#eef2f6', alphaMap: t, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
+  return _goalNetMat;
+}
+
+// Panel plano de red a partir de 4 puntos 3D (UV proyectadas al plano del panel, en celdas de red)
+function goalNetPanelGeometry(p) {
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const nrm = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+  const e1 = nrm(sub(p[1], p[0]));
+  let e2 = sub(p[3], p[0]);
+  const k = dot(e2, e1);
+  e2 = nrm([e2[0] - e1[0] * k, e2[1] - e1[1] * k, e2[2] - e1[2] * k]);
+  const pos = [];
+  const uv = [];
+  p.forEach((q) => {
+    const d = sub(q, p[0]);
+    pos.push(q[0], q[1], q[2]);
+    uv.push(dot(d, e1) / GOAL_NET_CELL, dot(d, e2) / GOAL_NET_CELL);
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
+  g.setIndex([0, 1, 2, 0, 2, 3]);
+  return g;
+}
+
+function GoalBar({ a, b, r = 0.05, mat }) {
+  const { pos, quat, len } = useMemo(() => {
+    const va = new THREE.Vector3(...a);
+    const vb = new THREE.Vector3(...b);
+    const d = vb.clone().sub(va);
+    const l = d.length();
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+    return { pos: va.clone().add(vb).multiplyScalar(0.5), quat: q, len: l };
+  }, [a[0], a[1], a[2], b[0], b[1], b[2]]);
+  return (
+    <mesh position={pos} quaternion={quat} material={mat} castShadow>
+      <cylinderGeometry args={[r, r, len, 12]} />
+    </mesh>
+  );
+}
+
+// Portería FIFA 7.32 x 2.44 m con marco trasero inclinado y red tensada (techo 1.0 m, base 2.0 m)
+function GoalFrame({ xPos, dir }) {
+  const W = 3.66, H = 2.44, DT = 1.0, DB = 2.0;
+  const frameMat = envMat('goal-frame', () => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.28, metalness: 0.1 }));
+  const netMat = getGoalNetMaterial();
+  const X = (d) => dir * d;
+  const geos = useMemo(() => {
+    const sideL = goalNetPanelGeometry([[0, 0, -W], [0, H, -W], [X(DT), H, -W], [X(DB), 0, -W]]);
+    const sideR = goalNetPanelGeometry([[0, 0, W], [0, H, W], [X(DT), H, W], [X(DB), 0, W]]);
+    const top = goalNetPanelGeometry([[0, H, -W], [0, H, W], [X(DT), H, W], [X(DT), H, -W]]);
+    const back = goalNetPanelGeometry([[X(DT), H, -W], [X(DT), H, W], [X(DB), 0, W], [X(DB), 0, -W]]);
+    return [sideL, sideR, top, back];
+  }, [dir]);
+  useEffect(() => () => geos.forEach((g) => g.dispose()), [geos]);
+  return (
+    <group position={[xPos, 0, 0]} dispose={null}>
+      {/* Postes y travesaño */}
+      <GoalBar a={[0, 0, -W]} b={[0, H, -W]} r={0.06} mat={frameMat} />
+      <GoalBar a={[0, 0, W]} b={[0, H, W]} r={0.06} mat={frameMat} />
+      <GoalBar a={[0, H, -W]} b={[0, H, W]} r={0.06} mat={frameMat} />
+      {/* Brazos superiores hacia atrás, parantes traseros inclinados y bases */}
+      {[-W, W].map((z) => (
+        <group key={`frame-${z}`}>
+          <GoalBar a={[0, H, z]} b={[X(DT), H, z]} r={0.035} mat={frameMat} />
+          <GoalBar a={[X(DT), H, z]} b={[X(DB), 0.04, z]} r={0.035} mat={frameMat} />
+          <GoalBar a={[0, 0.04, z]} b={[X(DB), 0.04, z]} r={0.035} mat={frameMat} />
+        </group>
+      ))}
+      <GoalBar a={[X(DT), H, -W]} b={[X(DT), H, W]} r={0.03} mat={frameMat} />
+      <GoalBar a={[X(DB), 0.04, -W]} b={[X(DB), 0.04, W]} r={0.035} mat={frameMat} />
+      {/* Redes */}
+      {geos.map((g, i) => <mesh key={`net-${i}`} geometry={g} material={netMat} />)}
+    </group>
+  );
+}
+
+// ---- Graderías: dos niveles, butacas visibles (InstancedMesh), pasillos, vomitorios, techo con vigas ----
+const STAND_STYLES = {
+  red:  { seat: '#c1272d', alt: '#f4f1ea', accent: '#c1272d' },
+  blue: { seat: '#1f4fb8', alt: '#f4f1ea', accent: '#1f4fb8' },
+};
+const STAND_SEAT_SPACING = 0.62; // sube a 0.8 si necesitas más rendimiento en móviles
+const ST = { R1: 12, RISE1: 0.4, RD: 0.82, CONC: 2.4, FASCIA: 1.4, R2: 14, RISE2: 0.5 };
+
+let _seatGeo = null;
+function getSeatGeometry() {
+  if (_seatGeo) return _seatGeo;
+  // faces de BoxGeometry: 0:+x 1:-x 2:+y 3:-y 4:+z 5:-z. El asiento mira hacia -z (hacia la cancha).
+  const mk = (w, h, d, cx, cy, cz, faces) => {
+    const g = new THREE.BoxGeometry(w, h, d);
+    const src = g.index.array;
+    const keep = [];
+    faces.forEach((f) => { for (let k = 0; k < 6; k++) keep.push(src[f * 6 + k]); });
+    g.setIndex(keep);
+    g.translate(cx, cy, cz);
+    return g;
+  };
+  const cushion = mk(0.46, 0.1, 0.42, 0, 0.22, -0.05, [0, 1, 2, 5]);
+  const back = mk(0.46, 0.46, 0.07, 0, 0.5, 0.17, [0, 1, 2, 5]);
+  _seatGeo = mergePlayerGeos([cushion, back]);
+  cushion.dispose(); back.dispose();
+  return _seatGeo;
+}
+
+function buildStandSeats(length, style, seed) {
+  const rows = [];
+  for (let i = 0; i < ST.R1; i++) rows.push({ z: i * ST.RD + ST.RD / 2, y: (i + 1) * ST.RISE1, r: i });
+  const zUp0 = ST.R1 * ST.RD + ST.CONC;
+  const base2 = ST.R1 * ST.RISE1 + ST.FASCIA;
+  for (let j = 0; j < ST.R2; j++) rows.push({ z: zUp0 + j * ST.RD + ST.RD / 2, y: base2 + (j + 1) * ST.RISE2, r: ST.R1 + 1.6 + j });
+
+  // Estrella blanca central (motivo del asiento) y variación sutil de tono
+  const star = [];
+  for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5; const rad = k % 2 === 0 ? 11 : 4.6; star.push([Math.cos(a) * rad, Math.sin(a) * rad]); }
+  const inStar = (x, y) => {
+    let inside = false;
+    for (let i = 0, j = star.length - 1; i < star.length; j = i++) {
+      const [xi, yi] = star[i], [xj, yj] = star[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+  const totalRows = ST.R1 + 1.6 + ST.R2;
+  const cy = (totalRows * 0.85) / 2;
+
+  const mats = [];
+  const cols = [];
+  const dummy = new THREE.Object3D();
+  let s = seed * 7919 + 17;
+  const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  const base = new THREE.Color(style.seat);
+  const alt = new THREE.Color(style.alt);
+  const nSeats = Math.floor((length - 1) / STAND_SEAT_SPACING);
+  rows.forEach((row) => {
+    for (let k = 0; k < nSeats; k++) {
+      const x = -length / 2 + 0.5 + (k + 0.5) * STAND_SEAT_SPACING;
+      const aisle = Math.abs((((x + length / 2) % 18) + 18) % 18 - 9);
+      if (aisle < 0.75) continue; // pasillo de escaleras
+      dummy.position.set(x, row.y, row.z);
+      dummy.updateMatrix();
+      mats.push(dummy.matrix.clone());
+      const white = inStar(x, row.r * 0.85 - cy);
+      const c = (white ? alt : base).clone();
+      c.offsetHSL(0, 0, (rnd() - 0.5) * 0.05);
+      cols.push(c);
+    }
+  });
+  const mesh = new THREE.InstancedMesh(getSeatGeometry(), envMat('seat-mat', () => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.55, metalness: 0.05 })), mats.length);
+  mats.forEach((m, i) => { mesh.setMatrixAt(i, m); mesh.setColorAt(i, cols[i]); });
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.computeBoundingSphere && mesh.computeBoundingSphere();
+  return mesh;
+}
+
+// Marco local: X = largo, Y = arriba, Z = hacia AFUERA de la cancha
+function Stand({ position, rotationY = 0, length, variant = 'blue', seed = 1 }) {
+  const style = STAND_STYLES[variant] || STAND_STYLES.blue;
+  const zUp0 = ST.R1 * ST.RD + ST.CONC;
+  const base2 = ST.R1 * ST.RISE1 + ST.FASCIA;
+  const depth = zUp0 + ST.R2 * ST.RD;
+  const topH = base2 + ST.R2 * ST.RISE2;
+
+  const seats = useMemo(() => buildStandSeats(length, style, seed), [length, style, seed]);
+  useEffect(() => () => seats.dispose && seats.dispose(), [seats]);
+
+  const concrete = envMat('st-concrete', () => new THREE.MeshStandardMaterial({ color: '#aab2bd', roughness: 0.92 }));
+  const riser = envMat('st-riser', () => new THREE.MeshStandardMaterial({ color: '#d3d9e0', roughness: 0.9 }));
+  const back = envMat('st-back', () => new THREE.MeshStandardMaterial({ color: '#7b8592', roughness: 0.95 }));
+  const stepMats = useMemo(() => [concrete, concrete, concrete, concrete, back, riser], [concrete, riser, back]);
+  const accent = envMat(`st-accent-${variant}`, () => new THREE.MeshStandardMaterial({ color: style.accent, roughness: 0.5 }));
+  const dark = envMat('st-dark', () => new THREE.MeshStandardMaterial({ color: '#2b3340', roughness: 0.6, metalness: 0.35 }));
+  const roofTop = envMat('st-roof-top', () => new THREE.MeshStandardMaterial({ color: '#e6ebf0', roughness: 0.55, metalness: 0.2 }));
+  const roofMats = useMemo(() => [dark, dark, roofTop, dark, dark, dark], [dark, roofTop]);
+  const voidMat = envMat('st-void', () => new THREE.MeshStandardMaterial({ color: '#0d141f', roughness: 1 }));
+
+  // Techo en voladizo
+  const zf = zUp0 + 2, yf = topH - 1.2;
+  const zb = depth + 2.5, yb = topH + 4.4;
+  const roofLen = Math.hypot(zb - zf, yb - yf);
+  const roofTilt = -Math.atan2(yb - yf, zb - zf);
+  const yAt = (z) => yf + ((yb - yf) / (zb - zf)) * (z - zf);
+  const nRibs = Math.max(3, Math.round(length / 7));
+  const nCols = Math.max(2, Math.round(length / 14));
+  const nDoors = Math.max(2, Math.round(length / 36));
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]} dispose={null}>
+      {/* Nivel inferior: escalones macizos */}
+      {Array.from({ length: ST.R1 }).map((_, i) => {
+        const h = (i + 1) * ST.RISE1;
+        return (
+          <mesh key={`l-${i}`} position={[0, h / 2, i * ST.RD + ST.RD / 2]} material={stepMats}>
+            <boxGeometry args={[length, h, ST.RD]} />
+          </mesh>
+        );
+      })}
+      {/* Pasillo (concourse) entre niveles */}
+      <mesh position={[0, (ST.R1 * ST.RISE1) / 2, ST.R1 * ST.RD + ST.CONC / 2]} material={stepMats}>
+        <boxGeometry args={[length, ST.R1 * ST.RISE1, ST.CONC]} />
+      </mesh>
+      {/* Nivel superior */}
+      {Array.from({ length: ST.R2 }).map((_, j) => {
+        const h = base2 + (j + 1) * ST.RISE2;
+        return (
+          <mesh key={`u-${j}`} position={[0, h / 2, zUp0 + j * ST.RD + ST.RD / 2]} material={stepMats}>
+            <boxGeometry args={[length, h, ST.RD]} />
+          </mesh>
+        );
+      })}
+      {/* Franja de color en la contrahuella del nivel superior y barandilla del nivel inferior */}
+      <mesh position={[0, ST.R1 * ST.RISE1 + 0.9, zUp0 - 0.02]} material={accent}>
+        <boxGeometry args={[length, 0.5, 0.06]} />
+      </mesh>
+      <mesh position={[0, 0.55, -0.15]} material={accent}>
+        <boxGeometry args={[length, 1.1, 0.15]} />
+      </mesh>
+      {/* Vomitorios (accesos oscuros) en el muro del pasillo */}
+      {Array.from({ length: nDoors }).map((_, d) => (
+        <mesh key={`door-${d}`} position={[-length / 2 + ((d + 0.5) * length) / nDoors, ST.R1 * ST.RISE1 + 1.3, zUp0 - 0.05]} material={voidMat}>
+          <boxGeometry args={[3.6, 1.8, 0.08]} />
+        </mesh>
+      ))}
+      {/* Butacas (instanciadas) */}
+      <primitive object={seats} />
+
+      {/* Techo: placa, canto frontal, vigas inferiores y columnas */}
+      <mesh position={[0, (yf + yb) / 2, (zf + zb) / 2]} rotation={[roofTilt, 0, 0]} material={roofMats}>
+        <boxGeometry args={[length, 0.35, roofLen]} />
+      </mesh>
+      <mesh position={[0, yf, zf]} material={accent}>
+        <boxGeometry args={[length, 0.6, 0.3]} />
+      </mesh>
+      {Array.from({ length: nRibs + 1 }).map((_, k) => (
+        <mesh key={`rib-${k}`} position={[-length / 2 + (k * length) / nRibs, (yf + yb) / 2 - 0.38, (zf + zb) / 2]} rotation={[roofTilt, 0, 0]} material={dark}>
+          <boxGeometry args={[0.22, 0.5, roofLen]} />
+        </mesh>
+      ))}
+      {Array.from({ length: nCols + 1 }).map((_, k) => {
+        const colZ = zb - 1.2;
+        const colH = yAt(colZ) - 0.4;
+        return (
+          <mesh key={`col-${k}`} position={[-length / 2 + (k * length) / nCols, colH / 2, colZ]} material={dark}>
+            <boxGeometry args={[0.55, colH, 0.55]} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function AdBoards() {
+  const base = useMemo(() => getAdTexture(), []);
+  const mats = useMemo(() => {
+    const mk = (len) => {
+      const t = base.clone();
+      t.needsUpdate = true;
+      t.repeat.set(len / 18, 1);
+      return new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: '#ffffff', emissiveIntensity: 0.55, roughness: 0.5 });
+    };
+    return { long: mk(110), short: mk(74) };
+  }, [base]);
+  useEffect(() => () => { mats.long.map.dispose(); mats.short.map.dispose(); mats.long.dispose(); mats.short.dispose(); }, [mats]);
+  return (
+    <group dispose={null}>
+      {[-36.8, 36.8].map((z) => (
+        <mesh key={`bz-${z}`} position={[0, 0.55, z]} rotation={[0, z < 0 ? 0 : Math.PI, 0]} material={mats.long}>
+          <boxGeometry args={[110, 1.1, 0.12]} />
+        </mesh>
+      ))}
+      {[-55.8, 55.8].map((x) => (
+        <mesh key={`bx-${x}`} position={[x, 0.55, 0]} rotation={[0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]} material={mats.short}>
+          <boxGeometry args={[74, 1.1, 0.12]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function StadiumEnvironment() {
+  const towers = [[-96, -76], [96, -76], [-96, 76], [96, 76]];
+  return (
+    <group>
+      <SkyAndGround />
+      {/* Graderías largas (detrás de las bandas) cierran las esquinas; las de fondo (detrás de las porterías) completan el óvalo */}
+      <Stand position={[0, 0, -41]} rotationY={Math.PI} length={169.4} variant="blue" seed={1} />
+      <Stand position={[0, 0, 41]} rotationY={0} length={169.4} variant="blue" seed={2} />
+      <Stand position={[-61, 0, 0]} rotationY={-Math.PI / 2} length={82} variant="red" seed={3} />
+      <Stand position={[61, 0, 0]} rotationY={Math.PI / 2} length={82} variant="red" seed={4} />
+
+      <AdBoards />
+
+      {/* Torres de iluminación exteriores */}
+      {towers.map(([x, z]) => (
+        <group key={`tower-${x}-${z}`} position={[x, 0, z]}>
+          <mesh position={[0, 21, 0]}><cylinderGeometry args={[0.35, 0.55, 42, 10]} /><meshStandardMaterial color="#94a3b8" roughness={0.5} metalness={0.4} /></mesh>
+          <group position={[0, 42, 0]} rotation={[0, Math.atan2(-x, -z), 0]}>
+            <mesh><boxGeometry args={[7, 4, 0.6]} /><meshStandardMaterial color="#e2e8f0" emissive="#fff7d6" emissiveIntensity={0.9} roughness={0.4} /></mesh>
+          </group>
+        </group>
+      ))}
+
+      {/* Explanada de hormigón entre el césped y las graderías */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]}>
+        <planeGeometry args={[190, 150]} />
+        <meshStandardMaterial color="#6d7580" roughness={0.95} />
+      </mesh>
+    </group>
+  );
+}
+
 function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC }) {
   const isDragging = useRef(false);
   const dragId = useRef(null);
@@ -1200,7 +1629,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
   // En móvil usamos una perspectiva diagonal para conservar el volumen 3D y
   // encuadrar la cancha con sus dos porterías. Se mantiene el eje vertical natural de Three.js.
   const camPos = isPC ? [0, 26, 46] : [0, 38, 52];
-  const camFov = isPC ? 45 : 55;
+const camFov = isPC ? 45 : 55;
 
   return (
     <>
@@ -1209,29 +1638,17 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
         enabled={!cameraLocked}
         target={[0, 0, 0]}
         maxPolarAngle={Math.PI / 2.05}
-        minPolarAngle={0.15}
-        minDistance={12}
-        maxDistance={150}
+        minPolarAngle={0.2}
+        minDistance={15}
+        maxDistance={140}
         enableDamping
         dampingFactor={0.08}
       />
-      {/* Atmósfera y Cielo Azul Natural de Estadio */}
-      <color attach="background" args={["#60a5fa"]} />
-      <fog attach="fog" args={["#93c5fd", 110, 240]} />
-      <ambientLight intensity={0.9} color="#ffffff" />
-      <hemisphereLight args={["#bae6fd", "#1e3a24", 0.75]} />
-      <directionalLight
-        position={[25, 45, 20]}
-        intensity={2.1}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-bias={-0.0001}
-      />
-      <directionalLight position={[-25, 25, -20]} intensity={0.5} color="#e0f2fe" />
+      <ambientLight intensity={0.95} />
+      <hemisphereLight args={["#e0f2fe", "#14532d", 0.65]} />
+      <directionalLight position={[12, 35, 18]} intensity={1.7} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
 
-      {/* Cancha 3D y Estadio con Butacas Individuales Realistas */}
-      <SkyDome3D />
+      {/* Cancha 3D en coordenadas nativas, sin rotación CSS del viewport. */}
       <Pitch3D />
       <StadiumEnvironment />
 
