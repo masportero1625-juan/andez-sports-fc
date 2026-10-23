@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, Users, DollarSign, Type, Shield, Move
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Html, useGLTF } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
 // CREDENCIALES SUPABASE
@@ -677,7 +677,9 @@ function getPlayerModel(isGK) {
     buckets[slot].forEach((g) => g.dispose());
   });
 
-  const model = { geos, hipY: pose.hipY, lean: pose.lean };
+  let height = 0;
+  Object.keys(geos).forEach((slot) => { height = Math.max(height, geos[slot].boundingBox.max.y); });
+  const model = { geos, hipY: pose.hipY, lean: pose.lean, height };
   _playerModelCache[cacheKey] = model;
   return model;
 }
@@ -709,60 +711,83 @@ function getPlayerNumberMaterial(number, darkText) {
   return mat;
 }
 
-function TacticalPlayer3D({ color, number, isSelected, onClick, facing = Math.PI }) {
-  // Modelo humanoide atlético oficial Three.js (Malla continua, proporciones humanas reales)
-  const { scene } = useGLTF('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Xbot.glb');
-  const clone = useMemo(() => scene.clone(), [scene]);
-  const jerseyColor = color || '#2563eb';
+// Altura real del futbolista en metros (la cancha está en metros reales: 105 x 68)
+const PLAYER_HEIGHT_M = 1.8;
+function getPlayerScale() {
+  return PLAYER_HEIGHT_M / getPlayerModel(false).height; // el jugador de campo erguido mide exactamente 1.80 m
+}
 
-  // Aplicar colores de equipación deportiva sobre la malla continua
-  useEffect(() => {
-    clone.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        if (child.material) {
-          child.material = child.material.clone();
-          // Asigna el color del equipo al torso/pecho
-          if (child.name.toLowerCase().includes('body') || child.name.toLowerCase().includes('mesh')) {
-            child.material.color.set(jerseyColor);
-          }
-        }
-      }
-    });
-  }, [clone, jerseyColor]);
+// facing = 0 -> el jugador encara +Z, que es hacia la cámara táctica inicial (cámara en +Z mirando a -Z).
+// facing = Math.PI -> de espaldas a la cámara.
+function TacticalPlayer3D({ color, number, role, isSelected, onClick, facing = 0 }) {
+  const bodyRef = useRef();
+  const isGK = role === 'GK';
+  const model = useMemo(() => getPlayerModel(isGK), [isGK]);
+  const scale = useMemo(() => getPlayerScale(), []);
+  const jersey = color || '#2563eb';
+  const light = playerHexLuma(jersey) > 0.78;
+
+  const mats = useMemo(() => ({
+    jersey: playerStdMat(jersey, 0.64),
+    shorts: playerStdMat(light ? '#1f2937' : '#f8fafc', 0.72),
+    sock: playerStdMat('#f8fafc', 0.7),
+    ribete: playerStdMat(light ? '#111827' : jersey, 0.65),
+    collar: playerStdMat(light ? '#111827' : '#f8fafc', 0.65),
+    skin: playerStdMat('#b9825f', 0.88),
+    hair: playerStdMat('#30231e', 0.94),
+    boot: playerStdMat('#15191f', 0.42),
+    sole: playerStdMat('#d1d5db', 0.6),
+    glove: playerStdMat('#f8fafc', 0.55),
+  }), [jersey, light]);
+  const numberMat = getPlayerNumberMaterial(number, light);
+
+  // Rebote leve solo cuando está seleccionado (costo mínimo)
+  useFrame(({ clock }) => {
+    if (!bodyRef.current) return;
+    const target = isSelected ? Math.abs(Math.sin(clock.getElapsedTime() * 5)) * 0.03 : 0;
+    bodyRef.current.position.y += (target - bodyRef.current.position.y) * 0.2;
+  });
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
       {/* Sombra de contacto suave */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.55, 24]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.35} depthWrite={false} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+        <circleGeometry args={[0.5, 28]} />
+        <meshBasicMaterial color="#020617" transparent opacity={0.32} depthWrite={false} />
       </mesh>
 
-      {/* Selector táctico en césped */}
+      {/* Selector táctico amarillo en el césped: aro nítido + disco translúcido */}
       {isSelected && (
         <group>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-            <circleGeometry args={[0.85, 32]} />
-            <meshBasicMaterial color="#facc15" transparent opacity={0.35} depthWrite={false} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+            <circleGeometry args={[0.85, 40]} />
+            <meshBasicMaterial color={SELECTOR_COLOR} transparent opacity={0.35} depthWrite={false} toneMapped={false} polygonOffset polygonOffsetFactor={-2} />
           </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.035, 0]}>
-            <ringGeometry args={[0.85, 0.98, 36]} />
-            <meshBasicMaterial color="#facc15" depthWrite={false} toneMapped={false} />
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+            <ringGeometry args={[0.85, 0.98, 48]} />
+            <meshBasicMaterial color={SELECTOR_COLOR} toneMapped={false} depthWrite={false} polygonOffset polygonOffsetFactor={-3} />
           </mesh>
         </group>
       )}
 
-      {/* Humanoide con orientación hacia la cámara principal y escala reglamentaria 1.80m */}
-      <group rotation={[0, facing, 0]} scale={[0.0102, 0.0102, 0.0102]}>
-        <primitive object={clone} />
+      {/* Cuerpo procedural a escala real (1.80 m), encarando la cámara */}
+      <group ref={bodyRef} rotation={[0, facing, 0]} scale={[scale, scale, scale]}>
+        {Object.keys(model.geos).map((slot) => (
+          <mesh key={slot} geometry={model.geos[slot]} material={mats[slot]} castShadow />
+        ))}
+        {/* Dorsal (espalda) y número pequeño en el pecho; siguen la inclinación del torso */}
+        <group position={[0, model.hipY + 0.06, 0]} rotation={[model.lean, 0, 0]}>
+          <mesh position={[0, 0.33, -0.153]} rotation={[-0.11, Math.PI, 0]} material={numberMat}>
+            <planeGeometry args={[0.3, 0.3]} />
+          </mesh>
+          <mesh position={[0, 0.42, 0.162]} rotation={[0.11, 0, 0]} material={numberMat}>
+            <planeGeometry args={[0.15, 0.15]} />
+          </mesh>
+        </group>
       </group>
     </group>
   );
 }
-
-useGLTF.preload('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/models/gltf/Xbot.glb');
 
 
 
