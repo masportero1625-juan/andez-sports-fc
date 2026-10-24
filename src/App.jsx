@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, Users, DollarSign, Type, Shield, Move
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, useGLTF, useAnimations, PerspectiveCamera } from '@react-three/drei';
+import { OrbitControls, Text, Html, useGLTF, useAnimations, PerspectiveCamera } from '@react-three/drei';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import * as THREE from 'three';
 
@@ -14,20 +14,59 @@ import * as THREE from 'three';
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
 
-async function sbGet(key) {
+// Copia local (localStorage) para que la app siga funcionando si la tabla app_data aún no existe o no hay conexión
+const sbLocalKey = (k) => `sbcache:${k}`;
+function sbLocalRead(key) {
   try {
-    const res = await fetch(`${SB_URL}/rest/v1/app_data?key=eq.${encodeURIComponent(key)}&select=value`, {
-      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
-    });
-    const d = await res.json();
-    return d && d.length > 0 ? d[0].value : null;
+    const raw = window.localStorage.getItem(sbLocalKey(key));
+    return raw ? JSON.parse(raw) : null;
   } catch (e) {
     return null;
   }
 }
+function sbLocalWrite(key, value) {
+  try {
+    window.localStorage.setItem(sbLocalKey(key), JSON.stringify(value));
+  } catch (e) { /* cuota llena o almacenamiento bloqueado */ }
+}
+
+// Se comprueba UNA sola vez si la tabla existe; así no se disparan decenas de peticiones 404 en paralelo
+let _sbAvailable = null;
+let _sbProbe = null;
+function sbIsAvailable() {
+  if (_sbAvailable !== null) return Promise.resolve(_sbAvailable);
+  if (!_sbProbe) {
+    _sbProbe = fetch(`${SB_URL}/rest/v1/app_data?select=key&limit=1`, {
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+    })
+      .then((res) => { _sbAvailable = res.ok; return _sbAvailable; })
+      .catch(() => { _sbAvailable = false; return false; });
+  }
+  return _sbProbe;
+}
+
+async function sbGet(key) {
+  try {
+    if (await sbIsAvailable()) {
+      const res = await fetch(`${SB_URL}/rest/v1/app_data?key=eq.${encodeURIComponent(key)}&select=value`, {
+        headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        if (Array.isArray(d) && d.length > 0) {
+          sbLocalWrite(key, d[0].value);
+          return d[0].value;
+        }
+      }
+    }
+  } catch (e) { /* silencioso */ }
+  return sbLocalRead(key);
+}
 
 async function sbSet(key, value) {
+  sbLocalWrite(key, value);
   try {
+    if (!(await sbIsAvailable())) return;
     await fetch(`${SB_URL}/rest/v1/app_data`, {
       method: 'POST',
       headers: {
@@ -38,7 +77,7 @@ async function sbSet(key, value) {
       },
       body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
     });
-  } catch (e) {}
+  } catch (e) { /* silencioso */ }
 }
 
 const DEFAULT_CATEGORIES = [
@@ -637,19 +676,19 @@ function mergePlayerGeos(list) {
 }
 
 // ---------- Perfiles anatómicos (metros; el modelo mira hacia +Z) ----------
-const P_THIGH = [PK(0, 0.100, 0.106), PK(0.07, 0.108, 0.114, 0, 0.004), PK(0.18, 0.103, 0.110, 0, 0.012), PK(0.30, 0.084, 0.090, 0, 0.012), PK(0.39, 0.066, 0.072, 0, 0.008), PK(0.42, 0.062, 0.066, 0, 0.004)];
-const P_SHORTS_LEG = [PK(0, 0.080, 0.086, 0, 0.004), PK(0.03, 0.114, 0.120, 0, 0.006), PK(0.10, 0.121, 0.126, 0, 0.010), PK(0.20, 0.120, 0.124, 0, 0.014), PK(0.245, 0.118, 0.122, 0, 0.014), PK(0.262, 0.100, 0.108, 0, 0.013)];
-const P_PELVIS = [PK(-0.11, 0.138, 0.098), PK(-0.06, 0.168, 0.114), PK(0, 0.172, 0.116), PK(0.05, 0.166, 0.114), PK(0.10, 0.150, 0.106), PK(0.12, 0.146, 0.104)];
+const P_THIGH = [PK(0, 0.090, 0.096), PK(0.07, 0.098, 0.104, 0, 0.004), PK(0.18, 0.094, 0.100, 0, 0.010), PK(0.30, 0.078, 0.084, 0, 0.010), PK(0.39, 0.062, 0.068, 0, 0.007), PK(0.42, 0.058, 0.062, 0, 0.004)];
+const P_SHORTS_LEG = [PK(0, 0.098, 0.104, 0, 0.004), PK(0.04, 0.110, 0.115, 0, 0.006), PK(0.12, 0.112, 0.118, 0, 0.010), PK(0.20, 0.110, 0.116, 0, 0.013), PK(0.25, 0.107, 0.113, 0, 0.013), PK(0.272, 0.103, 0.109, 0, 0.012)];
+const P_PELVIS = [PK(-0.11, 0.128, 0.094), PK(-0.06, 0.158, 0.110), PK(0, 0.164, 0.112), PK(0.05, 0.158, 0.110), PK(0.10, 0.144, 0.102), PK(0.12, 0.140, 0.100)];
 const P_SHIN = [PK(0, 0.066, 0.070), PK(0.06, 0.068, 0.075, 0, -0.004), PK(0.13, 0.074, 0.082, 0, -0.010), PK(0.22, 0.062, 0.066, 0, -0.006), PK(0.32, 0.048, 0.050, 0, -0.002), PK(0.40, 0.043, 0.046), PK(0.42, 0.043, 0.045)];
 const P_BOOT = [PK(-0.075, 0.032, 0.045, 0, -0.036), PK(-0.05, 0.044, 0.052, 0, -0.028), PK(0.02, 0.048, 0.050, 0, -0.030), PK(0.10, 0.053, 0.040, 0, -0.040), PK(0.17, 0.045, 0.031, 0, -0.049), PK(0.205, 0.027, 0.022, 0, -0.054)];
 const P_SOLE = [PK(-0.078, 0.031, 0.012, 0, -0.072), PK(-0.05, 0.044, 0.012, 0, -0.072), PK(0.02, 0.049, 0.012, 0, -0.072), PK(0.10, 0.054, 0.012, 0, -0.074), PK(0.17, 0.046, 0.011, 0, -0.074), PK(0.21, 0.028, 0.010, 0, -0.072)];
-const P_TORSO = [PK(0.02, 0.188, 0.134, 0, -0.002), PK(0.10, 0.162, 0.122), PK(0.21, 0.170, 0.122, 0, 0.005), PK(0.32, 0.205, 0.130, 0, 0.012), PK(0.42, 0.230, 0.140, 0, 0.018), PK(0.50, 0.245, 0.132, 0, 0.008), PK(0.57, 0.185, 0.105, 0, 0.004), PK(0.60, 0.092, 0.080), PK(0.62, 0.066, 0.066)];
+const P_TORSO = [PK(0.02, 0.176, 0.130, 0, -0.002), PK(0.10, 0.150, 0.118), PK(0.21, 0.160, 0.120, 0, 0.005), PK(0.32, 0.190, 0.128, 0, 0.012), PK(0.42, 0.212, 0.136, 0, 0.018), PK(0.50, 0.214, 0.128, 0, 0.008), PK(0.565, 0.160, 0.100, 0, 0.004), PK(0.60, 0.088, 0.078), PK(0.62, 0.064, 0.064)];
 const P_NECK = [PK(0.56, 0.060, 0.062), PK(0.66, 0.052, 0.056, 0, 0.006), PK(0.72, 0.050, 0.054, 0, 0.008)];
 const P_COLLAR = [PK(0.585, 0.086, 0.084, 0, 0.003), PK(0.60, 0.080, 0.078, 0, 0.004), PK(0.625, 0.070, 0.070, 0, 0.005)];
 const P_HEAD = [PK(0, 0.028, 0.040, 0, 0.045), PK(0.025, 0.060, 0.070, 0, 0.035), PK(0.06, 0.078, 0.088, 0, 0.020), PK(0.105, 0.083, 0.097, 0, 0.010), PK(0.15, 0.084, 0.100, 0, 0.005), PK(0.19, 0.076, 0.092), PK(0.22, 0.050, 0.065, 0, -0.005), PK(0.23, 0.020, 0.030, 0, -0.008)];
 const P_HAIR = [PK(0.085, 0.090, 0.104, 0, -0.030), PK(0.13, 0.091, 0.104, 0, -0.014), PK(0.165, 0.086, 0.102, 0, -0.002), PK(0.20, 0.074, 0.092, 0, -0.004), PK(0.225, 0.048, 0.064, 0, -0.008), PK(0.236, 0.022, 0.030)];
-const P_ARM = [PK(0, 0.064, 0.066), PK(0.06, 0.071, 0.073), PK(0.14, 0.063, 0.067, 0, 0.004), PK(0.24, 0.050, 0.052), PK(0.30, 0.043, 0.045)];
-const P_FOREARM = [PK(0, 0.043, 0.045), PK(0.06, 0.049, 0.049), PK(0.16, 0.041, 0.040), PK(0.25, 0.029, 0.026), PK(0.28, 0.028, 0.024)];
+const P_ARM = [PK(0, 0.058, 0.060), PK(0.06, 0.064, 0.066), PK(0.14, 0.057, 0.061, 0, 0.004), PK(0.24, 0.045, 0.047), PK(0.30, 0.039, 0.041)];
+const P_FOREARM = [PK(0, 0.039, 0.041), PK(0.06, 0.044, 0.044), PK(0.16, 0.037, 0.036), PK(0.25, 0.026, 0.023), PK(0.28, 0.025, 0.021)];
 const P_PALM = [PK(0, 0.020, 0.034), PK(0.04, 0.018, 0.041), PK(0.085, 0.014, 0.040)];
 
 // ---------- Construcción del modelo (una vez por rol) ----------
@@ -658,11 +697,10 @@ function getPlayerModel(isGK) {
   const cacheKey = isGK ? 'gk' : 'field';
   if (_playerModelCache[cacheKey]) return _playerModelCache[cacheKey];
 
-  // Postura anatómica atlética TacticalPad:
-  // Portero con flexión atlética lista de 15° (no cuclillas exageradas) y campo erguido natural
+  // Postura por rol: portero en "posición de espera" (rodillas flexionadas, brazos abiertos y listos), campo erguido y dinámico
   const pose = isGK
-    ? { hipY: 0.90, lean: 0.12, legX: 0.15, abd: 0.04, alphaL: 0.24, alphaR: 0.24, armX: [-0.22, -0.22], armZ: 0.42, elbow: [0.55, 0.55], headTilt: 0.85 }
-    : { hipY: 0.95, lean: 0.05, legX: 0.11, abd: 0.02, alphaL: 0.16, alphaR: -0.06, armX: [-0.18, 0.12], armZ: 0.15, elbow: [0.55, 0.45], headTilt: 0.8 };
+    ? { hipY: 0.8, lean: 0.18, legX: 0.13, abd: 0.06, alphaL: 0.5, alphaR: 0.5, armX: [-0.45, -0.45], armZ: 0.55, elbow: [0.6, 0.6], headTilt: 0.9 }
+    : { hipY: 0.92, lean: 0.06, legX: 0.09, abd: 0.03, alphaL: 0.28, alphaR: -0.1, armX: [-0.28, 0.22], armZ: 0.12, elbow: [0.85, 0.6], headTilt: 0.8 };
 
   const root = new THREE.Group();
   const node = (parent, pos, rot, scl) => {
@@ -723,24 +761,33 @@ function getPlayerModel(isGK) {
   tufts.forEach(([x, y, z, rx, rz, len, w]) => {
     part(head, 'hair', playerLoft('+y', [PK(0, w, w * 0.8), PK(len * 0.5, w * 0.9, w * 0.7), PK(len, w * 0.2, w * 0.15)], { rings: 4, seg: 6, capEnd: true }), [x, y, z], [rx, 0, rz]);
   });
-  [-1, 1].forEach((s) => {
-    part(head, 'hair', playerEllipsoid(0.01, 0.03, 0.02, 6, 5), [s * 0.082, 0.12, 0.03]);                       // patillas
-    part(head, 'hair', playerEllipsoid(0.022, 0.0045, 0.007, 6, 5), [s * 0.034, 0.148, 0.094], [0.1, 0, -s * 0.15]); // cejas
-    part(head, 'sclera', playerEllipsoid(0.0115, 0.0075, 0.005, 8, 6), [s * 0.034, 0.128, 0.092]);              // ojos (esclerótica)
-    part(head, 'hair', playerEllipsoid(0.0058, 0.0058, 0.003, 6, 5), [s * 0.034, 0.128, 0.0955]);               // iris
-    part(head, 'skin', playerEllipsoid(0.01, 0.026, 0.018, 8, 7), [s * 0.083, 0.1, -0.004]);                    // orejas
+  // Superficie frontal de la cabeza a la altura y (y lateral x): sirve para apoyar ojos, nariz y boca sin enterrarlos
+  const headZ = (y, x = 0) => {
+    const p = playerProfileAt(P_HEAD, y);
+    const k = 1 - ((x - p.ca) / p.a) * ((x - p.ca) / p.a);
+    return p.cb + p.b * Math.sqrt(Math.max(0, k));
+  };
+  [-1, 1].forEach((sd) => {
+    const ex = sd * 0.034;
+    part(head, 'hair', playerEllipsoid(0.01, 0.03, 0.02, 6, 5), [sd * 0.082, 0.12, 0.03]);                              // patillas
+    part(head, 'skin', playerEllipsoid(0.011, 0.027, 0.018, 8, 7), [sd * 0.083, 0.1, -0.004]);                          // orejas
+    part(head, 'sclera', playerEllipsoid(0.0115, 0.0072, 0.0045, 8, 6), [ex, 0.128, headZ(0.128, ex) + 0.0015]);        // esclerótica
+    part(head, 'hair', playerEllipsoid(0.0062, 0.0062, 0.0035, 6, 5), [ex + sd * 0.0008, 0.128, headZ(0.128, ex) + 0.0042]); // iris
+    part(head, 'hair', playerEllipsoid(0.024, 0.0048, 0.007, 6, 5), [sd * 0.037, 0.152, headZ(0.152, sd * 0.037) + 0.001], [0.1, 0, -sd * 0.18]); // cejas
+    part(head, 'skin', playerEllipsoid(0.0085, 0.0075, 0.0085, 6, 5), [sd * 0.0125, 0.082, headZ(0.082, sd * 0.0125) + 0.004]);       // aletas de la nariz
   });
-  part(head, 'skin', playerEllipsoid(0.011, 0.022, 0.017, 8, 7), [0, 0.094, 0.106], [0.3, 0, 0]);                // nariz
-  part(head, 'lip', playerEllipsoid(0.024, 0.0055, 0.008, 8, 6), [0, 0.056, 0.093], [0.12, 0, 0]);              // boca
+  part(head, 'skin', playerEllipsoid(0.0095, 0.024, 0.016, 8, 7), [0, 0.1, headZ(0.1) + 0.006], [0.28, 0, 0]);          // puente y punta de la nariz
+  part(head, 'lip', playerEllipsoid(0.022, 0.0048, 0.0075, 8, 6), [0, 0.0605, headZ(0.0605) + 0.0012], [0.1, 0, 0]);    // labio superior
+  part(head, 'lip', playerEllipsoid(0.019, 0.0052, 0.0075, 8, 6), [0, 0.0525, headZ(0.0525) + 0.0012], [0.1, 0, 0]);    // labio inferior
+  part(head, 'hair', playerEllipsoid(0.021, 0.0013, 0.004, 8, 5), [0, 0.0567, headZ(0.0567) + 0.0035]);                 // línea de la boca
 
   // Brazos con codos semi-doblados y manos con dedos
   [-1, 1].forEach((side) => {
     const i = side < 0 ? 0 : 1;
-    // Hombro con caída clavicular natural (evita forma de hombrera de robot)
-    const shoulder = node(torso, [side * 0.205, 0.49, 0], [pose.armX[i], 0, side * pose.armZ]);
-    part(shoulder, 'jersey', playerEllipsoid(0.056, 0.062, 0.054, 10, 9));
-    part(shoulder, 'jersey', playerLoft('-y', playerSlice(P_ARM, 0, 0.17, 5, 0.005), { rings: 6, seg: 14, capStart: true }));
-    part(shoulder, 'collar', playerLoft('-y', playerSlice(P_ARM, 0.15, 0.185, 3, 0.008), { rings: 3, seg: 14 }));
+    const shoulder = node(torso, [side * 0.205, 0.515, 0], [pose.armX[i], 0, side * pose.armZ]);
+    part(shoulder, 'jersey', playerEllipsoid(0.057, 0.062, 0.056, 10, 9));                                      // deltoides
+    part(shoulder, 'jersey', playerLoft('-y', playerSlice(P_ARM, 0, 0.17, 5, 0.007), { rings: 6, seg: 14, capStart: true }));
+    part(shoulder, 'collar', playerLoft('-y', playerSlice(P_ARM, 0.15, 0.185, 3, 0.011), { rings: 3, seg: 14 })); // puño de manga
     part(shoulder, 'skin', playerLoft('-y', playerSlice(P_ARM, 0.12, 0.3, 6), { rings: 6, seg: 12, capStart: true, capEnd: true }));
     const elbow = node(shoulder, [0, -0.3, 0], [-pose.elbow[i], 0, 0]);
     part(elbow, 'skin', playerEllipsoid(0.042, 0.042, 0.044, 8, 7));
@@ -797,7 +844,7 @@ function getPlayerModel(isGK) {
   return model;
 }
 
-// Camiseta con rayas tono sobre tono (como en TacticalPad): textura procedural cacheada por color
+// Camiseta con rayas tono sobre tono: textura procedural cacheada por color
 const _jerseyMatCache = new Map();
 function getJerseyMaterial(color) {
   if (_jerseyMatCache.has(color)) return _jerseyMatCache.get(color);
@@ -846,53 +893,254 @@ function getPlayerNumberMaterial(number, darkText) {
   return mat;
 }
 
+// Número flotante sobre la cabeza (sprite que siempre mira a la cámara; sin <Text>, así no se pide ninguna fuente a internet)
+const _numSpriteCache = new Map();
+function getNumberSpriteMaterial(number) {
+  const label = String(number ?? '');
+  if (_numSpriteCache.has(label)) return _numSpriteCache.get(label);
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `900 ${label.length > 1 ? 78 : 96}px Arial, Helvetica, sans-serif`;
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 12;
+  ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+  ctx.strokeText(label, 64, 68);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(label, 64, 68);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false });
+  _numSpriteCache.set(label, mat);
+  return mat;
+}
+
 // El jugador de campo erguido mide exactamente PLAYER_HEIGHT_M (1.80 m) en el mundo (la cancha está en metros reales)
 function getPlayerScale() {
   return PLAYER_HEIGHT_M / getPlayerModel(false).height;
 }
 
+// Sombra de contacto + selector táctico amarillo (comunes al jugador GLB y al procedural)
+function PlayerGroundMarks({ isSelected }) {
+  return (
+    <>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+        <circleGeometry args={[0.5, 28]} />
+        <meshBasicMaterial color="#020617" transparent opacity={0.32} depthWrite={false} />
+      </mesh>
+      {isSelected && (
+        <group>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+            <circleGeometry args={[0.85, 40]} />
+            <meshBasicMaterial color={SELECTOR_COLOR} transparent opacity={0.35} depthWrite={false} toneMapped={false} polygonOffset polygonOffsetFactor={-2} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
+            <ringGeometry args={[0.85, 0.98, 48]} />
+            <meshBasicMaterial color={SELECTOR_COLOR} toneMapped={false} depthWrite={false} polygonOffset polygonOffsetFactor={-3} />
+          </mesh>
+        </group>
+      )}
+    </>
+  );
+}
+
+// ---------- Jugador procedural (respaldo automático si el GLB no carga) ----------
 // facing = 0 -> encara +Z (hacia la cámara táctica inicial). facing = Math.PI -> de espaldas a la cámara.
-function TacticalPlayer3D({ player, isSelected, onClick }) {
-  const { scene, animations } = useGLTF('/player.glb', 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
-  const { actions } = useAnimations(animations, clone);
+function ProceduralPlayer3D({ color, number, role, isSelected, onClick, facing = 0 }) {
+  const bodyRef = useRef();
+  const isGK = role === 'GK';
+  const model = useMemo(() => getPlayerModel(isGK), [isGK]);
+  const scale = useMemo(() => getPlayerScale(), []);
+  const jersey = color || '#2563eb';
+  const light = playerHexLuma(jersey) > 0.78;
+  const n = parseInt(number, 10) || 0;
 
-  useEffect(() => {
-    const action = actions['mixamo.com'] || Object.values(actions)[0];
-    if (action) {
-      action.reset().play();
-      action.paused = true;
-    }
-  }, [actions]);
+  const mats = useMemo(() => ({
+    jersey: getJerseyMaterial(jersey),
+    shorts: playerStdMat(light ? '#1f2937' : '#f8fafc', 0.7),
+    sock: playerStdMat(light ? '#f8fafc' : jersey, 0.75),
+    ribete: playerStdMat(light ? '#111827' : '#f8fafc', 0.6),
+    collar: playerStdMat(light ? '#111827' : '#f8fafc', 0.6),
+    skin: playerStdMat(PLAYER_SKINS[n % PLAYER_SKINS.length], 0.8),
+    hair: playerStdMat(PLAYER_HAIRS[(n * 3 + 1) % PLAYER_HAIRS.length], 0.9),
+    boot: playerStdMat('#15191f', 0.4),
+    sole: playerStdMat('#d1d5db', 0.6),
+    glove: playerStdMat('#f8fafc', 0.5),
+    sclera: playerStdMat('#f8fafc', 0.4),
+    lip: playerStdMat('#a8645a', 0.7),
+  }), [jersey, light, n]);
+  const numberMat = getPlayerNumberMaterial(number, light);
 
-  useEffect(() => {
-    clone.traverse((child) => {
-      if (child.isMesh && child.name.toLowerCase().includes('shirt')) {
-        child.material = child.material.clone();
-        child.material.color.set(player.team === 'home' ? '#dc2626' : '#2563eb');
-      }
-    });
-  }, [clone, player.team]);
+  // Rebote leve solo cuando está seleccionado (costo mínimo)
+  useFrame(({ clock }) => {
+    if (!bodyRef.current) return;
+    const target = isSelected ? Math.abs(Math.sin(clock.getElapsedTime() * 5)) * 0.03 : 0;
+    bodyRef.current.position.y += (target - bodyRef.current.position.y) * 0.2;
+  });
 
   return (
-    <group
-      position={[player.x - 52.5, 0, player.y - 34]}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick(player);
-      }}
-    >
-      <primitive object={clone} scale={[0.01, 0.01, 0.01]} />
-      <mesh position={[0, 2.1, 0]}>
-        <Text fontSize={0.4} color="white" anchorX="center" anchorY="middle">
-          {player.number}
-        </Text>
-      </mesh>
+    <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      <PlayerGroundMarks isSelected={isSelected} />
+      <group ref={bodyRef} rotation={[0, facing, 0]} scale={[scale, scale, scale]}>
+        {Object.keys(model.geos).map((slot) => (
+          <mesh key={slot} geometry={model.geos[slot]} material={mats[slot]} />
+        ))}
+        {/* Dorsal en la espalda y número pequeño en el pecho (siguen la inclinación del torso) */}
+        <group position={[0, model.hipY, 0]} rotation={[model.lean, 0, 0]}>
+          <mesh position={[0, 0.32, -0.127]} rotation={[-0.035, Math.PI, 0]} material={numberMat}>
+            <planeGeometry args={[0.26, 0.26]} />
+          </mesh>
+          <mesh position={[0, 0.4, 0.163]} rotation={[0.15, 0, 0]} material={numberMat}>
+            <planeGeometry args={[0.13, 0.13]} />
+          </mesh>
+        </group>
+      </group>
     </group>
   );
 }
 
-useGLTF.preload('/player.glb', 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+// ---------- Jugador GLB (Mixamo) ----------
+const USE_GLB_PLAYER = true; // pon false para usar siempre el jugador procedural
+const GLB_URL = '/player.glb';
+const DRACO_URL = 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/';
+const GLB_POSE_TIME = 0;     // segundo de la animación en el que se congela la pose
+let _glbFailed = false;       // si el GLB falla una vez, el resto de jugadores usa directamente el procedural
+let _glbNamesLogged = false;
+
+// Normaliza el modelo a 1.80 m y lo apoya en y = 0, sin importar si el GLB viene en centímetros o metros
+const _glbNormCache = new WeakMap();
+function getGlbNormalization(scene) {
+  if (_glbNormCache.has(scene)) return _glbNormCache.get(scene);
+  let result = { scale: 0.01, offsetY: 0 };
+  try {
+    scene.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    scene.traverse((o) => {
+      if (o.isMesh && o.geometry) {
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));
+      }
+    });
+    const h = box.max.y - box.min.y;
+    if (Number.isFinite(h) && h > 0.01) {
+      const sc = PLAYER_HEIGHT_M / h;
+      result = { scale: sc, offsetY: -box.min.y * sc };
+    }
+  } catch (e) { /* se mantiene la escala por defecto */ }
+  _glbNormCache.set(scene, result);
+  return result;
+}
+
+function GLBPlayer({ color, number, isSelected, onClick, facing = 0 }) {
+  const { scene, animations } = useGLTF(GLB_URL, DRACO_URL);
+  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
+  const { actions, mixer } = useAnimations(animations, clone);
+  const norm = useMemo(() => getGlbNormalization(scene), [scene]);
+
+  // Congelar la animación en una pose de pie (evita la pose en cruz)
+  useEffect(() => {
+    const names = Object.keys(actions || {});
+    const action = (actions && actions['mixamo.com']) || (names.length ? actions[names[0]] : null);
+    if (action) {
+      action.reset();
+      action.play();
+      action.paused = true;
+      action.time = GLB_POSE_TIME;
+      if (mixer) mixer.update(0);
+    }
+    return () => { if (mixer) mixer.stopAllAction(); };
+  }, [actions, mixer]);
+
+  // Color de la camiseta según el equipo + ajustes de seguridad para mallas con esqueleto
+  useEffect(() => {
+    const owned = [];
+    const seen = [];
+    let matched = false;
+    clone.traverse((child) => {
+      if (!child.isMesh) return;
+      child.frustumCulled = false;
+      child.castShadow = false;
+      seen.push(`${child.name}/${child.material?.name || '-'}`);
+      const label = `${child.name} ${child.material?.name || ''}`.toLowerCase();
+      if (/shirt|jersey|camis|tshirt|t-shirt/.test(label) && child.material && child.material.color) {
+        child.material = child.material.clone();
+        child.material.color.set(color || '#2563eb');
+        owned.push(child.material);
+        matched = true;
+      }
+    });
+    if (!matched && !_glbNamesLogged) {
+      _glbNamesLogged = true;
+      console.info('[player.glb] No se encontró una malla de camiseta. Mallas disponibles:', seen);
+    }
+    return () => owned.forEach((m) => m.dispose());
+  }, [clone, color]);
+
+  return (
+    <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      <PlayerGroundMarks isSelected={isSelected} />
+      <group rotation={[0, facing, 0]}>
+        <primitive object={clone} position={[0, norm.offsetY, 0]} scale={norm.scale} />
+      </group>
+      <sprite position={[0, 2.25, 0]} scale={[0.6, 0.6, 1]} material={getNumberSpriteMaterial(number)} />
+    </group>
+  );
+}
+
+// Si el GLB falla (404, Draco bloqueado, etc.) se muestra el jugador procedural en lugar de tumbar el WebGL
+class PlayerErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(error) {
+    if (!_glbFailed) {
+      _glbFailed = true;
+      console.warn('[player.glb] No se pudo cargar; se usa el jugador procedural.', error && error.message);
+    }
+  }
+  render() { return this.state.failed ? this.props.fallback : this.props.children; }
+}
+
+// Misma firma que usa Scene3D: <TacticalPlayer3D color number role isSelected onClick />
+// El <group> padre de Scene3D ya posiciona al jugador con position={[pos.x, 0, pos.z]}: aquí NO se aplica ninguna traslación.
+function TacticalPlayer3D(props) {
+  const fallback = <ProceduralPlayer3D {...props} />;
+  if (!USE_GLB_PLAYER || _glbFailed) return fallback;
+  return (
+    <PlayerErrorBoundary fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <GLBPlayer {...props} />
+      </Suspense>
+    </PlayerErrorBoundary>
+  );
+}
+
+useGLTF.preload(GLB_URL, DRACO_URL);
+
+// Si algo del 3D lanza un error, solo cae la vista 3D (con opción de reintentar) y no toda la aplicación
+class Scene3DBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error) { console.error('[3D] Error en la escena:', error); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-zinc-950 text-zinc-200 p-6 text-center">
+          <p className="text-sm font-bold">No se pudo mostrar la vista 3D.</p>
+          <button
+            onClick={() => this.setState({ error: null })}
+            className="px-4 py-2 rounded-xl bg-amber-500 text-black text-xs font-bold active:scale-95"
+          >
+            Reintentar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 
 function TrainingObject3D({ obj, position, onClick }) {
@@ -2703,29 +2951,37 @@ Devuelve estricta y únicamente el array JSON.`;
                 <span>{cameraLocked ? 'Cámara Bloqueada' : 'Rotar Cancha (Orbitar)'}</span>
               </button>
             </div>
-            <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
-              <Canvas
-              frameloop="always"
-              dpr={[1, 1.5]}
-              shadows
-              gl={{ antialias: true, powerPreference: "high-performance" }}
-              className="w-full h-full touch-none select-none"
-              style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
-            >
-              <Scene3D
-                objects={objects}
-                setObjects={setObjects}
-                drawings={drawings}
-                textBlocks={textBlocks}
-                selectedObj={selectedObj}
-                setSelectedObj={setSelectedObj}
-                teamColors={teamColors}
-                cameraLocked={cameraLocked}
-                recordHistory={recordHistory}
-                isPC={isPC}
-              />
-            </Canvas>
-            </Suspense>
+            <Scene3DBoundary>
+              <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
+                <Canvas
+                  frameloop="always"
+                  dpr={[1, 1.5]}
+                  shadows
+                  gl={{ antialias: true, powerPreference: "high-performance" }}
+                  className="w-full h-full touch-none select-none"
+                  style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+                  onCreated={({ gl }) => {
+                    // Permite que el navegador restaure el contexto WebGL si se pierde
+                    gl.domElement.addEventListener('webglcontextlost', (ev) => ev.preventDefault(), false);
+                  }}
+                >
+                  <Suspense fallback={null}>
+                    <Scene3D
+                      objects={objects}
+                      setObjects={setObjects}
+                      drawings={drawings}
+                      textBlocks={textBlocks}
+                      selectedObj={selectedObj}
+                      setSelectedObj={setSelectedObj}
+                      teamColors={teamColors}
+                      cameraLocked={cameraLocked}
+                      recordHistory={recordHistory}
+                      isPC={isPC}
+                    />
+                  </Suspense>
+                </Canvas>
+              </Suspense>
+            </Scene3DBoundary>
           </div>
         )}
 
@@ -3505,4 +3761,3 @@ Devuelve estricta y únicamente el array JSON.`;
     </div>
   );
 }
-
