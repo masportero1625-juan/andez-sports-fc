@@ -6,7 +6,8 @@ import {
   CheckCircle2, Clock, Users, DollarSign, Type, Shield, Move
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Html } from '@react-three/drei';
+import { OrbitControls, Text, useGLTF, useAnimations } from '@react-three/drei';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import * as THREE from 'three';
 
 // CREDENCIALES SUPABASE
@@ -851,78 +852,47 @@ function getPlayerScale() {
 }
 
 // facing = 0 -> encara +Z (hacia la cámara táctica inicial). facing = Math.PI -> de espaldas a la cámara.
-function TacticalPlayer3D({ color, number, role, isSelected, onClick, facing = 0 }) {
-  const bodyRef = useRef();
-  const isGK = role === 'GK';
-  const model = useMemo(() => getPlayerModel(isGK), [isGK]);
-  const scale = useMemo(() => getPlayerScale(), []);
-  const jersey = color || '#2563eb';
-  const light = playerHexLuma(jersey) > 0.78;
-  const n = parseInt(number, 10) || 0;
+function TacticalPlayer3D({ player, isSelected, onClick }) {
+  const { scene, animations } = useGLTF('/player.glb');
+  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
+  const { actions } = useAnimations(animations, clone);
 
-  const mats = useMemo(() => ({
-    jersey: getJerseyMaterial(jersey),
-    shorts: playerStdMat(light ? '#1f2937' : '#f8fafc', 0.7),
-    sock: playerStdMat(light ? '#f8fafc' : jersey, 0.75),
-    ribete: playerStdMat(light ? '#111827' : '#f8fafc', 0.6),
-    collar: playerStdMat(light ? '#111827' : '#f8fafc', 0.6),
-    skin: playerStdMat(PLAYER_SKINS[n % PLAYER_SKINS.length], 0.8),
-    hair: playerStdMat(PLAYER_HAIRS[(n * 3 + 1) % PLAYER_HAIRS.length], 0.9),
-    boot: playerStdMat('#15191f', 0.4),
-    sole: playerStdMat('#d1d5db', 0.6),
-    glove: playerStdMat('#f8fafc', 0.5),
-    sclera: playerStdMat('#f8fafc', 0.4),
-    lip: playerStdMat('#a8645a', 0.7),
-  }), [jersey, light, n]);
-  const numberMat = getPlayerNumberMaterial(number, light);
+  useEffect(() => {
+    const action = actions['mixamo.com'] || Object.values(actions)[0];
+    if (action) {
+      action.reset().play();
+      action.paused = true;
+    }
+  }, [actions]);
 
-  // Rebote leve solo cuando está seleccionado (costo mínimo)
-  useFrame(({ clock }) => {
-    if (!bodyRef.current) return;
-    const target = isSelected ? Math.abs(Math.sin(clock.getElapsedTime() * 5)) * 0.03 : 0;
-    bodyRef.current.position.y += (target - bodyRef.current.position.y) * 0.2;
-  });
+  useEffect(() => {
+    clone.traverse((child) => {
+      if (child.isMesh && child.name.toLowerCase().includes('shirt')) {
+        child.material = child.material.clone();
+        child.material.color.set(player.team === 'home' ? '#dc2626' : '#2563eb');
+      }
+    });
+  }, [clone, player.team]);
 
   return (
-    <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra de contacto suave */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-        <circleGeometry args={[0.5, 28]} />
-        <meshBasicMaterial color="#020617" transparent opacity={0.32} depthWrite={false} />
+    <group
+      position={[player.x - 52.5, 0, player.y - 34]}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(player);
+      }}
+    >
+      <primitive object={clone} scale={[0.01, 0.01, 0.01]} />
+      <mesh position={[0, 2.1, 0]}>
+        <Text fontSize={0.4} color="white" anchorX="center" anchorY="middle">
+          {player.number}
+        </Text>
       </mesh>
-
-      {/* Selector táctico amarillo en el césped: aro nítido + disco translúcido */}
-      {isSelected && (
-        <group>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
-            <circleGeometry args={[0.85, 40]} />
-            <meshBasicMaterial color={SELECTOR_COLOR} transparent opacity={0.35} depthWrite={false} toneMapped={false} polygonOffset polygonOffsetFactor={-2} />
-          </mesh>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0]}>
-            <ringGeometry args={[0.85, 0.98, 48]} />
-            <meshBasicMaterial color={SELECTOR_COLOR} toneMapped={false} depthWrite={false} polygonOffset polygonOffsetFactor={-3} />
-          </mesh>
-        </group>
-      )}
-
-      {/* Cuerpo orgánico a escala real, encarando la cámara */}
-      <group ref={bodyRef} rotation={[0, facing, 0]} scale={[scale, scale, scale]}>
-        {Object.keys(model.geos).map((slot) => (
-          <mesh key={slot} geometry={model.geos[slot]} material={mats[slot]} />
-        ))}
-        {/* Dorsal en la espalda y número pequeño en el pecho (siguen la inclinación del torso) */}
-        <group position={[0, model.hipY, 0]} rotation={[model.lean, 0, 0]}>
-          <mesh position={[0, 0.32, -0.127]} rotation={[-0.035, Math.PI, 0]} material={numberMat}>
-            <planeGeometry args={[0.26, 0.26]} />
-          </mesh>
-          <mesh position={[0, 0.4, 0.163]} rotation={[0.15, 0, 0]} material={numberMat}>
-            <planeGeometry args={[0.13, 0.13]} />
-          </mesh>
-        </group>
-      </group>
     </group>
   );
 }
+
+useGLTF.preload('/player.glb');
 
 
 function TrainingObject3D({ obj, position, onClick }) {
