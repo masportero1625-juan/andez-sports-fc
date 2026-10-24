@@ -853,7 +853,7 @@ function getPlayerScale() {
 
 // facing = 0 -> encara +Z (hacia la cámara táctica inicial). facing = Math.PI -> de espaldas a la cámara.
 function TacticalPlayer3D({ player, isSelected, onClick }) {
-  const { scene, animations } = useGLTF('/player.glb');
+  const { scene, animations } = useGLTF('/player.glb', 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { actions } = useAnimations(animations, clone);
 
@@ -892,7 +892,7 @@ function TacticalPlayer3D({ player, isSelected, onClick }) {
   );
 }
 
-useGLTF.preload('/player.glb');
+useGLTF.preload('/player.glb', 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 
 
 function TrainingObject3D({ obj, position, onClick }) {
