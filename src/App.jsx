@@ -6,7 +6,7 @@ import {
   CheckCircle2, Clock, Users, DollarSign, Type, Shield, Move
 } from 'lucide-react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text, useGLTF, useAnimations } from '@react-three/drei';
+import { OrbitControls, Text, useGLTF, useAnimations, PerspectiveCamera } from '@react-three/drei';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import * as THREE from 'three';
 
