@@ -1411,30 +1411,28 @@ function getSkyTexture() {
 
 // Publicidad perimetral LED profesional sin sobreposición de textos
 function getAdTexture() {
-  return envCanvasTexture('ads', 1024, 128, (ctx, w, h) => {
+  return envCanvasTexture('ads', 2048, 128, (ctx, w, h) => {
     const panels = [
-      ['#091b36', '#38bdf8', '★ ANDEZ SPORTS TACTICS PRO ★'],
-      ['#1e1b4b', '#f8fafc', 'PIZARRA TÁCTICA 3D'],
-      ['#7f1d1d', '#facc15', 'FÚTBOL FORMATIVO PRO'],
-      ['#064e3b', '#34d399', 'ENTRENAMIENTO INTELIGENTE'],
-      ['#18181b', '#e2e8f0', 'DIRECTOR TÉCNICO PRO'],
-      ['#0f172a', '#fbbf24', 'ANDEZ SPORTS LEAGUE']
+      ['#0b132b', '#38bdf8', '★ ANDEZ SPORTS TACTICS PRO ★'],
+      ['#1c1917', '#facc15', 'PIZARRA TÁCTICA MULTIDEPORTE'],
+      ['#064e3b', '#34d399', 'ENTRENAMIENTO Y METODOLOGÍA PRO'],
+      ['#18181b', '#f8fafc', 'ANDEZTPRO.COM • PLATAFORMA OFICIAL']
     ];
     const pw = w / panels.length;
     panels.forEach(([bg, fg, label], i) => {
       ctx.fillStyle = bg;
       ctx.fillRect(i * pw, 0, pw, h);
-      // Marco y bisel LED
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
-      ctx.fillRect(i * pw, 0, pw, 8);
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(i * pw, h - 8, pw, 8);
-      // Texto limpio, centrado con margen seguro
+      // Bordes luminosos estilo LED
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.fillRect(i * pw, 0, pw, 6);
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(i * pw, h - 6, pw, 6);
+      // Tipografía nítida y proporción sin corte
       ctx.fillStyle = fg;
-      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, Arial, sans-serif';
+      ctx.font = '900 32px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, i * pw + pw / 2, h / 2 + 2);
+      ctx.fillText(label, i * pw + pw / 2, h / 2);
     });
   }, { repeat: [1, 1] });
 }
@@ -1754,7 +1752,7 @@ function AdBoards() {
       });
     };
     // Repeticiones enteras exactas para evitar que los textos se corten
-    return { long: mk(110, 4), short: mk(74, 3) };
+    return { long: mk(110, 8), short: mk(74, 5) };
   }, [base]);
   useEffect(() => () => { mats.long.map.dispose(); mats.short.map.dispose(); mats.long.dispose(); mats.short.dispose(); }, [mats]);
   return (
@@ -3622,8 +3620,13 @@ Devuelve estricta y únicamente el array JSON.`;
                         <span className="font-bold text-xs text-white">{lic.coach}</span>
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-amber-400 font-mono font-bold border border-zinc-700">{lic.code}</span>
                       </div>
-                      <div className="text-[10px] text-zinc-400">{lic.club} • {lic.plan}</div>
-                      <div className="text-[9px] text-zinc-500">Equipos conectados: {(lic.devices || []).length} / {lic.seats} máx</div>
+                      <div className="text-[10px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
+  <span>{lic.club} • {lic.plan}</span>
+  <span className="text-[8px] bg-emerald-950 text-emerald-400 border border-emerald-800/80 px-1.5 py-0.5 rounded font-black tracking-wider uppercase">
+    {(lic.disciplines || ['soccer']).map(d => d === 'soccer' ? '⚽ Fútbol' : d === 'basketball' ? '🏀 Básquet' : d === 'volleyball' ? '🏐 Vóley' : d).join(' | ')}
+  </span>
+</div>
+<div className="text-[9px] text-zinc-500">Equipos conectados: {(lic.devices || []).length} / {lic.seats} máx</div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => {
