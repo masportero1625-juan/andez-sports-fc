@@ -270,7 +270,7 @@ function WhatsAppButton({ phone, label = '', name = '', customMessage = '' }) {
   if (!phone) return <span className="text-[10px] text-zinc-600 italic">Sin WhatsApp</span>;
   const num = phone.replace(/[^0-9]/g, '');
   const finalNum = num.startsWith('56') ? num : `56${num}`;
-  const defMsg = `Hola ${name || ''}, te contacto desde Andez Sports FC.`;
+  const defMsg = `Hola ${name || ''}, te contacto desde Andez Sports Tactics Pro.`;
   const msg = encodeURIComponent(customMessage || defMsg);
   return (
     <a href={`https://wa.me/${finalNum}?text=${msg}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold shadow transition active:scale-95">
@@ -1413,7 +1413,7 @@ function getSkyTexture() {
 function getAdTexture() {
   return envCanvasTexture('ads', 1024, 128, (ctx, w, h) => {
     const panels = [
-      ['#091b36', '#38bdf8', '★ ANDEZ SPORTS FC ★'],
+      ['#091b36', '#38bdf8', '★ ANDEZ SPORTS TACTICS PRO ★'],
       ['#1e1b4b', '#f8fafc', 'PIZARRA TÁCTICA 3D'],
       ['#7f1d1d', '#facc15', 'FÚTBOL FORMATIVO PRO'],
       ['#064e3b', '#34d399', 'ENTRENAMIENTO INTELIGENTE'],
@@ -2067,8 +2067,8 @@ export default function App() {
   const [adminLicenses, setAdminLicenses] = useState(() => {
     const l = localStorage.getItem('andez_licenses');
     return l ? JSON.parse(l) : [
-      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 4, devices: [], status: 'active', plan: 'Plan Plata (4 Dispositivos)', price: 25000, expiry: '2026-11-15' },
-      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, devices: [], status: 'active', plan: 'Plan Individual (2 Dispositivos)', price: 15000, expiry: '2026-11-10' }
+      { id: 'lic-1', coach: 'Prof. Carlos Morales', club: 'Escuela Los Andes', code: 'AND-7821', seats: 4, devices: [], status: 'active', plan: 'Plan Plata (4 Dispositivos)', price: 25000, expiry: '2026-11-15', disciplines: ['soccer'] },
+      { id: 'lic-2', coach: 'DT Matías Soto', club: 'Academia Biobío', code: 'AND-4412', seats: 2, devices: [], status: 'active', plan: 'Plan Individual (2 Dispositivos)', price: 15000, expiry: '2026-11-10', disciplines: ['soccer'] }
     ];
   });
 
@@ -2131,7 +2131,7 @@ export default function App() {
   }, [attendanceRecords]);
 
   const [billingDay, setBillingDay] = useState(() => localStorage.getItem('andez_billing_day') || '5');
-  const [billingMessageTemplate, setBillingMessageTemplate] = useState(() => localStorage.getItem('andez_billing_template') || 'Estimado(a) apoderado(a) de {ALUMNO}, le recordamos desde Andez Sports FC que la mensualidad correspondiente al mes en curso se encuentra pendiente. Agradecemos regularizar el pago.');
+  const [billingMessageTemplate, setBillingMessageTemplate] = useState(() => localStorage.getItem('andez_billing_template') || 'Estimado(a) apoderado(a) de {ALUMNO}, le recordamos desde Andez Sports Tactics Pro que la mensualidad correspondiente al mes en curso se encuentra pendiente. Agradecemos regularizar el pago.');
 
   const [inputLicenseCode, setInputLicenseCode] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -2142,7 +2142,7 @@ export default function App() {
     const code = inputLicenseCode.trim().toUpperCase();
 
     if (code === 'ANDEZ2026') {
-      const u = { role: 'owner', name: 'Administrador Maestro', club: 'Andez Sports FC Principal' };
+      const u = { role: 'owner', name: 'Administrador Maestro', club: 'Andez Sports Tactics Pro Principal' };
       setAuthenticatedUser(u);
       localStorage.setItem('andez_auth_session', JSON.stringify(u));
       return;
@@ -2576,14 +2576,14 @@ Devuelve estricta y únicamente el array JSON.`;
       <div className="flex flex-col items-center justify-center min-h-screen w-screen bg-[#070b12] text-white p-4 font-sans select-none relative">
         <div className="w-full max-w-md bg-zinc-950/90 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center">
           <img src={currentDisplayLogo} alt="Logo" className="w-16 h-16 rounded-2xl mb-4 border border-amber-400 object-cover" />
-          <h1 className="text-2xl font-black text-white mb-1">ANDEZ SPORTS FC <span className="text-amber-400">PRO</span></h1>
+          <h1 className="text-2xl font-black text-white mb-1">ANDEZ SPORTS TACTICS <span className="text-amber-400">PRO</span></h1>
           <p className="text-xs text-zinc-400 mb-4">Ingreso de Director Técnico, Profesor o Administrador</p>
           <form onSubmit={handleClientLogin} className="w-full space-y-3 my-2">
             <input type="text" value={inputLicenseCode} onChange={e => setInputLicenseCode(e.target.value)} placeholder="Código (ej. ANDEZ2026 / AND-7821)" className="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 text-sm text-center font-mono font-bold text-white uppercase focus:border-red-500 outline-none" required />
             {loginError && <p className="text-xs text-red-400 font-bold bg-red-950/50 p-2 rounded-xl border border-red-800">{loginError}</p>}
             <button type="submit" className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase rounded-2xl shadow">Ingresar al Sistema</button>
           </form>
-          <a href="https://wa.me/56932100183?text=Hola%20Andez%20Sports%20FC,%20solicito%20acceso" target="_blank" rel="noopener noreferrer" className="w-full mt-3 py-3 bg-zinc-900 border border-zinc-800 hover:border-emerald-500 rounded-2xl text-xs font-bold text-zinc-300 flex items-center justify-center gap-2">
+          <a href="https://wa.me/56932100183?text=Hola%20Andez%20Sports%20Tactics%20Pro,%20solicito%20acceso" target="_blank" rel="noopener noreferrer" className="w-full mt-3 py-3 bg-zinc-900 border border-zinc-800 hover:border-emerald-500 rounded-2xl text-xs font-bold text-zinc-300 flex items-center justify-center gap-2">
             <MessageCircle className="w-4 h-4 text-emerald-400" /> Soporte Oficial (+56932100183)
           </a>
         </div>
@@ -3654,7 +3654,7 @@ Devuelve estricta y únicamente el array JSON.`;
                 if (!newCoachName.trim()) return;
                 const code = 'AND-' + Math.floor(1000 + Math.random() * 9000);
                 const chosenPlan = customPlans.find(p => p.id === newCoachPlan) || customPlans[0];
-                setAdminLicenses([{ id: 'lic-' + Date.now(), coach: newCoachName.trim(), club: newCoachClub.trim() || 'Club Deportivo', code, seats: chosenPlan.seats, devices: [], status: 'active', plan: chosenPlan.name, price: chosenPlan.price, expiry: newCoachExpiry }, ...adminLicenses]);
+                setAdminLicenses([{ id: 'lic-' + Date.now(), coach: newCoachName.trim(), club: newCoachClub.trim() || 'Club Deportivo', code, seats: chosenPlan.seats, devices: [], status: 'active', plan: chosenPlan.name, price: chosenPlan.price, expiry: newCoachExpiry, disciplines: ['soccer'] }, ...adminLicenses]);
                 setShowNewUserModal(false); setNewCoachName(''); setNewCoachClub('');
                 alert(`¡Club Creado!\nClave: ${code}\nDispositivos: ${chosenPlan.seats}`);
               }} className="space-y-3">
