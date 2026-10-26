@@ -1565,14 +1565,22 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
           } else {
             mat.color.set(baseHex);
           }
-        } else if (kind === 'hair') {
-          const avgLuma = glbTintTowards(mat, hairColor, 0.4, 4);
-          if (avgLuma < 0.2) mat.emissive.set(hairColor).multiplyScalar(0.45);
-          mat.roughness = 0.95;
-        } else if (kind === 'skin') {
-          glbTintTowards(mat, skinColor);
-          mat.roughness = 0.85;
-        }
+        } else if (/eye|iris|cornea|pupil|ojo/.test(label)) {
+        // Brillo corneal y reflejo húmedo en los ojos
+        mat.color.set('#ffffff');
+        mat.roughness = 0.1;
+        mat.metalness = 0.2;
+      } else if (kind === 'hair') {
+        // Cabello con volumen y brillo especular
+        glbTintTowards(mat, hairColor, 0.4, 4);
+        mat.roughness = 0.48;
+        mat.metalness = 0.05;
+      } else if (kind === 'skin') {
+        // Piel viva con relieve y satinado suave (elimina el aspecto de tiza/maniquí)
+        glbTintTowards(mat, skinColor);
+        mat.roughness = 0.52;
+        mat.metalness = 0.02;
+      }
         mat.needsUpdate = true;
         return mat;
       });
@@ -1588,7 +1596,10 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
       <PlayerGroundMarks isSelected={isSelected} />
-      <group rotation={[0, facing, 0]}>
+      <group 
+        rotation={[isGK ? 0.12 : 0, facing, 0]} 
+        position={[0, isGK ? -0.04 : 0, isGK ? 0.06 : 0]}
+      >
         <primitive
           object={clone}
           position={[0, footY, 0]}
