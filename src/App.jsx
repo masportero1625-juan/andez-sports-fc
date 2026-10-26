@@ -1034,13 +1034,25 @@ function getGlbNormalization(scene) {
   return result;
 }
 
-function GLBPlayer({ color, number, isSelected, onClick, facing = 0 }) {
+function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   const { scene, animations } = useGLTF(GLB_URL, DRACO_URL);
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { actions, mixer } = useAnimations(animations, clone);
   const norm = useMemo(() => getGlbNormalization(scene), [scene]);
 
-  // Congelar la animación en una pose de pie (evita la pose en cruz)
+  const n = parseInt(number, 10) || 0;
+  const isGK = role === 'GK' || n === 1;
+
+  // 1. Variedad de envergadura física según rol y dorsal
+  const customScale = useMemo(() => {
+    const base = norm.scale;
+    if (isGK) return [base * 1.05, base * 1.06, base * 1.05]; // Arquero más alto e imponente
+    const heightVar = 0.95 + ((n * 7) % 11) * 0.012; // Variación entre 1.74m y 1.88m
+    const widthVar = 0.96 + ((n * 3) % 9) * 0.01;
+    return [base * widthVar, base * heightVar, base * widthVar];
+  }, [norm.scale, isGK, n]);
+
+  // Congelar la pose
   useEffect(() => {
     const names = Object.keys(actions || {});
     const action = (actions && actions['mixamo.com']) || (names.length ? actions[names[0]] : null);
@@ -1054,36 +1066,87 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0 }) {
     return () => { if (mixer) mixer.stopAllAction(); };
   }, [actions, mixer]);
 
-  // Color de la camiseta según el equipo + ajustes de seguridad para mallas con esqueleto
+  // 2. Personalización de Piel, Cabello, Camiseta con sombras y Pantalones
   useEffect(() => {
     const owned = [];
-    const seen = [];
-    let matched = false;
+    const skinColor = (typeof PLAYER_SKINS !== 'undefined' && PLAYER_SKINS.length) 
+      ? PLAYER_SKINS[n % PLAYER_SKINS.length] 
+      : '#d49870';
+    const hairColor = (typeof PLAYER_HAIRS !== 'undefined' && PLAYER_HAIRS.length) 
+      ? PLAYER_HAIRS[(n * 3 + 1) % PLAYER_HAIRS.length] 
+      : '#261a15';
+
     clone.traverse((child) => {
       if (!child.isMesh) return;
       child.frustumCulled = false;
-      child.castShadow = false;
-      seen.push(`${child.name}/${child.material?.name || '-'}`);
+      child.castShadow = true;
+
       const label = `${child.name} ${child.material?.name || ''}`.toLowerCase();
-      if (/shirt|jersey|camis|tshirt|t-shirt/.test(label) && child.material && child.material.color) {
+
+      if (child.material) {
         child.material = child.material.clone();
-        child.material.color.set(color || '#2563eb');
         owned.push(child.material);
-        matched = true;
+
+        // Camiseta
+        if (/shirt|jersey|camis|tshirt|t-shirt|top/.test(label)) {
+          child.material.color.set(color || '#2563eb');
+          child.material.roughness = 0.65;
+          child.material.metalness = 0.1;
+        }
+        // Pantalón / Shorts
+        else if (/short|pant|bottom/.test(label)) {
+          child.material.color.set(color === '#ffffff' ? '#1e293b' : '#ffffff');
+          child.material.roughness = 0.8;
+        }
+        // Tono de piel
+        else if (/body|skin|head|face|arm|hand|leg|cuerpo|piel/.test(label)) {
+          child.material.color.set(skinColor);
+          child.material.roughness = 0.85;
+        }
+        // Cabello
+        else if (/hair|pelo|cabello/.test(label)) {
+          child.material.color.set(hairColor);
+          child.material.roughness = 0.95;
+        }
       }
     });
-    if (!matched && !_glbNamesLogged) {
-      _glbNamesLogged = true;
-      console.info('[player.glb] No se encontró una malla de camiseta. Mallas disponibles:', seen);
-    }
+
     return () => owned.forEach((m) => m.dispose());
-  }, [clone, color]);
+  }, [clone, color, n]);
+
+  // Material para el dorsal en la espalda
+  const backNumberMat = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 256, 256);
+    ctx.font = 'bold 160px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 14;
+    ctx.strokeText(String(number ?? ''), 128, 128);
+    ctx.fillText(String(number ?? ''), 128, 128);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    return new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+  }, [number]);
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
       <PlayerGroundMarks isSelected={isSelected} />
       <group rotation={[0, facing, 0]}>
-        <primitive object={clone} position={[0, norm.offsetY, 0]} scale={norm.scale} />
+        <primitive 
+          object={clone} 
+          position={[0, norm.offsetY, 0]} 
+          scale={customScale} 
+        />
+        {/* Dorsal 3D estampado en la espalda de la camiseta */}
+        <mesh position={[0, norm.offsetY + 1.28, -0.16]} rotation={[0, Math.PI, 0]} material={backNumberMat}>
+          <planeGeometry args={[0.32, 0.32]} />
+        </mesh>
       </group>
       <sprite position={[0, 2.25, 0]} scale={[0.6, 0.6, 1]} material={getNumberSpriteMaterial(number)} />
     </group>
@@ -2677,10 +2740,10 @@ Devuelve estricta y únicamente el array JSON.`;
       </header>
 
       {/* CANCHA 2D CON TEXTOS INTERACTIVOS (+ / - / ↻) O VISOR 3D */}
-      <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative bg-[#1e881b]">
-        {viewMode === '2d' ? (
-          <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 85" : "0 0 68 105")} className="w-full h-full select-none drop-shadow-2xl touch-none" onPointerDown={handlePitchPointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
-            <defs>
+      <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative">
+  <div className={`w-full h-full flex items-center justify-center ${viewMode === '2d' ? 'block' : 'hidden'}`}>
+    <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 55" : "0 0 68 105")}>
+      <defs>
               <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" stroke="none" /></marker>
               <marker id="arrow-red" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ef4444" stroke="none" /></marker>
               <marker id="arrow-blue" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#3b82f6" stroke="none" /></marker>
@@ -2953,8 +3016,8 @@ Devuelve estricta y únicamente el array JSON.`;
               );
             })}
           </svg>
-        ) : (
-          <div className="relative w-full h-full">
+  </div>
+  <div className={`relative w-full h-full ${viewMode === '3d' ? 'block' : 'hidden'}`}>
             <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl p-2 shadow-2xl flex items-center gap-2">
               <button
                 onClick={() => setCameraLocked(!cameraLocked)}
@@ -2998,7 +3061,7 @@ Devuelve estricta y únicamente el array JSON.`;
               </Suspense>
             </Scene3DBoundary>
           </div>
-        )}
+        
 
         {/* MODAL INSERTAR TEXTO TÁCTICO */}
         {textModalOpen && (
