@@ -1035,7 +1035,7 @@ function getGlbNormalization(scene) {
 }
 
 // ---------- Identidad visual de los jugadores GLB: equipación, contextura, rostro y postura ----------
-const GLB_FRONT_NUMBER = true; // dorsal pequeño en el pecho (la cámara táctica inicial ve a los jugadores de frente). false = solo en la espalda
+const GLB_FRONT_NUMBER = false; // dorsal pequeño en el pecho (la cámara táctica inicial ve a los jugadores de frente). false = solo en la espalda
 
 function glbHashStr(s) {
   let h = 2166136261;
