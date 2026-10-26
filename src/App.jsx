@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, Suspense } from 'react';
 import {
   Folder, Play, RotateCcw, Save, Undo2, Redo2, Trash2, PenTool, X,
   Eraser, Lock, Plus, AlertTriangle, RotateCw, LogOut, MessageCircle,
@@ -483,8 +483,8 @@ const PLAYER_ANKLE = 0.08;        // altura del tobillo sobre el césped
 const PLAYER_THIGH = 0.42;        // cadera -> rodilla
 const PLAYER_SHIN = 0.42;         // rodilla -> tobillo
 const PLAYER_HIP_DROP = 0.03;     // la articulación de la cadera queda 3 cm bajo el centro de la pelvis
-const PLAYER_SKINS = ['#d9a47e', '#b9825f', '#8d5a3b', '#f0c29b'];
-const PLAYER_HAIRS = ['#1c1411', '#3a2a1f', '#5a3d2b', '#2b2b2b'];
+const PLAYER_SKINS = ['#d9a47e', '#b9825f', '#8d5a3b', '#f0c29b', '#6f4630', '#a47551', '#fadcc0', '#c58c63'];
+const PLAYER_HAIRS = ['#1c1411', '#3a2a1f', '#5a3d2b', '#2b2b2b', '#7a4a28', '#a8703a', '#d4b06a'];
 
 const _playerMatCache = new Map();
 function playerStdMat(color, roughness = 0.7, metalness = 0) {
@@ -1014,7 +1014,7 @@ let _glbNamesLogged = false;
 const _glbNormCache = new WeakMap();
 function getGlbNormalization(scene) {
   if (_glbNormCache.has(scene)) return _glbNormCache.get(scene);
-  let result = { scale: 0.01, offsetY: 0 };
+  let result = { scale: 0.01, offsetY: 0, minY: 0 };
   try {
     scene.updateMatrixWorld(true);
     const box = new THREE.Box3();
@@ -1027,11 +1027,424 @@ function getGlbNormalization(scene) {
     const h = box.max.y - box.min.y;
     if (Number.isFinite(h) && h > 0.01) {
       const sc = PLAYER_HEIGHT_M / h;
-      result = { scale: sc, offsetY: -box.min.y * sc };
+      result = { scale: sc, offsetY: -box.min.y * sc, minY: box.min.y };
     }
   } catch (e) { /* se mantiene la escala por defecto */ }
   _glbNormCache.set(scene, result);
   return result;
+}
+
+// ---------- Identidad visual de los jugadores GLB: equipación, contextura, rostro y postura ----------
+const GLB_FRONT_NUMBER = true; // dorsal pequeño en el pecho (la cámara táctica inicial ve a los jugadores de frente). false = solo en la espalda
+
+function glbHashStr(s) {
+  let h = 2166136261;
+  const str = String(s ?? '');
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+function glbBoneKey(name) {
+  return String(name || '').toLowerCase().replace(/^mixamorig[:_]?/, '').replace(/[^a-z0-9]/g, '');
+}
+
+// Clasificación de las partes del modelo por nombre de malla / material
+const GLB_RE_SHIRT = /shirt|jersey|camis|t-?shirt|top|torso|sweater|polo/;
+const GLB_RE_SHORTS = /short|pant|bottom|trouser|jean|bermuda/;
+const GLB_RE_HAIR = /hair|pelo|cabello/;
+const GLB_RE_SKIN = /body|skin|head|face|arm|hand|leg|cuerpo|piel/;
+function glbClassify(label) {
+  if (GLB_RE_SHIRT.test(label)) return 'shirt';
+  if (GLB_RE_SHORTS.test(label)) return 'shorts';
+  if (GLB_RE_HAIR.test(label)) return 'hair';
+  if (GLB_RE_SKIN.test(label)) return 'skin';
+  return null;
+}
+function glbPartLabel(mesh, mat) {
+  return `${mesh.name || ''} ${(mat && mat.name) || ''}`.toLowerCase();
+}
+
+// Medidas del modelo en pose de referencia (se calculan una sola vez por escena y se cachean).
+// Todo se expresa en unidades de altura corporal (H) para no depender de si el GLB viene en cm o en metros.
+const _glbKitCache = new WeakMap();
+function getGlbKitInfo(scene) {
+  if (_glbKitCache.has(scene)) return _glbKitCache.get(scene);
+  const info = {
+    ok: false, y0: 0, H: 1.8, cx: 0, fwd: 1,
+    shirt: { lo: 0.5, hi: 0.84, halfW: 0.3 },
+    shorts: { lo: 0.3, hi: 0.53 },
+    shirtFound: false, names: []
+  };
+  try {
+    scene.updateMatrixWorld(true);
+    const body = new THREE.Box3();
+    const shirt = new THREE.Box3();
+    const tmp = new THREE.Box3();
+    const shorts = new THREE.Box3();
+    let footBone = null;
+    let toeBone = null;
+    scene.traverse((o) => {
+      if (o.isBone) {
+        const k = glbBoneKey(o.name);
+        if (k === 'leftfoot') footBone = o;
+        if (k === 'lefttoebase') toeBone = o;
+      }
+      if (!o.isMesh || !o.geometry) return;
+      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+      tmp.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+      body.union(tmp);
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      const kinds = mats.map((m) => glbClassify(glbPartLabel(o, m)));
+      info.names.push(`${o.name || '?'}[${mats.map((m) => (m && m.name) || '?').join(',')}]=${kinds.map((k) => k || '-').join(',')}`);
+      if (kinds.includes('shirt')) shirt.union(tmp);
+      if (kinds.includes('shorts')) shorts.union(tmp);
+    });
+    const H = body.max.y - body.min.y;
+    if (Number.isFinite(H) && H > 0.01) {
+      info.y0 = body.min.y;
+      info.H = H;
+      info.cx = (body.min.x + body.max.x) / 2;
+      if (footBone && toeBone) {
+        const a = new THREE.Vector3().setFromMatrixPosition(footBone.matrixWorld);
+        const b = new THREE.Vector3().setFromMatrixPosition(toeBone.matrixWorld);
+        info.fwd = (b.z - a.z) < 0 ? -1 : 1;
+      }
+      if (!shirt.isEmpty()) {
+        info.shirtFound = true;
+        const lo = (shirt.min.y - info.y0) / H;
+        const hi = (shirt.max.y - info.y0) / H;
+        const halfW = Math.max(Math.abs(shirt.min.x - info.cx), Math.abs(shirt.max.x - info.cx)) / H;
+        if (hi - lo > 0.15 && hi - lo < 0.6 && lo > 0.3 && hi < 0.97) {
+          info.shirt = { lo, hi, halfW: Math.min(0.55, Math.max(0.15, halfW)) };
+        }
+      }
+      if (!shorts.isEmpty()) {
+        const lo = (shorts.min.y - info.y0) / H;
+        const hi = (shorts.max.y - info.y0) / H;
+        if (hi - lo > 0.08 && hi < 0.7) info.shorts = { lo, hi };
+      }
+      info.ok = true;
+    }
+  } catch (e) { /* se mantienen los valores por defecto */ }
+  _glbKitCache.set(scene, info);
+  return info;
+}
+
+// Contextura según rol (o dorsal si no hay rol): arqueros y centrales más altos y corpulentos; laterales y extremos más estilizados
+const GLB_ROLE_KIND = {
+  GK: 'gk', CB: 'cb', SW: 'cb', RB: 'fb', LB: 'fb', RWB: 'fb', LWB: 'fb', WB: 'fb',
+  CDM: 'dm', DM: 'dm', CM: 'cm', CAM: 'cm', AM: 'cm', MF: 'cm',
+  RM: 'wing', LM: 'wing', RW: 'wing', LW: 'wing', W: 'wing',
+  ST: 'st', CF: 'st', SS: 'st', FW: 'st'
+};
+const GLB_NUMBER_KIND = { 1: 'gk', 2: 'fb', 3: 'cb', 4: 'cb', 5: 'fb', 6: 'dm', 7: 'wing', 8: 'cm', 9: 'st', 10: 'cm', 11: 'wing' };
+const GLB_BODY_PROFILES = {
+  gk: { h: 1.07, w: 1.12 },
+  cb: { h: 1.06, w: 1.10 },
+  dm: { h: 1.03, w: 1.05 },
+  st: { h: 1.03, w: 1.03 },
+  cm: { h: 0.98, w: 0.96 },
+  fb: { h: 0.98, w: 0.94 },
+  wing: { h: 0.95, w: 0.92 }
+};
+function glbBodyProfile(role, n, seed) {
+  const r = String(role || '').toUpperCase();
+  const kind = (r === 'GK' || n === 1) ? 'gk' : (GLB_ROLE_KIND[r] || GLB_NUMBER_KIND[n] || 'cm');
+  const p = GLB_BODY_PROFILES[kind];
+  const jitterH = ((seed % 11) - 5) * 0.006;
+  const jitterW = (((seed >>> 5) % 11) - 5) * 0.006;
+  return { kind, h: p.h + jitterH, w: p.w + jitterW };
+}
+
+// Camiseta: textura de tela generada en canvas (color base, franja, ribetes de cuello/mangas/ruedo y dorsal).
+// La mitad izquierda del canvas es el frente y la derecha la espalda; el shader la proyecta sobre el cuerpo.
+const _glbJerseyTexCache = new Map();
+function getGlbJerseyTexture(color, number, shirt) {
+  const label = String(number ?? '');
+  const key = `${color}|${label}|${shirt.lo.toFixed(3)}|${shirt.hi.toFixed(3)}|${shirt.halfW.toFixed(3)}`;
+  if (_glbJerseyTexCache.has(key)) return _glbJerseyTexCache.get(key);
+
+  const HALF_W = 480;
+  const CH = 320;
+  const yTop = shirt.hi + 0.012;
+  const panelH = (shirt.hi - shirt.lo) + 0.03;
+  const yBot = yTop - panelH;
+  const hw = shirt.halfW;
+  const pxX = HALF_W / (2 * hw); // píxeles por unidad de altura (horizontal)
+  const pxY = CH / panelH;       // píxeles por unidad de altura (vertical)
+  const X = (hx) => (hx + hw) * pxX;
+  const Y = (hy) => (yTop - hy) * pxY;
+
+  const lum = playerHexLuma(color);
+  const base = new THREE.Color(color);
+  const accent = `#${base.clone().offsetHSL(0, 0, lum > 0.62 ? -0.09 : 0.1).getHexString()}`;
+  const trim = lum > 0.72 ? '#111827' : '#f8fafc';
+  const numFill = lum > 0.62 ? '#0f172a' : '#ffffff';
+  const numLine = lum > 0.62 ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)';
+  const style = glbHashStr(color) % 3; // el diseño depende del color del equipo, nunca del jugador
+
+  const c = document.createElement('canvas');
+  c.width = HALF_W * 2;
+  c.height = CH;
+  const ctx = c.getContext('2d');
+
+  const drawNumber = (txt, hx, hy, capH) => {
+    const fontPx = (capH * pxY) / 0.72;
+    const size = txt.length > 2 ? fontPx * 0.66 : txt.length > 1 ? fontPx * 0.86 : fontPx;
+    ctx.save();
+    ctx.translate(X(hx), Y(hy));
+    ctx.scale(pxX / pxY, 1); // compensa la proporción del panel para que el número no se deforme
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `900 ${size}px Arial, Helvetica, sans-serif`;
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = size * 0.13;
+    ctx.strokeStyle = numLine;
+    ctx.strokeText(txt, 0, 0);
+    ctx.fillStyle = numFill;
+    ctx.fillText(txt, 0, 0);
+    ctx.restore();
+  };
+
+  for (let side = 0; side < 2; side++) {
+    ctx.save();
+    ctx.translate(side * HALF_W, 0);
+    ctx.beginPath();
+    ctx.rect(0, 0, HALF_W, CH);
+    ctx.clip();
+
+    // Color base de la tela
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, HALF_W, CH);
+
+    // Franja / diseño del equipo
+    ctx.fillStyle = accent;
+    if (style === 0) {
+      ctx.fillRect(X(-0.05), 0, 0.1 * pxX, CH);
+      ctx.fillStyle = trim;
+      ctx.fillRect(X(-0.066), 0, 0.007 * pxX, CH);
+      ctx.fillRect(X(0.059), 0, 0.007 * pxX, CH);
+    } else if (style === 1) {
+      const w = 0.035;
+      const steps = Math.ceil(hw / w);
+      for (let k = -steps; k <= steps; k++) {
+        if (k % 2 === 0) ctx.fillRect(X(k * w - w / 2), 0, w * pxX, CH);
+      }
+    } else {
+      const top = Y(shirt.hi - 0.045);
+      const bottom = Y(shirt.hi - 0.085);
+      ctx.fillRect(0, top, HALF_W, bottom - top);
+    }
+
+    // Ribete del ruedo
+    ctx.fillStyle = trim;
+    ctx.fillRect(0, Y(shirt.lo + 0.014), HALF_W, CH);
+
+    // Ribete del cuello
+    ctx.fillStyle = trim;
+    ctx.fillRect(X(-0.09), 0, 0.18 * pxX, Y(shirt.hi - 0.03));
+
+    // Ribetes de las mangas (doble vivo)
+    ctx.fillStyle = trim;
+    ctx.fillRect(X(hw - 0.03), 0, 0.03 * pxX + 2, CH);
+    ctx.fillRect(X(-hw) - 2, 0, 0.03 * pxX + 2, CH);
+    ctx.fillRect(X(hw - 0.04), 0, 0.005 * pxX, CH);
+    ctx.fillRect(X(-hw + 0.035), 0, 0.005 * pxX, CH);
+
+    if (side === 1) {
+      // Dorsal grande en la espalda
+      const capH = Math.min(0.125, (shirt.hi - shirt.lo) * 0.36);
+      drawNumber(label, 0, shirt.lo + 0.55 * (shirt.hi - shirt.lo), capH);
+    } else if (GLB_FRONT_NUMBER) {
+      // Dorsal pequeño en el pecho
+      drawNumber(label, 0, shirt.lo + 0.66 * (shirt.hi - shirt.lo), 0.05);
+    }
+    ctx.restore();
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.anisotropy = 4;
+  tex.needsUpdate = true;
+
+  const res = { tex, yBot, panelH };
+  _glbJerseyTexCache.set(key, res);
+  return res;
+}
+
+// Inyecta en un MeshStandardMaterial un color procedural calculado con la posición/normal del modelo en pose de referencia
+// (no depende del UV del GLB, así que no importa dónde esté el "7" de fábrica ni cómo esté desplegada su textura)
+function glbInjectBindProjection(mat, key, fragDecl, fragBody, uniforms) {
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform mat4 uB2S;\nvarying vec3 vBP;\nvarying vec3 vBN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBP = (uB2S * vec4(position, 1.0)).xyz;\nvBN = mat3(uB2S) * normal;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\nvarying vec3 vBP;\nvarying vec3 vBN;\n${fragDecl}`)
+      .replace('#include <map_fragment>', fragBody);
+  };
+  mat.customProgramCacheKey = () => key;
+  mat.needsUpdate = true;
+}
+
+const GLB_JERSEY_DECL = 'uniform sampler2D uJTex;\nuniform vec3 uJ0;\nuniform vec3 uJ1;\nuniform float uFwd;';
+const GLB_JERSEY_FRAG = `
+{
+  vec3 jn = normalize(vBN);
+  float jx = (vBP.x - uJ0.x) / uJ0.z;
+  float jy = (vBP.y - uJ0.y) / uJ0.z;
+  float jBack = (jn.z * uFwd) < 0.0 ? 1.0 : 0.0;
+  float ju = ((jBack > 0.5 ? -jx : jx) / (2.0 * uJ1.x)) + 0.5;
+  float jv = (jy - uJ1.y) / uJ1.z;
+  vec2 juv = vec2(ju * 0.5 + jBack * 0.5, jv);
+  juv.x = clamp(juv.x, jBack * 0.5 + 0.0007, jBack * 0.5 + 0.4993);
+  vec2 jg = vec2(jx / (2.0 * uJ1.x) * 0.5, jv);
+  diffuseColor.rgb = textureGrad(uJTex, juv, dFdx(jg), dFdy(jg)).rgb;
+}
+`;
+
+const GLB_SHORTS_DECL = 'uniform vec3 uS0;\nuniform vec2 uS1;\nuniform vec3 uSBase;\nuniform vec3 uSStripe;\nuniform vec3 uSTrim;';
+const GLB_SHORTS_FRAG = `
+{
+  vec3 sn = normalize(vBN);
+  float sy = (vBP.y - uS0.y) / uS0.z;
+  float sOuter = sn.x * sign(vBP.x - uS0.x);
+  vec3 sCol = uSBase;
+  if (sOuter > 0.8) sCol = uSTrim;
+  if (sOuter > 0.88) sCol = uSStripe;
+  if (sOuter > 0.97) sCol = uSTrim;
+  if (sy < uS1.x + 0.02) sCol = uSStripe;
+  if (sy < uS1.x + 0.008) sCol = uSTrim;
+  if (sy > uS1.y - 0.022) sCol = uSTrim;
+  diffuseColor.rgb = sCol;
+}
+`;
+
+// Promedio de color de una textura (para teñir piel y pelo hacia un tono objetivo sin perder el detalle de la textura original)
+const _glbTexAvg = new WeakMap();
+function glbTextureAverage(tex) {
+  if (!tex) return null;
+  if (_glbTexAvg.has(tex)) return _glbTexAvg.get(tex);
+  let res = null;
+  try {
+    const img = tex.image;
+    if (img && (img.width || img.videoWidth)) {
+      const c = document.createElement('canvas');
+      c.width = 32; c.height = 32;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, 32, 32);
+      const d = ctx.getImageData(0, 0, 32, 32).data;
+      let r = 0, g = 0, b = 0, cnt = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 8) continue;
+        r += d[i]; g += d[i + 1]; b += d[i + 2]; cnt++;
+      }
+      if (cnt) res = [r / cnt / 255, g / cnt / 255, b / cnt / 255];
+    }
+  } catch (e) { res = null; }
+  _glbTexAvg.set(tex, res);
+  return res;
+}
+
+function glbTintTowards(mat, hex, minGain = 0.35, maxGain = 2.6) {
+  const target = new THREE.Color(hex);
+  const avg = glbTextureAverage(mat.map);
+  if (!avg) { mat.color.copy(target); return 1; }
+  const a = new THREE.Color().setRGB(avg[0], avg[1], avg[2], THREE.SRGBColorSpace);
+  const gain = (t, v) => Math.min(maxGain, Math.max(minGain, t / Math.max(v, 0.02)));
+  mat.color.setRGB(gain(target.r, a.r), gain(target.g, a.g), gain(target.b, a.b));
+  return 0.2126 * a.r + 0.7152 * a.g + 0.0722 * a.b;
+}
+
+// Postura de expectativa del arquero: rodillas semiflexionadas, pies separados, torso levemente inclinado y manos al frente.
+// Orienta cada hueso hacia una dirección objetivo (en el sistema del modelo), así queda simétrica sea cual sea la pose congelada.
+function buildGlbGoalkeeperStance(root, fwd) {
+  const bones = {};
+  root.traverse((o) => { if (o.isBone) bones[glbBoneKey(o.name)] = o; });
+  const hips = bones.hips;
+  const lUp = bones.leftupleg, lLeg = bones.leftleg, rUp = bones.rightupleg, rLeg = bones.rightleg;
+  if (!hips || !lUp || !lLeg || !rUp || !rLeg) return null;
+
+  const saved = new Map();
+  const touched = new Set();
+  const keep = (b) => { if (!saved.has(b)) saved.set(b, { q: b.quaternion.clone(), p: b.position.clone() }); touched.add(b); };
+  const scl = new THREE.Vector3();
+  const tmpP = new THREE.Vector3();
+  const invRoot = () => { root.updateMatrixWorld(true); return new THREE.Matrix4().copy(root.matrixWorld).invert(); };
+  const posIn = (bone, inv) => new THREE.Vector3().setFromMatrixPosition(bone.matrixWorld).applyMatrix4(inv);
+
+  const align = (bone, child, target) => {
+    if (!bone || !child) return;
+    const inv = invRoot();
+    const cur = posIn(child, inv).sub(posIn(bone, inv)).normalize();
+    const q = new THREE.Quaternion().setFromUnitVectors(cur, target.clone().normalize());
+    const parentQ = new THREE.Quaternion();
+    if (bone.parent) new THREE.Matrix4().multiplyMatrices(inv, bone.parent.matrixWorld).decompose(tmpP, parentQ, scl);
+    keep(bone);
+    bone.quaternion.premultiply(parentQ).premultiply(q).premultiply(parentQ.clone().invert());
+  };
+
+  const inv0 = invRoot();
+  const sideL = Math.sign(posIn(lUp, inv0).x - posIn(rUp, inv0).x) || 1;
+  const thighLen = posIn(lUp, inv0).distanceTo(posIn(lLeg, inv0));
+  const lFoot = bones.leftfoot, rFoot = bones.rightfoot;
+  const shinLen = lFoot ? posIn(lLeg, inv0).distanceTo(posIn(lFoot, inv0)) : thighLen;
+  const hipToFootL = lFoot ? posIn(lUp, inv0).y - posIn(lFoot, inv0).y : thighLen + shinLen;
+  const hipToFootR = rFoot ? posIn(rUp, inv0).y - posIn(rFoot, inv0).y : thighLen + shinLen;
+
+  const ALPHA = 0.42; // muslo hacia delante
+  const GAMMA = 0.3;  // pierna hacia atrás respecto de la vertical (rodilla flexionada ~41°)
+  const PHI = 0.14;   // apertura de los muslos
+  const PHI2 = 0.08;  // apertura de las piernas
+  const drop = Math.max(0, Math.max(hipToFootL, hipToFootR) - (thighLen * Math.cos(ALPHA) + shinLen * Math.cos(GAMMA)));
+
+  // 1. Baja la cadera para que los pies sigan apoyados en el césped
+  if (drop > 0) {
+    const inv = invRoot();
+    const m = new THREE.Matrix4().multiplyMatrices(inv, hips.parent ? hips.parent.matrixWorld : new THREE.Matrix4());
+    const mi = m.clone().invert();
+    const o = new THREE.Vector3().applyMatrix4(mi);
+    const d = new THREE.Vector3(0, -drop, 0).applyMatrix4(mi).sub(o);
+    keep(hips);
+    hips.position.add(d);
+  }
+
+  // 2. Piernas semiflexionadas y abiertas al ancho de hombros
+  [[lUp, lLeg, lFoot, sideL], [rUp, rLeg, rFoot, -sideL]].forEach(([up, leg, foot, s]) => {
+    align(up, leg, new THREE.Vector3(s * Math.sin(PHI), -Math.cos(ALPHA), fwd * Math.sin(ALPHA)));
+    if (foot) align(leg, foot, new THREE.Vector3(s * Math.sin(PHI2), -Math.cos(GAMMA), -fwd * Math.sin(GAMMA)));
+  });
+
+  // 3. Torso levemente inclinado hacia delante, cabeza al frente
+  if (bones.spine && bones.spine1) align(bones.spine, bones.spine1, new THREE.Vector3(0, Math.cos(0.14), fwd * Math.sin(0.14)));
+  if (bones.neck && bones.head) align(bones.neck, bones.head, new THREE.Vector3(0, Math.cos(0.04), fwd * Math.sin(0.04)));
+
+  // 4. Brazos abiertos y manos al frente, listos para atajar
+  [['left', sideL], ['right', -sideL]].forEach(([name, s]) => {
+    const arm = bones[`${name}arm`], fore = bones[`${name}forearm`], hand = bones[`${name}hand`];
+    if (arm && fore) align(arm, fore, new THREE.Vector3(s * Math.sin(0.5), -Math.cos(0.5), fwd * 0.15));
+    if (fore && hand) align(fore, hand, new THREE.Vector3(s * 0.22, -0.3, fwd * 0.9));
+  });
+
+  const finals = [];
+  touched.forEach((b) => finals.push({ bone: b, q: b.quaternion.clone(), p: b === hips ? b.position.clone() : null }));
+
+  return {
+    // El mixer (pose congelada) reescribe los huesos en cada frame: se vuelve a imponer la postura del arquero después de él
+    apply() {
+      for (let i = 0; i < finals.length; i++) {
+        const f = finals[i];
+        f.bone.quaternion.copy(f.q);
+        if (f.p) f.bone.position.copy(f.p);
+      }
+    },
+    restore() {
+      saved.forEach((s, b) => { b.quaternion.copy(s.q); b.position.copy(s.p); });
+    }
+  };
 }
 
 function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
@@ -1039,19 +1452,20 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { actions, mixer } = useAnimations(animations, clone);
   const norm = useMemo(() => getGlbNormalization(scene), [scene]);
+  const kit = useMemo(() => getGlbKitInfo(scene), [scene]);
 
   const n = parseInt(number, 10) || 0;
   const isGK = role === 'GK' || n === 1;
+  const jerseyColor = color || '#2563eb';
+  const teamSeed = useMemo(() => glbHashStr(jerseyColor), [jerseyColor]);
+  const seed = useMemo(() => glbHashStr(`${jerseyColor}|${number}`), [jerseyColor, number]);
 
-  // 1. Variedad de envergadura física según rol y dorsal
+  // 1. Contextura según rol / dorsal (más una pequeña variación individual)
   const customScale = useMemo(() => {
+    const p = glbBodyProfile(role, n, seed);
     const base = norm.scale;
-    if (isGK) return [base * 1.08, base * 1.10, base * 1.08]; // Arquero notablemente más alto
-    // Variación marcada de contextura y altura entre defensores y delanteros
-    const heightMod = 0.92 + ((n * 9) % 7) * 0.035; // Alturas visibles entre 1.70m y 1.92m
-    const widthMod = 0.90 + ((n * 5) % 6) * 0.035;
-    return [base * widthMod, base * heightMod, base * widthMod];
-  }, [norm.scale, isGK, n]);
+    return [base * p.w, base * p.h, base * p.w];
+  }, [norm.scale, role, n, seed]);
 
   // Congelar la pose
   useEffect(() => {
@@ -1067,93 +1481,121 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
     return () => { if (mixer) mixer.stopAllAction(); };
   }, [actions, mixer]);
 
-  // 2. Personalización de Piel, Cabello, Camiseta con sombras y Pantalones
+  // 2. Postura de expectativa del arquero (se calcula una vez sobre la pose congelada y se reimpone tras el mixer)
+  const stanceRef = useRef(null);
   useEffect(() => {
+    stanceRef.current = null;
+    if (!isGK) return undefined;
+    let stance = null;
+    try {
+      clone.updateMatrixWorld(true);
+      stance = buildGlbGoalkeeperStance(clone, kit.fwd);
+    } catch (e) { stance = null; }
+    stanceRef.current = stance;
+    return () => {
+      if (stance) stance.restore();
+      stanceRef.current = null;
+    };
+  }, [clone, actions, mixer, isGK, kit]);
+  useFrame(() => { if (stanceRef.current) stanceRef.current.apply(); });
+
+  // 3. Piel, cabello, camiseta (textura procedural con dorsal) y shorts con ribete lateral
+  useLayoutEffect(() => {
     const owned = [];
-    const skinColor = (typeof PLAYER_SKINS !== 'undefined' && PLAYER_SKINS.length) 
-      ? PLAYER_SKINS[n % PLAYER_SKINS.length] 
-      : '#d49870';
-    const hairColor = (typeof PLAYER_HAIRS !== 'undefined' && PLAYER_HAIRS.length) 
-      ? PLAYER_HAIRS[(n * 3 + 1) % PLAYER_HAIRS.length] 
-      : '#261a15';
+    const skinColor = PLAYER_SKINS[(n * 3 + (teamSeed % PLAYER_SKINS.length)) % PLAYER_SKINS.length];
+    const hairColor = PLAYER_HAIRS[(n * 5 + 3 + ((teamSeed >>> 3) % PLAYER_HAIRS.length)) % PLAYER_HAIRS.length];
+    const lightKit = playerHexLuma(jerseyColor) > 0.78;
+
+    if (!_glbNamesLogged) {
+      _glbNamesLogged = true;
+      console.info('[player.glb] partes detectadas:', kit.names.join(' · '));
+      if (!kit.shirtFound) console.warn('[player.glb] No se encontró ninguna malla de camiseta (nombre con shirt/jersey/camis/top/torso). Revisa los nombres de arriba.');
+    }
+
+    clone.updateMatrixWorld(true);
+    const invRoot = new THREE.Matrix4().copy(clone.matrixWorld).invert();
 
     clone.traverse((child) => {
       if (!child.isMesh) return;
       child.frustumCulled = false;
       child.castShadow = true;
+      if (!child.userData.glbOrigMaterial) child.userData.glbOrigMaterial = child.material;
+      const src = child.userData.glbOrigMaterial;
+      if (!src) return;
+      const list = Array.isArray(src) ? src : [src];
+      const rel = new THREE.Matrix4().multiplyMatrices(invRoot, child.matrixWorld);
 
-      const label = `${child.name} ${child.material?.name || ''}`.toLowerCase();
+      const next = list.map((m) => {
+        const mat = m.clone();
+        owned.push(mat);
+        const kind = glbClassify(glbPartLabel(child, mat));
 
-      if (child.material) {
-        child.material = child.material.clone();
-        owned.push(child.material);
-
-        // Camiseta
-        if (/shirt|jersey|camis|tshirt|t-shirt|top/.test(label)) {
-          child.material.color.set(color || '#2563eb');
-          child.material.roughness = 0.65;
-          child.material.metalness = 0.1;
+        if (kind === 'shirt') {
+          mat.roughness = 0.65;
+          mat.metalness = 0.05;
+          if (kit.ok) {
+            const jt = getGlbJerseyTexture(jerseyColor, number, kit.shirt);
+            mat.map = null; // se descarta la textura de fábrica (y su "7")
+            mat.color.set('#ffffff');
+            glbInjectBindProjection(mat, 'glb-jersey-v1', GLB_JERSEY_DECL, GLB_JERSEY_FRAG, {
+              uB2S: { value: rel },
+              uJTex: { value: jt.tex },
+              uJ0: { value: new THREE.Vector3(kit.cx, kit.y0, kit.H) },
+              uJ1: { value: new THREE.Vector3(kit.shirt.halfW, jt.yBot, jt.panelH) },
+              uFwd: { value: kit.fwd }
+            });
+          } else {
+            mat.color.set(jerseyColor);
+          }
+        } else if (kind === 'shorts') {
+          mat.roughness = 0.8;
+          const baseHex = lightKit ? '#1f2937' : '#f8fafc';
+          const trimHex = lightKit ? '#f8fafc' : '#0f172a';
+          if (kit.ok) {
+            mat.map = null;
+            mat.color.set('#ffffff');
+            glbInjectBindProjection(mat, 'glb-shorts-v1', GLB_SHORTS_DECL, GLB_SHORTS_FRAG, {
+              uB2S: { value: rel },
+              uS0: { value: new THREE.Vector3(kit.cx, kit.y0, kit.H) },
+              uS1: { value: new THREE.Vector2(kit.shorts.lo, kit.shorts.hi) },
+              uSBase: { value: new THREE.Color(baseHex) },
+              uSStripe: { value: new THREE.Color(jerseyColor) },
+              uSTrim: { value: new THREE.Color(trimHex) }
+            });
+          } else {
+            mat.color.set(baseHex);
+          }
+        } else if (kind === 'hair') {
+          const avgLuma = glbTintTowards(mat, hairColor, 0.4, 4);
+          if (avgLuma < 0.2) mat.emissive.set(hairColor).multiplyScalar(0.45);
+          mat.roughness = 0.95;
+        } else if (kind === 'skin') {
+          glbTintTowards(mat, skinColor);
+          mat.roughness = 0.85;
         }
-        // Pantalón / Shorts
-        else if (/short|pant|bottom/.test(label)) {
-          child.material.color.set(color === '#ffffff' ? '#1e293b' : '#ffffff');
-          child.material.roughness = 0.8;
-        }
-        // Tono de piel
-        else if (/body|skin|head|face|arm|hand|leg|cuerpo|piel/.test(label)) {
-          child.material.color.set(skinColor);
-          child.material.roughness = 0.85;
-        }
-        // Cabello
-        else if (/hair|pelo|cabello/.test(label)) {
-          child.material.color.set(hairColor);
-          child.material.roughness = 0.95;
-        }
-      }
+        mat.needsUpdate = true;
+        return mat;
+      });
+      child.material = Array.isArray(src) ? next : next[0];
     });
 
     return () => owned.forEach((m) => m.dispose());
-  }, [clone, color, n]);
+  }, [clone, kit, jerseyColor, number, n, teamSeed]);
 
-  // Material para el dorsal en la espalda
-  const backNumberMat = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 256, 256);
-    ctx.font = 'bold 160px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 14;
-    ctx.strokeText(String(number ?? ''), 128, 128);
-    ctx.fillText(String(number ?? ''), 128, 128);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    return new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
-  }, [number]);
+  // Los pies del modelo se apoyan en y = 0 con la escala real de este jugador
+  const footY = -norm.minY * customScale[1];
 
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
       <PlayerGroundMarks isSelected={isSelected} />
       <group rotation={[0, facing, 0]}>
-        <primitive 
-          object={clone} 
-          position={[0, norm.offsetY, 0]} 
-          scale={customScale} 
+        <primitive
+          object={clone}
+          position={[0, footY, 0]}
+          scale={customScale}
         />
-        {/* Parche de fondo para tapar el "7" nativo del modelo + Dorsal oficial */}
-        <mesh position={[0, norm.offsetY + 1.28, -0.165]} rotation={[0, Math.PI, 0]}>
-          <planeGeometry args={[0.34, 0.38]} />
-          <meshStandardMaterial color={color || '#2563eb'} roughness={0.7} />
-        </mesh>
-        <mesh position={[0, norm.offsetY + 1.28, -0.167]} rotation={[0, Math.PI, 0]} material={backNumberMat}>
-          <planeGeometry args={[0.30, 0.30]} />
-        </mesh>
       </group>
-      {/* Se eliminó el sprite flotante sobre la cabeza para vista táctica limpia */}
+      {/* Sin sprites ni parches: el dorsal está impreso en la textura de la camiseta */}
     </group>
   );
 }
@@ -2683,7 +3125,7 @@ Devuelve estricta y únicamente el array JSON.`;
     >
       {/* HEADER */}
       <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 no-print overflow-x-auto max-w-full">
-        <div className={`w-full h-full flex items-center justify-center p-2 sm:p-4 ${viewMode === '2d' ? 'block' : 'hidden'}`}>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {isPC ? (
             <label htmlFor="logo-up" className="cursor-pointer" title="Cambiar Logo Club">
               <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
@@ -2745,9 +3187,14 @@ Devuelve estricta y únicamente el array JSON.`;
       </header>
 
       {/* CANCHA 2D CON TEXTOS INTERACTIVOS (+ / - / ↻) O VISOR 3D */}
-      <main className="flex-1 w-full h-full flex items-center justify-center p-0 overflow-hidden touch-none relative">
-  <div className={`w-full h-full flex items-center justify-center ${viewMode === '2d' ? 'block' : 'hidden'}`}>
-    <svg ref={svgRef} viewBox={isPC ? (pitchMode === 'half' ? "0 0 55 68" : "0 0 105 68") : (pitchMode === 'half' ? "0 0 68 55" : "0 0 68 105")}>
+      <main className="flex-1 min-h-0 w-full h-full relative overflow-hidden touch-none bg-black flex items-center justify-center">
+        <div className={`w-full h-full flex items-center justify-center p-2 sm:p-3 ${viewMode === '2d' ? 'flex' : 'hidden'}`}>
+          <svg
+            ref={svgRef}
+            className="w-full h-full max-h-full max-w-full select-none"
+            preserveAspectRatio="xMidYMid meet"
+            viewBox={isPC ? (pitchMode === 'half' ? "-2 -1 59 70" : "-3 -1 111 70") : (pitchMode === 'half' ? "-1 -2 70 89" : "-1 -2 70 109")}
+          >
       <defs>
               <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" stroke="none" /></marker>
               <marker id="arrow-red" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ef4444" stroke="none" /></marker>
@@ -3022,7 +3469,7 @@ Devuelve estricta y únicamente el array JSON.`;
             })}
           </svg>
   </div>
-  <div className={`relative w-full h-full ${viewMode === '3d' ? 'block' : 'hidden'}`}>
+  <div className={`absolute inset-0 ${viewMode === '3d' ? 'block' : 'hidden'}`}>
             <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl p-2 shadow-2xl flex items-center gap-2">
               <button
                 onClick={() => setCameraLocked(!cameraLocked)}
