@@ -1035,7 +1035,7 @@ function getGlbNormalization(scene) {
 }
 
 // ---------- Identidad visual de los jugadores GLB: equipación, contextura, rostro y postura ----------
-const GLB_FRONT_NUMBER = true; // dorsal pequeño en el pecho (la cámara táctica inicial ve a los jugadores de frente). false = solo en la espalda
+const GLB_FRONT_NUMBER = false; // dorsal pequeño en el pecho (la cámara táctica inicial ve a los jugadores de frente). false = solo en la espalda
 
 function glbHashStr(s) {
   let h = 2166136261;
@@ -3191,7 +3191,11 @@ Devuelve estricta y únicamente el array JSON.`;
         <div className={`w-full h-full flex items-center justify-center p-2 sm:p-3 ${viewMode === '2d' ? 'flex' : 'hidden'}`}>
           <svg
             ref={svgRef}
-            className="w-full h-full max-h-full max-w-full select-none"
+            onPointerDown={handlePitchPointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            className="w-full h-full max-h-full max-w-full touch-none select-none"
             preserveAspectRatio="xMidYMid meet"
             viewBox={isPC ? (pitchMode === 'half' ? "-2 -1 59 70" : "-3 -1 111 70") : (pitchMode === 'half' ? "-1 -2 70 89" : "-1 -2 70 109")}
           >
