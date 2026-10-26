@@ -1411,28 +1411,45 @@ function getSkyTexture() {
 
 // Publicidad perimetral LED profesional sin sobreposición de textos
 function getAdTexture() {
-  return envCanvasTexture('ads', 2048, 128, (ctx, w, h) => {
+  return envCanvasTexture('ads-led-calibrated', 2048, 128, (ctx, w, h) => {
+    // Fondo base negro LED
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, w, h);
+
     const panels = [
-      ['#0b132b', '#38bdf8', '★ ANDEZ SPORTS TACTICS PRO ★'],
-      ['#1c1917', '#facc15', 'PIZARRA TÁCTICA MULTIDEPORTE'],
-      ['#064e3b', '#34d399', 'ENTRENAMIENTO Y METODOLOGÍA PRO'],
-      ['#18181b', '#f8fafc', 'ANDEZTPRO.COM • PLATAFORMA OFICIAL']
+      { bg: '#061325', border: '#0284c7', fg: '#38bdf8', text: '★ ANDEZ SPORTS TACTICS PRO ★' },
+      { bg: '#18181b', border: '#eab308', fg: '#facc15', text: 'PIZARRA TÁCTICA MULTIDEPORTE' },
+      { bg: '#062817', border: '#10b981', fg: '#34d399', text: 'METODOLOGÍA & RENDIMIENTO' },
+      { bg: '#1c1917', border: '#f43f5e', fg: '#fb7185', text: 'ANDEZTPRO.COM • SISTEMA OFICIAL' }
     ];
-    const pw = w / panels.length;
-    panels.forEach(([bg, fg, label], i) => {
-      ctx.fillStyle = bg;
-      ctx.fillRect(i * pw, 0, pw, h);
-      // Bordes luminosos estilo LED
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
-      ctx.fillRect(i * pw, 0, pw, 6);
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.fillRect(i * pw, h - 6, pw, 6);
-      // Tipografía nítida y proporción sin corte
-      ctx.fillStyle = fg;
-      ctx.font = '900 32px system-ui, -apple-system, sans-serif';
+
+    const slotW = w / panels.length;
+    const gap = 16; // Separación física negra para evitar cualquier choque de texto
+
+    panels.forEach((p, i) => {
+      const x = i * slotW + gap / 2;
+      const pw = slotW - gap;
+
+      // Pantalla individual de cada módulo LED
+      ctx.fillStyle = p.bg;
+      ctx.fillRect(x, 4, pw, h - 8);
+
+      // Marco perimetral luminoso
+      ctx.strokeStyle = p.border;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, 4, pw, h - 8);
+
+      // Líneas de acento LED superior e inferior
+      ctx.fillStyle = p.fg;
+      ctx.fillRect(x + 10, 8, pw - 20, 2);
+      ctx.fillRect(x + 10, h - 10, pw - 20, 2);
+
+      // Tipografía calibrada con límite estricto de ancho
+      ctx.fillStyle = p.fg;
+      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, i * pw + pw / 2, h / 2);
+      ctx.fillText(p.text, x + pw / 2, h / 2, pw - 40); // Margen de seguridad lateral de 40px
     });
   }, { repeat: [1, 1] });
 }
@@ -1752,7 +1769,7 @@ function AdBoards() {
       });
     };
     // Repeticiones enteras exactas para evitar que los textos se corten
-    return { long: mk(110, 8), short: mk(74, 5) };
+    return { long: mk(110, 5), short: mk(74, 3) };
   }, [base]);
   useEffect(() => () => { mats.long.map.dispose(); mats.short.map.dispose(); mats.long.dispose(); mats.short.dispose(); }, [mats]);
   return (
