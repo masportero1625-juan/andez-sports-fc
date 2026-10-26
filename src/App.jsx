@@ -1046,10 +1046,11 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   // 1. Variedad de envergadura física según rol y dorsal
   const customScale = useMemo(() => {
     const base = norm.scale;
-    if (isGK) return [base * 1.05, base * 1.06, base * 1.05]; // Arquero más alto e imponente
-    const heightVar = 0.95 + ((n * 7) % 11) * 0.012; // Variación entre 1.74m y 1.88m
-    const widthVar = 0.96 + ((n * 3) % 9) * 0.01;
-    return [base * widthVar, base * heightVar, base * widthVar];
+    if (isGK) return [base * 1.08, base * 1.10, base * 1.08]; // Arquero notablemente más alto
+    // Variación marcada de contextura y altura entre defensores y delanteros
+    const heightMod = 0.92 + ((n * 9) % 7) * 0.035; // Alturas visibles entre 1.70m y 1.92m
+    const widthMod = 0.90 + ((n * 5) % 6) * 0.035;
+    return [base * widthMod, base * heightMod, base * widthMod];
   }, [norm.scale, isGK, n]);
 
   // Congelar la pose
@@ -1143,12 +1144,16 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
           position={[0, norm.offsetY, 0]} 
           scale={customScale} 
         />
-        {/* Dorsal 3D estampado en la espalda de la camiseta */}
-        <mesh position={[0, norm.offsetY + 1.28, -0.16]} rotation={[0, Math.PI, 0]} material={backNumberMat}>
-          <planeGeometry args={[0.32, 0.32]} />
+        {/* Parche de fondo para tapar el "7" nativo del modelo + Dorsal oficial */}
+        <mesh position={[0, norm.offsetY + 1.28, -0.165]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[0.34, 0.38]} />
+          <meshStandardMaterial color={color || '#2563eb'} roughness={0.7} />
+        </mesh>
+        <mesh position={[0, norm.offsetY + 1.28, -0.167]} rotation={[0, Math.PI, 0]} material={backNumberMat}>
+          <planeGeometry args={[0.30, 0.30]} />
         </mesh>
       </group>
-      <sprite position={[0, 2.25, 0]} scale={[0.6, 0.6, 1]} material={getNumberSpriteMaterial(number)} />
+      {/* Se eliminó el sprite flotante sobre la cabeza para vista táctica limpia */}
     </group>
   );
 }
@@ -2678,7 +2683,7 @@ Devuelve estricta y únicamente el array JSON.`;
     >
       {/* HEADER */}
       <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 no-print overflow-x-auto max-w-full">
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className={`w-full h-full flex items-center justify-center p-2 sm:p-4 ${viewMode === '2d' ? 'block' : 'hidden'}`}>
           {isPC ? (
             <label htmlFor="logo-up" className="cursor-pointer" title="Cambiar Logo Club">
               <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
