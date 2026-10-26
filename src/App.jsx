@@ -1035,7 +1035,7 @@ function getGlbNormalization(scene) {
 }
 
 // ---------- Identidad visual de los jugadores GLB: equipación, contextura, rostro y postura ----------
-const GLB_FRONT_NUMBER = false; // dorsal pequeño en el pecho (la cámara táctica inicial ve a los jugadores de frente). false = solo en la espalda
+const GLB_FRONT_NUMBER = true; // dorsal pequeño en el pecho (la cámara táctica inicial ve a los jugadores de frente). false = solo en la espalda
 
 function glbHashStr(s) {
   let h = 2166136261;
@@ -1565,22 +1565,14 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
           } else {
             mat.color.set(baseHex);
           }
-        } else if (/eye|iris|cornea|pupil|ojo/.test(label)) {
-        // Brillo corneal y reflejo húmedo en los ojos
-        mat.color.set('#ffffff');
-        mat.roughness = 0.1;
-        mat.metalness = 0.2;
-      } else if (kind === 'hair') {
-        // Cabello con volumen y brillo especular
-        glbTintTowards(mat, hairColor, 0.4, 4);
-        mat.roughness = 0.48;
-        mat.metalness = 0.05;
-      } else if (kind === 'skin') {
-        // Piel viva con relieve y satinado suave (elimina el aspecto de tiza/maniquí)
-        glbTintTowards(mat, skinColor);
-        mat.roughness = 0.52;
-        mat.metalness = 0.02;
-      }
+        } else if (kind === 'hair') {
+          const avgLuma = glbTintTowards(mat, hairColor, 0.4, 4);
+          if (avgLuma < 0.2) mat.emissive.set(hairColor).multiplyScalar(0.45);
+          mat.roughness = 0.95;
+        } else if (kind === 'skin') {
+          glbTintTowards(mat, skinColor);
+          mat.roughness = 0.85;
+        }
         mat.needsUpdate = true;
         return mat;
       });
@@ -1596,10 +1588,7 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
       <PlayerGroundMarks isSelected={isSelected} />
-      <group 
-        rotation={[isGK ? 0.12 : 0, facing, 0]} 
-        position={[0, isGK ? -0.04 : 0, isGK ? 0.06 : 0]}
-      >
+      <group rotation={[0, facing, 0]}>
         <primitive
           object={clone}
           position={[0, footY, 0]}
@@ -3202,11 +3191,7 @@ Devuelve estricta y únicamente el array JSON.`;
         <div className={`w-full h-full flex items-center justify-center p-2 sm:p-3 ${viewMode === '2d' ? 'flex' : 'hidden'}`}>
           <svg
             ref={svgRef}
-            onPointerDown={handlePitchPointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
-            className="w-full h-full max-h-full max-w-full touch-none select-none"
+            className="w-full h-full max-h-full max-w-full select-none"
             preserveAspectRatio="xMidYMid meet"
             viewBox={isPC ? (pitchMode === 'half' ? "-2 -1 59 70" : "-3 -1 111 70") : (pitchMode === 'half' ? "-1 -2 70 89" : "-1 -2 70 109")}
           >
