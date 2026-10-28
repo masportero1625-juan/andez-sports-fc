@@ -2434,6 +2434,10 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     isDragging.current = true;
     setActiveDragId(obj.id);
 
+    // Ajustar el plano a la altura del objeto antes de calcular el impacto
+    const objAlt = obj?.elevation || obj?.altitude || obj?.z || 0;
+    mathPlane.constant = -objAlt;
+
     // Fijar el anclaje exacto del puntero
     if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
       dragOffset.current.set(
