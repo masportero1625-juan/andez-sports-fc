@@ -1823,26 +1823,17 @@ function getBallTexture() {
 }
 
 function Ball3D({ position, isSelected, onClick }) {
-  // Coordenadas universales compatibles con PC y celular
-  const posX = typeof isPC !== 'undefined' && !isPC
-    ? (position?.y ?? 52.5) - 52.5
-    : (position?.x ?? 52.5) - 52.5;
-
-  const posZ = typeof isPC !== 'undefined' && !isPC
-    ? 34 - (position?.x ?? 34)
-    : (position?.y ?? 34) - 34;
-
   // Altura del balón en metros (0 = suelo, hasta 3.5 m para juego aéreo)
   const altitude = Math.max(0, position?.elevation ?? position?.altitude ?? position?.z ?? 0);
   const ballTexture = useMemo(() => getBallTexture(), []);
 
-  // La sombra se desvanece y se reduce suavemente con la altura
+  // La sombra se mantiene en el césped y se atenúa con la altura
   const shadowOpacity = Math.max(0.12, 0.45 - altitude * 0.09);
   const shadowScale = Math.max(0.55, 1 - altitude * 0.12);
 
   return (
-    <group position={[posX, 0, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra proyectada fija a ras de cesped */}
+    <group position={[0, 0, 0]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      {/* Sombra proyectada fija a ras de césped */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.015, 0]}
@@ -4466,7 +4457,24 @@ Devuelve estricta y únicamente el array JSON.`;
           <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk_away', customColor: teamColors.gk_away })} style={{ backgroundColor: teamColors.gk_away }} className="w-9 h-9 rounded-full border-2 border-white text-white font-black text-xs shadow hover:scale-105 transition-transform" title="Arquero Visitante">1</button>
           <button onClick={() => addElement('player', { team: 'blue', customColor: teamColors.blue })} style={{ backgroundColor: teamColors.blue }} className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform" title="Jugador Equipo 1">11</button>
           <button onClick={() => addElement('player', { team: 'red', customColor: teamColors.red })} style={{ backgroundColor: teamColors.red }} className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform" title="Jugador Equipo 2">11</button>
-          <button onClick={() => addElement('ball')} className="w-9 h-9 rounded-full bg-white text-sm shadow hover:scale-105 transition-transform">⚽</button>
+          <button
+  type="button"
+  onClick={() => {
+    const isDesk = window.innerWidth > 768;
+    const newBall = {
+      id: `ball-${Date.now()}`,
+      type: 'ball',
+      x: isDesk ? 52.5 : 34,
+      y: isDesk ? 34 : 52.5,
+      elevation: 0
+    };
+    setObjects((prev) => [...prev, newBall]);
+    setSelectedObj(newBall);
+  }}
+  className="w-9 h-9 rounded-full bg-white text-sm shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition"
+>
+  ⚽
+</button>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
