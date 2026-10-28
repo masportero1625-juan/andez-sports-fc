@@ -1823,22 +1823,53 @@ function getBallTexture() {
 }
 
 function Ball3D({ position, isSelected, onClick }) {
-  const posX = (position?.x ?? 52.5) - 52.5;
-  const posZ = (position?.y ?? 34) - 34;
+  // Coordenadas universales compatibles con PC y celular
+  const posX = typeof isPC !== 'undefined' && !isPC
+    ? (position?.y ?? 52.5) - 52.5
+    : (position?.x ?? 52.5) - 52.5;
+
+  const posZ = typeof isPC !== 'undefined' && !isPC
+    ? 34 - (position?.x ?? 34)
+    : (position?.y ?? 34) - 34;
+
+  // Altura del balón en metros (0 = suelo, hasta 3.5 m para juego aéreo)
+  const altitude = Math.max(0, position?.elevation ?? position?.altitude ?? position?.z ?? 0);
   const ballTexture = useMemo(() => getBallTexture(), []);
 
+  // La sombra se desvanece y se reduce suavemente con la altura
+  const shadowOpacity = Math.max(0.12, 0.45 - altitude * 0.09);
+  const shadowScale = Math.max(0.55, 1 - altitude * 0.12);
+
   return (
-    <group position={[posX, 0.11, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra proyectada por el balón a escala FIFA */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.10, 0]} raycast={() => null}>
-        <circleGeometry args={[0.14, 16]} />
-        <meshBasicMaterial color="#000000" opacity={0.45} transparent depthWrite={false} />
+    <group position={[posX, 0, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      {/* Sombra proyectada fija a ras de cesped */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.015, 0]}
+        scale={[shadowScale, shadowScale, 1]}
+        raycast={() => null}
+      >
+        <circleGeometry args={[0.15, 24]} />
+        <meshBasicMaterial
+          color="#000000"
+          opacity={shadowOpacity}
+          transparent
+          depthWrite={false}
+        />
       </mesh>
 
-      {/* Balón reglamentario FIFA (diámetro 22 cm, radio 0.11 m) */}
-      <mesh castShadow rotation={[0.35, 0.6, 0.1]}>
+      {/* Balón con elevación tridimensional variable */}
+      <mesh
+        castShadow
+        position={[0, 0.11 + altitude, 0]}
+        rotation={[0.35, 0.6, 0.1]}
+      >
         <sphereGeometry args={[0.11, 32, 24]} />
-        <meshStandardMaterial map={ballTexture} roughness={0.42} metalness={0.02} />
+        <meshStandardMaterial
+          map={ballTexture}
+          roughness={0.42}
+          metalness={0.02}
+        />
       </mesh>
     </group>
   );
@@ -2560,7 +2591,7 @@ const camFov = isPC ? 45 : 55;
                 <sphereGeometry args={[1.4, 12, 10]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
-              <Ball3D position={{ x: obj.x, y: obj.y }} isSelected={selectedObj?.id === obj.id} onClick={() => {}} />
+              <Ball3D position={obj} isSelected={selectedObj?.id === obj.id} onClick={() => setSelectedObj(obj)} />
             </group>
           );
         }
@@ -3616,7 +3647,42 @@ Devuelve estricta y únicamente el array JSON.`;
             </Scene3DBoundary>
           </div>
         
-
+        {/* Selector de altura para juego aereo cuando el balon esta seleccionado */}
+      {selectedObj && selectedObj.type === 'ball' && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-4 py-2 rounded-xl backdrop-blur-md border border-slate-700 flex items-center gap-3 shadow-2xl">
+          <span className="text-xs font-semibold text-slate-300">Altura Balon:</span>
+          <button
+            type="button"
+            onClick={() => {
+              setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 0 } : o));
+              setSelectedObj((prev) => ({ ...prev, elevation: 0 }));
+            }}
+            className={`px-3 py-1 text-xs rounded-lg font-medium transition ${(!selectedObj.elevation || selectedObj.elevation === 0) ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+          >
+            Piso (0m)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 1.8 } : o));
+              setSelectedObj((prev) => ({ ...prev, elevation: 1.8 }));
+            }}
+            className={`px-3 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 1.8 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+          >
+            Cabeza (1.8m)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 2.8 } : o));
+              setSelectedObj((prev) => ({ ...prev, elevation: 2.8 }));
+            }}
+            className={`px-3 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 2.8 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+          >
+            Aereo (2.8m)
+          </button>
+        </div>
+      )}
         {/* MODAL INSERTAR TEXTO TÁCTICO */}
         {textModalOpen && (
           <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
