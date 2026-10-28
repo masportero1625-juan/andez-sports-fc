@@ -2586,11 +2586,11 @@ const camFov = isPC ? 45 : 55;
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
             >
-              {/* Hitbox invisible ampliada para selección táctil del balón. */}
-              <mesh position={[0, 0.9, 0]}>
-                <sphereGeometry args={[1.4, 12, 10]} />
-                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-              </mesh>
+              {/* Hitbox vertical integral: permite arrastrar el balón tanto en el piso como en el aire */}
+    <mesh position={[0, 2.0, 0]}>
+      <cylinderGeometry args={[1.6, 1.6, 4.2, 12]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
               <Ball3D position={obj} isSelected={selectedObj?.id === obj.id} onClick={() => setSelectedObj(obj)} />
             </group>
           );
@@ -3647,19 +3647,19 @@ Devuelve estricta y únicamente el array JSON.`;
             </Scene3DBoundary>
           </div>
         
-        {/* Selector de altura para juego aereo cuando el balon esta seleccionado */}
+        {/* Selector de altura y gestion del balon seleccionado */}
       {selectedObj && selectedObj.type === 'ball' && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-4 py-2 rounded-xl backdrop-blur-md border border-slate-700 flex items-center gap-3 shadow-2xl">
-          <span className="text-xs font-semibold text-slate-300">Altura Balon:</span>
+        <div className="fixed bottom-16 left-4 md:left-6 z-50 bg-slate-900/95 text-white px-3 py-2 rounded-xl backdrop-blur-md border border-slate-700 flex items-center gap-2 shadow-2xl">
+          <span className="text-xs font-semibold text-amber-400">Balón:</span>
           <button
             type="button"
             onClick={() => {
               setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 0 } : o));
               setSelectedObj((prev) => ({ ...prev, elevation: 0 }));
             }}
-            className={`px-3 py-1 text-xs rounded-lg font-medium transition ${(!selectedObj.elevation || selectedObj.elevation === 0) ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition ${(!selectedObj.elevation || selectedObj.elevation === 0) ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
           >
-            Piso (0m)
+            Piso
           </button>
           <button
             type="button"
@@ -3667,9 +3667,9 @@ Devuelve estricta y únicamente el array JSON.`;
               setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 1.8 } : o));
               setSelectedObj((prev) => ({ ...prev, elevation: 1.8 }));
             }}
-            className={`px-3 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 1.8 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 1.8 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
           >
-            Cabeza (1.8m)
+            Cabeza
           </button>
           <button
             type="button"
@@ -3677,9 +3677,24 @@ Devuelve estricta y únicamente el array JSON.`;
               setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 2.8 } : o));
               setSelectedObj((prev) => ({ ...prev, elevation: 2.8 }));
             }}
-            className={`px-3 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 2.8 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 2.8 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
           >
-            Aereo (2.8m)
+            Aéreo
+          </button>
+
+          <div className="h-4 w-px bg-slate-700 mx-1" />
+
+          {/* Boton para eliminar UNICAMENTE este balon */}
+          <button
+            type="button"
+            title="Eliminar este balón"
+            onClick={() => {
+              setObjects((prev) => prev.filter((o) => o.id !== selectedObj.id));
+              setSelectedObj(null);
+            }}
+            className="px-2 py-1 text-xs rounded-lg bg-red-600/80 hover:bg-red-600 text-white transition flex items-center gap-1"
+          >
+            Borrar
           </button>
         </div>
       )}
