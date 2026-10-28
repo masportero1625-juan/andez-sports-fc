@@ -1822,18 +1822,30 @@ function getBallTexture() {
   return tex;
 }
 
+// Calculo matematico de parabola aerea (Curva cuadratica tipo Bezier)
+function getParabolicElevation(progress, maxElevation = 2.8) {
+  if (maxElevation <= 0) return 0;
+  // Ecuacion parabolica f(t) = 4 * h * t * (1 - t), donde t va de 0 a 1
+  const t = Math.max(0, Math.min(1, progress));
+  return 4 * maxElevation * t * (1 - t);
+}
+
 function Ball3D({ position, isSelected, onClick }) {
-  // Altura del balón en metros (0 = suelo, hasta 3.5 m para juego aéreo)
-  const altitude = Math.max(0, position?.elevation ?? position?.altitude ?? position?.z ?? 0);
+  // Si el balon trae un progreso de animacion (0 a 1), calcula el vuelo parabolico; de lo contrario usa la altura fija
+  const baseAlt = Math.max(0, position?.elevation ?? position?.altitude ?? position?.z ?? 0);
+  const altitude = position?.animProgress !== undefined 
+    ? getParabolicElevation(position.animProgress, baseAlt || 2.8) 
+    : baseAlt;
+
   const ballTexture = useMemo(() => getBallTexture(), []);
 
-  // La sombra se mantiene en el césped y se atenúa con la altura
+  // La sombra se mantiene en el cesped, se atenua y se achica segun la altura del vuelo
   const shadowOpacity = Math.max(0.12, 0.45 - altitude * 0.09);
   const shadowScale = Math.max(0.55, 1 - altitude * 0.12);
 
   return (
     <group position={[0, 0, 0]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra proyectada fija a ras de césped */}
+      {/* Sombra proyectada fija a ras de cesped */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.015, 0]}
@@ -1849,7 +1861,7 @@ function Ball3D({ position, isSelected, onClick }) {
         />
       </mesh>
 
-      {/* Balón con elevación tridimensional variable */}
+      {/* Balon con elevacion tridimensional variable o vuelo parabolico */}
       <mesh
         castShadow
         position={[0, 0.11 + altitude, 0]}
@@ -3682,7 +3694,28 @@ Devuelve estricta y únicamente el array JSON.`;
           >
             Aéreo
           </button>
-
+          <button
+              type="button"
+              onClick={() => {
+                let t = 0;
+                const interval = setInterval(() => {
+                  t += 0.02;
+                  if (t > 1) {
+                    clearInterval(interval);
+                    setObjects((prev) =>
+                      prev.map((o) => (o.id === selectedObj.id ? { ...o, animProgress: undefined } : o))
+                    );
+                  } else {
+                    setObjects((prev) =>
+                      prev.map((o) => (o.id === selectedObj.id ? { ...o, animProgress: t } : o))
+                    );
+                  }
+                }, 16);
+              }}
+              className="px-2.5 py-1 text-xs rounded-lg font-medium transition bg-amber-500 hover:bg-amber-400 text-black shadow"
+            >
+              Probar Vuelo
+            </button>
           <div className="h-4 w-px bg-slate-700 mx-1" />
 
           {/* Boton para eliminar UNICAMENTE este balon */}
