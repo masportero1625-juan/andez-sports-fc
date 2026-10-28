@@ -2338,27 +2338,17 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
   const mathPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), []);
   const planeIntersect = useMemo(() => new THREE.Vector3(), []);
 
-  // Proyección universal 1:1
-  const toWorld = (obj) => ({ x: obj.x - 52.5, z: obj.y - 34 });
-
-  const handlePointerDown = (e, obj) => {
-    if (!cameraLocked) return;
-    e.stopPropagation();
-    setSelectedObj(obj);
-    dragId.current = obj.id;
-    isDragging.current = true;
-    setActiveDragId(obj.id);
-
-    // Fijar el anclaje exacto del puntero
-    if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
-      dragOffset.current.set(
-        planeIntersect.x - (obj.x - 52.5),
-        0,
-        planeIntersect.z - (obj.y - 34)
-      );
-    } else {
-      dragOffset.current.set(0, 0, 0);
+  // Proyección universal 1:1 (Calibrada para PC horizontal y Celular vertical)
+  const toWorld = (obj) => {
+    if (isPC) {
+      return { x: obj.x - 52.5, z: obj.y - 34 };
     }
+    // En celular: el eje vertical Y (0..105) se mapea al largo X de la cancha 3D (-52.5..+52.5)
+    // y el ancho X (0..68) se mapea al ancho Z (-34..+34)
+    return {
+      x: (obj.y - 52.5),
+      z: (34 - obj.x)
+    };
   };
 
   const handlePointerMove = (e) => {
@@ -3207,10 +3197,19 @@ Devuelve estricta y únicamente el array JSON.`;
 
       {/* CANCHA 2D CON TEXTOS INTERACTIVOS (+ / - / ↻) O VISOR 3D */}
       <main className="flex-1 min-h-0 w-full h-full relative overflow-hidden touch-none bg-black flex items-center justify-center">
-        <div className={`w-full h-full flex items-center justify-center p-2 sm:p-3 ${viewMode === '2d' ? 'flex' : 'hidden'}`}>
+        <div 
+          className={`w-full h-full flex items-center justify-center p-2 sm:p-3 transition-opacity duration-150 ${
+            viewMode === '2d' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none absolute inset-0'
+          }`}
+          style={{ visibility: viewMode === '2d' ? 'visible' : 'hidden' }}
+        >
           <svg
             ref={svgRef}
-            className="w-full h-full max-h-full max-w-full select-none"
+            onPointerDown={handlePitchPointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            className="w-full h-full max-h-full max-w-full touch-none select-none"
             preserveAspectRatio="xMidYMid meet"
             viewBox={isPC ? (pitchMode === 'half' ? "-2 -1 59 70" : "-3 -1 111 70") : (pitchMode === 'half' ? "-1 -2 70 89" : "-1 -2 70 109")}
           >
@@ -3488,7 +3487,12 @@ Devuelve estricta y únicamente el array JSON.`;
             })}
           </svg>
   </div>
-  <div className={`absolute inset-0 ${viewMode === '3d' ? 'block' : 'hidden'}`}>
+  <div 
+    className={`absolute inset-0 transition-opacity duration-150 ${
+      viewMode === '3d' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+    }`}
+    style={{ visibility: viewMode === '3d' ? 'visible' : 'hidden' }}
+  >
             <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl p-2 shadow-2xl flex items-center gap-2">
               <button
                 onClick={() => setCameraLocked(!cameraLocked)}
@@ -3503,7 +3507,7 @@ Devuelve estricta y únicamente el array JSON.`;
             <Scene3DBoundary>
               <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
                 <Canvas
-                  frameloop="always"
+                  frameloop={viewMode === '3d' ? 'always' : 'never'}
                   dpr={[1, 1.5]}
                   shadows
                   gl={{ antialias: true, powerPreference: "high-performance" }}
