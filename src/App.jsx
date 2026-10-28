@@ -2350,7 +2350,25 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       z: (34 - obj.x)
     };
   };
+  const handlePointerDown = (e, obj) => {
+    if (!cameraLocked) return;
+    e.stopPropagation();
+    setSelectedObj(obj);
+    dragId.current = obj.id;
+    isDragging.current = true;
+    setActiveDragId(obj.id);
 
+    // Fijar el anclaje exacto del puntero
+    if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
+      dragOffset.current.set(
+        planeIntersect.x - (isPC ? obj.x - 52.5 : obj.y - 52.5),
+        0,
+        planeIntersect.z - (isPC ? obj.y - 34 : 34 - obj.x)
+      );
+    } else {
+      dragOffset.current.set(0, 0, 0);
+    }
+  };
   const handlePointerMove = (e) => {
     if (!isDragging.current || !dragId.current || !cameraLocked) return;
     e.stopPropagation();
