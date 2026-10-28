@@ -1448,6 +1448,49 @@ function buildGlbGoalkeeperStance(root, fwd) {
   };
 }
 
+function buildGlbFieldPlayerStance(root, fwd = 1) {
+  const bones = {};
+  root.traverse((c) => {
+    if (c.isBone) {
+      const k = glbBoneKey(c.name);
+      if (k) bones[k] = c;
+    }
+  });
+
+  const saved = [];
+  const targets = [];
+  const addMod = (bone, eulerRot) => {
+    if (!bone) return;
+    saved.push({ b: bone, q: bone.quaternion.clone(), p: bone.position.clone() });
+    const targetQ = bone.quaternion.clone().multiply(new THREE.Quaternion().setFromEuler(eulerRot));
+    targets.push({ bone, q: targetQ });
+  };
+
+  // Brazos pegados al torso
+  addMod(bones.leftarm, new THREE.Euler(0, 0, -0.32));
+  addMod(bones.rightarm, new THREE.Euler(0, 0, 0.32));
+
+  // Codos flexionados hacia adelante
+  addMod(bones.leftforearm, new THREE.Euler(0.45 * fwd, 0, -0.2));
+  addMod(bones.rightforearm, new THREE.Euler(0.45 * fwd, 0, 0.2));
+
+  // Semiflexion de rodillas atletica
+  addMod(bones.leftleg, new THREE.Euler(0.12 * fwd, 0, 0));
+  addMod(bones.rightleg, new THREE.Euler(0.12 * fwd, 0, 0));
+
+  return {
+    apply() {
+      targets.forEach((t) => t.bone.quaternion.copy(t.q));
+    },
+    restore() {
+      saved.forEach((s) => {
+        s.b.quaternion.copy(s.q);
+        s.b.position.copy(s.p);
+      });
+    }
+  };
+}
+
 function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   const { scene, animations } = useGLTF(GLB_URL, DRACO_URL);
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
@@ -1461,7 +1504,7 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   const teamSeed = useMemo(() => glbHashStr(jerseyColor), [jerseyColor]);
   const seed = useMemo(() => glbHashStr(`${jerseyColor}|${number}`), [jerseyColor, number]);
 
-  // 1. Contextura según rol / dorsal (más una pequeña variación individual)
+  // 1. Contextura segun rol / dorsal
   const customScale = useMemo(() => {
     const p = glbBodyProfile(role, n, seed);
     const base = norm.scale;
@@ -1482,15 +1525,18 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
     return () => { if (mixer) mixer.stopAllAction(); };
   }, [actions, mixer]);
 
-  // 2. Postura de expectativa del arquero (se calcula una vez sobre la pose congelada y se reimpone tras el mixer)
+  // 2. Postura atletica (arquero y jugadores de campo)
   const stanceRef = useRef(null);
   useEffect(() => {
     stanceRef.current = null;
-    if (!isGK) return undefined;
     let stance = null;
     try {
       clone.updateMatrixWorld(true);
-      stance = buildGlbGoalkeeperStance(clone, kit.fwd);
+      if (isGK) {
+        stance = buildGlbGoalkeeperStance(clone, kit.fwd);
+      } else {
+        stance = buildGlbFieldPlayerStance(clone, kit.fwd);
+      }
     } catch (e) { stance = null; }
     stanceRef.current = stance;
     return () => {
