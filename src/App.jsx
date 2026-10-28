@@ -2449,8 +2449,14 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     if (!isDragging.current || !dragId.current || !cameraLocked) return;
     e.stopPropagation();
 
+    // 1. Obtener la altura del objeto que se esta arrastrando (0 si es jugador o balon en piso)
+    const activeObj = objects.find((o) => o.id === dragId.current);
+    const objAlt = activeObj?.elevation || activeObj?.altitude || activeObj?.z || 0;
+
+    // 2. Ajustar el plano matematico a la altura real del objeto para que el zoom no desvie el puntero
+    mathPlane.constant = -objAlt;
+
     if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
-      // Arrastre continuo y suave sin saltos escalonados
       const targetWorldX = planeIntersect.x - dragOffset.current.x;
       const targetWorldZ = planeIntersect.z - dragOffset.current.z;
 
