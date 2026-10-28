@@ -1054,6 +1054,7 @@ const GLB_RE_SHORTS = /short|pant|bottom|trouser|jean|bermuda/;
 const GLB_RE_HAIR = /hair|pelo|cabello/;
 const GLB_RE_SKIN = /body|skin|head|face|arm|hand|leg|cuerpo|piel/;
 function glbClassify(label) {
+  if (/eye|iris|cornea|pupil|ojo/i.test(label)) return 'eye';
   if (GLB_RE_SHIRT.test(label)) return 'shirt';
   if (GLB_RE_SHORTS.test(label)) return 'shorts';
   if (GLB_RE_HAIR.test(label)) return 'hair';
@@ -1566,13 +1567,20 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
             mat.color.set(baseHex);
           }
         } else if (kind === 'hair') {
-          const avgLuma = glbTintTowards(mat, hairColor, 0.4, 4);
-          if (avgLuma < 0.2) mat.emissive.set(hairColor).multiplyScalar(0.45);
-          mat.roughness = 0.95;
-        } else if (kind === 'skin') {
-          glbTintTowards(mat, skinColor);
-          mat.roughness = 0.85;
-        }
+        const avgLuma = glbTintTowards(mat, hairColor, 0.4, 4);
+        if (avgLuma < 0.2) mat.emissive.set(hairColor).multiplyScalar(0.45);
+        mat.roughness = 0.9;
+      } else if (kind === 'eye') {
+        // Ojos realistas: esclerótica clara con brillo corneal vivo
+        if (mat.color) mat.color.set('#f8fafc');
+        mat.roughness = 0.1;
+        mat.metalness = 0.1;
+      } else if (kind === 'skin') {
+        glbTintTowards(mat, skinColor);
+        // Piel humana PBR: dispersión suave sin brillo plástico
+        mat.roughness = 0.65;
+        mat.metalness = 0.05;
+      }
         mat.needsUpdate = true;
         return mat;
       });
