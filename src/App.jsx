@@ -2378,8 +2378,15 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       const targetWorldX = planeIntersect.x - dragOffset.current.x;
       const targetWorldZ = planeIntersect.z - dragOffset.current.z;
 
-      const clampedX = Math.max(1, Math.min(104, targetWorldX + 52.5));
-      const clampedY = Math.max(1, Math.min(67, targetWorldZ + 34));
+      let clampedX, clampedY;
+      if (isPC) {
+        clampedX = Math.max(1, Math.min(104, targetWorldX + 52.5));
+        clampedY = Math.max(1, Math.min(67, targetWorldZ + 34));
+      } else {
+        // En celular: inversión simétrica exacta 1:1 con la huella táctil
+        clampedX = Math.max(1, Math.min(67, 34 - targetWorldZ));
+        clampedY = Math.max(1, Math.min(104, targetWorldX + 52.5));
+      }
 
       setObjects((prev) =>
         prev.map((o) =>
