@@ -2907,8 +2907,27 @@ export default function App() {
     setRecordedVideoUrl(null);
     recordedChunksRef.current = [];
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 } });
-      const mr = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      let stream = null;
+
+      // 1. En móviles o en modo 3D, capturar directamente el lienzo WebGL sin pedir pantalla completa
+      const canvasEl = document.querySelector('canvas');
+      if (canvasEl && (viewMode === '3d' || !navigator.mediaDevices?.getDisplayMedia)) {
+        stream = canvasEl.captureStream(30);
+      } else if (navigator.mediaDevices?.getDisplayMedia) {
+        // 2. En PC permite la selección de pantalla/ventana habitual
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 } });
+      }
+
+      if (!stream) {
+        alert('Tu navegador no admite la grabación directa en este modo.');
+        return;
+      }
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+
+      const mr = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mr;
       mr.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
       mr.onstop = () => {
@@ -2920,7 +2939,7 @@ export default function App() {
       mr.start();
       setIsRecording(true);
     } catch (err) {
-      alert('Selecciona la ventana de la pizarra para grabar.');
+      alert('No se pudo iniciar la grabación.');
       setIsRecording(false);
     }
   };
