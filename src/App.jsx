@@ -2653,6 +2653,10 @@ const camFov = isPC ? 45 : 55;
 }
 
 export default function App() {
+  // PUNTO 6: ESTADO Y CONTROL DE SECUENCIA CÍCLICA EN BUCLE
+  const [isLoopPlaying, setIsLoopPlaying] = useState(false);
+  const loopIntervalRef = useRef(null);
+  const initialPositionsRef = useRef(null);
   const [isPC, setIsPC] = useState(window.innerWidth > 768);
   const [viewMode, setViewMode] = useState('2d');
   const [cameraLocked, setCameraLocked] = useState(true);
@@ -3029,7 +3033,75 @@ export default function App() {
     };
     image.src = blobURL;
   };
+  // PUNTO 6: MOTOR DE REPETICIÓN CONTINUA (PC, TABLET Y MÓVIL)
+  const toggleLoopSequence = () => {
+    if (isLoopPlaying) {
+      // Pausar y restablecer posiciones
+      setIsLoopPlaying(false);
+      if (loopIntervalRef.current) clearInterval(loopIntervalRef.current);
+      if (initialPositionsRef.current) {
+        setObjects(initialPositionsRef.current);
+        initialPositionsRef.current = null;
+      }
+      return;
+    }
 
+    // Identificar balón y jugadores para la secuencia
+    const ball = objects.find((o) => o.type === 'ball');
+    const players = objects.filter((o) => o.type === 'player');
+    if (!ball || players.length < 2) {
+      alert('Se requieren al menos 2 jugadores y 1 balón en la cancha para ejecutar la secuencia de pases.');
+      return;
+    }
+
+    // Respaldar posiciones iniciales para poder reiniciar
+    initialPositionsRef.current = JSON.parse(JSON.stringify(objects));
+    setIsLoopPlaying(true);
+
+    let currentIndex = 0;
+    const executePass = () => {
+      const fromPlayer = players[currentIndex % players.length];
+      const nextIndex = (currentIndex + 1) % players.length;
+      const toPlayer = players[nextIndex];
+
+      const startX = fromPlayer.x;
+      const startY = fromPlayer.y;
+      const targetX = toPlayer.x;
+      const targetY = toPlayer.y;
+
+      const maxHeight = 2.8;
+      let t = 0;
+
+      const flightStep = setInterval(() => {
+        t += 0.03;
+        if (t >= 1) {
+          clearInterval(flightStep);
+          setObjects((prev) =>
+            prev.map((o) =>
+              o.type === 'ball'
+                ? { ...o, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
+                : o
+            )
+          );
+          currentIndex = nextIndex;
+          // Espera medio segundo de control del receptor y saca el siguiente pase en bucle continuo
+          loopIntervalRef.current = setTimeout(executePass, 500);
+        } else {
+          const curX = startX + (targetX - startX) * t;
+          const curY = startY + (targetY - startY) * t;
+          setObjects((prev) =>
+            prev.map((o) =>
+              o.type === 'ball'
+                ? { ...o, x: curX, y: curY, elevation: maxHeight, animProgress: t }
+                : o
+            )
+          );
+        }
+      }, 16);
+    };
+
+    executePass();
+  };
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -3287,7 +3359,14 @@ Devuelve estricta y únicamente el array JSON.`;
           )}
 
           <button onClick={() => setShowLibraryModal(true)} className="text-zinc-300 hover:text-amber-400" title="Biblioteca y Gestión"><Folder className="w-5 h-5" /></button>
-          <button onClick={() => setShowSystemsMenu(true)} className="text-zinc-300 hover:text-amber-400" title="Sistemas Tácticos"><Play className="w-5 h-5" /></button>
+          <button
+  type="button"
+  onClick={toggleLoopSequence}
+  className={`transition p-1 rounded ${isLoopPlaying ? 'text-amber-400 animate-pulse bg-amber-500/20' : 'text-zinc-300 hover:text-amber-400'}`}
+  title={isLoopPlaying ? "Pausar Secuencia Cíclica" : "Reproducir Secuencia Cíclica en Bucle"}
+>
+  <Play className={`w-5 h-5 ${isLoopPlaying ? 'fill-amber-400' : ''}`} />
+</button>
           <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} title={`Vista: ${pitchMode === 'full' ? 'Media Cancha' : 'Cancha Entera'}`} className={`p-1 rounded transition ${pitchMode === 'half' ? 'bg-red-600 text-white px-1.5' : 'text-zinc-300 hover:text-amber-400'}`}><RotateCcw className="w-5 h-5" />{pitchMode === 'half' && <span className="text-xs font-bold ml-0.5">1/2</span>}</button>
           
           <button
