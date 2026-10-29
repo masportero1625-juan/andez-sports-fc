@@ -3033,9 +3033,10 @@ export default function App() {
     };
     image.src = blobURL;
   };
-  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE (PISO, CABEZA Y AÉREO 100% ESTABLE PC/MÓVIL)
+  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE DEFINITIVO (PC / MÓVIL 100% ESTABLE)
   const animFlightRef = useRef(null);
   const activeLoopPasserRef = useRef(null);
+  const exerciseModeRef = useRef('piso'); // Memoria inmutable del modo durante todo el bucle
   const currentObjectsRef = useRef(objects);
   currentObjectsRef.current = objects;
 
@@ -3066,8 +3067,19 @@ export default function App() {
       return;
     }
 
+    // Detectar y fijar el modo al presionar Play según el botón activo
+    const initialElev = Number(currentBall.elevation || 0);
+    if (Math.abs(initialElev - 1.8) < 0.3 || Math.abs(initialElev - 1.75) < 0.3) {
+      exerciseModeRef.current = 'cabeza';
+    } else if (initialElev >= 2.4) {
+      exerciseModeRef.current = 'aereo';
+    } else {
+      exerciseModeRef.current = 'piso';
+    }
+
     setIsLoopPlaying(true);
 
+    // Identificar pasador inicial
     let initialPasser = currentPlayers.reduce((prev, curr) => {
       const dPrev = Math.hypot(prev.x - currentBall.x, prev.y - currentBall.y);
       const dCurr = Math.hypot(curr.x - currentBall.x, curr.y - currentBall.y);
@@ -3100,7 +3112,7 @@ export default function App() {
         return;
       }
 
-      // Orientación del pasador en PC y Móvil
+      // Orientación en PC y móvil
       const rot = passer.rotationY || 0;
       const dirX = isPC ? Math.sin(rot) : -Math.cos(rot);
       const dirY = isPC ? Math.cos(rot) : Math.sin(rot);
@@ -3124,12 +3136,7 @@ export default function App() {
       const targetX = bestReceiver.x;
       const targetY = bestReceiver.y;
 
-      // Lectura estricta del modo de juego
-      const currentElev = Number(ball.elevation || 0);
-      const isCabeza = Math.abs(currentElev - 1.8) < 0.3 || Math.abs(currentElev - 1.78) < 0.3;
-      const isAereo = currentElev >= 2.4;
-      const isPiso = !isCabeza && !isAereo;
-
+      const mode = exerciseModeRef.current;
       let t = 0;
 
       animFlightRef.current = setInterval(() => {
@@ -3138,9 +3145,9 @@ export default function App() {
           clearInterval(animFlightRef.current);
           animFlightRef.current = null;
 
-          // Al llegar al receptor:
-          // Cabeza sostiene la altura en 1.78m; Piso y Aéreo descansan en césped (0m)
-          const arrivalElevation = isCabeza ? 1.78 : 0;
+          // En la llegada:
+          // Cabeza sostiene 1.75m en la frente; Aéreo y Piso quedan controlados en el césped (0m)
+          const arrivalElevation = mode === 'cabeza' ? 1.75 : 0;
 
           setObjects((stepObjs) =>
             stepObjs.map((o) =>
@@ -3158,25 +3165,25 @@ export default function App() {
           );
 
           activeLoopPasserRef.current = bestReceiver.id;
+          // Pausa de control táctico (550 ms)
           loopIntervalRef.current = setTimeout(executePass, 550);
         } else {
           const curX = startX + (targetX - startX) * t;
           const curY = startY + (targetY - startY) * t;
 
-          // Parábolas limpias:
-          // - Cabeza: parte en 1.78m, sube suavemente a 1.95m y vuelve a 1.78m sin tocar el piso.
-          // - Aéreo: réplica exacta de Dirigir Vuelo (2.8m con animProgress).
-          // - Piso: rueda a ras de suelo en 0m.
           let elevVal = 0;
           let progressVal = undefined;
 
-          if (isCabeza) {
-            elevVal = 1.78 + 0.18 * (4 * t * (1 - t));
+          if (mode === 'cabeza') {
+            // Curva tensa entre cabezas: base 1.75m con elevación máxima de 1.95m
+            elevVal = 1.75 + 0.20 * (4 * t * (1 - t));
             progressVal = undefined;
-          } else if (isAereo) {
-            elevVal = 2.8;
-            progressVal = t;
+          } else if (mode === 'aereo') {
+            // Centro parabólico limpio sin multiplicar dobles arcos (despega de 0, sube a 2.8 y aterriza en 0)
+            elevVal = 2.8 * (4 * t * (1 - t));
+            progressVal = undefined;
           } else {
+            // Piso: rueda al ras del césped
             elevVal = 0;
             progressVal = undefined;
           }
