@@ -3033,7 +3033,7 @@ export default function App() {
     };
     image.src = blobURL;
   };
-  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE CON ORIENTACIÓN Y ALTURA (PC / MÓVIL)
+  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE (PC / MÓVIL 100% CALIBRADO)
   const animFlightRef = useRef(null);
 
   const stopLoopSequence = () => {
@@ -3065,7 +3065,6 @@ export default function App() {
 
       setIsLoopPlaying(true);
 
-      // Hallar el jugador más cercano al balón para iniciar
       let passer = players.reduce((prev, curr) => {
         const dPrev = Math.hypot(prev.x - ball.x, prev.y - ball.y);
         const dCurr = Math.hypot(curr.x - ball.x, curr.y - ball.y);
@@ -3085,7 +3084,10 @@ export default function App() {
           const currentPasser = freshPlayers.find((p) => p.id === passer.id) || freshPlayers[0];
           const candidateReceivers = freshPlayers.filter((p) => p.id !== currentPasser.id);
 
-          // Buscar el compañero mejor perfilado hacia donde mira el pasador
+          const rot = currentPasser.rotationY || 0;
+          const dirX = isPC ? Math.sin(rot) : -Math.cos(rot);
+          const dirY = isPC ? Math.cos(rot) : Math.sin(rot);
+
           let bestReceiver = candidateReceivers[0];
           let bestDot = -Infinity;
 
@@ -3095,11 +3097,6 @@ export default function App() {
             const dist = Math.hypot(dx, dy) || 1;
             const normX = dx / dist;
             const normY = dy / dist;
-
-            // Vector de dirección según la rotación del cuerpo del jugador
-            const rot = currentPasser.rotationY || 0;
-            const dirX = Math.sin(rot);
-            const dirY = Math.cos(rot);
 
             const dot = normX * dirX + normY * dirY;
             if (dot > bestDot) {
@@ -3113,13 +3110,12 @@ export default function App() {
           const targetX = bestReceiver.x;
           const targetY = bestReceiver.y;
 
-          // Detección de altura según el modo seleccionado (Piso, Cabeza, Aéreo)
-          let maxHeight = 0.05; // Piso
-          if (freshBall.elevation === 'cabeza' || freshBall.elevation === 1.6 || (freshBall.elevation && freshBall.elevation > 1 && freshBall.elevation < 2.2)) {
-            maxHeight = 1.65; // Cabeza
-          } else if (freshBall.elevation === 'aereo' || freshBall.elevation >= 2.5) {
-            maxHeight = 2.8; // Aéreo
-          }
+          const isCabeza = freshBall.elevation === 'cabeza' || freshBall.elevation === 1.6 || (freshBall.elevation > 1 && freshBall.elevation < 2.2);
+          const isAereo = freshBall.elevation === 'aereo' || freshBall.elevation >= 2.5;
+
+          const startElevation = isCabeza ? 1.65 : 0;
+          const endElevation = isCabeza ? 1.65 : 0;
+          const peakHeight = isCabeza ? 2.05 : (isAereo ? 2.8 : 0.05);
 
           let t = 0;
           if (animFlightRef.current) clearInterval(animFlightRef.current);
@@ -3133,7 +3129,7 @@ export default function App() {
               setObjects((stepObjs) =>
                 stepObjs.map((o) =>
                   o.type === 'ball'
-                    ? { ...o, x: targetX, y: targetY, elevation: maxHeight > 0.5 ? maxHeight : 0, animProgress: undefined }
+                    ? { ...o, x: targetX, y: targetY, elevation: endElevation, animProgress: undefined }
                     : o
                 )
               );
@@ -3143,10 +3139,15 @@ export default function App() {
             } else {
               const curX = startX + (targetX - startX) * t;
               const curY = startY + (targetY - startY) * t;
+              const arc = 4 * t * (1 - t);
+              const currentAlt = isCabeza
+                ? startElevation + (peakHeight - startElevation) * arc
+                : peakHeight * arc;
+
               setObjects((stepObjs) =>
                 stepObjs.map((o) =>
                   o.type === 'ball'
-                    ? { ...o, x: curX, y: curY, elevation: maxHeight, animProgress: t }
+                    ? { ...o, x: curX, y: curY, elevation: currentAlt, animProgress: t }
                     : o
                 )
               );
