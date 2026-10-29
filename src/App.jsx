@@ -3110,12 +3110,18 @@ export default function App() {
           const targetX = bestReceiver.x;
           const targetY = bestReceiver.y;
 
-          const isCabeza = freshBall.elevation === 'cabeza' || freshBall.elevation === 1.6 || (freshBall.elevation > 1 && freshBall.elevation < 2.2);
-          const isAereo = freshBall.elevation === 'aereo' || freshBall.elevation >= 2.5;
+          // Detección estricta del tipo de pase
+          const isCabeza =
+            freshBall.elevation === 'cabeza' ||
+            freshBall.elevation === 1.6 ||
+            (typeof freshBall.elevation === 'number' && freshBall.elevation > 1.0 && freshBall.elevation < 2.3);
+          const isAereo =
+            freshBall.elevation === 'aereo' ||
+            (typeof freshBall.elevation === 'number' && freshBall.elevation >= 2.3);
 
-          const startElevation = isCabeza ? 1.65 : 0;
-          const endElevation = isCabeza ? 1.65 : 0;
-          const peakHeight = isCabeza ? 2.05 : (isAereo ? 2.8 : 0.05);
+          const baseHeadAlt = 1.65;
+          const headPeakArc = 0.45; // Arco de bombeo adicional entre cabezas
+          const airPeakAlt = 2.8;
 
           let t = 0;
           if (animFlightRef.current) clearInterval(animFlightRef.current);
@@ -3126,10 +3132,18 @@ export default function App() {
               clearInterval(animFlightRef.current);
               animFlightRef.current = null;
 
+              // En la llegada: queda a la altura exacta de la cabeza (1.65m) sin tocar el césped
               setObjects((stepObjs) =>
                 stepObjs.map((o) =>
                   o.type === 'ball'
-                    ? { ...o, x: targetX, y: targetY, elevation: endElevation, animProgress: undefined }
+                    ? {
+                        ...o,
+                        x: targetX,
+                        y: targetY,
+                        elevation: isCabeza ? baseHeadAlt : 0,
+                        altitude: isCabeza ? baseHeadAlt : 0,
+                        animProgress: undefined
+                      }
                     : o
                 )
               );
@@ -3139,15 +3153,25 @@ export default function App() {
             } else {
               const curX = startX + (targetX - startX) * t;
               const curY = startY + (targetY - startY) * t;
+
+              // Curva matemática: si es cabeza viaja de 1.65m con un arco leve hasta 2.10m y cae a 1.65m
               const arc = 4 * t * (1 - t);
-              const currentAlt = isCabeza
-                ? startElevation + (peakHeight - startElevation) * arc
-                : peakHeight * arc;
+              const currentElevation = isCabeza
+                ? baseHeadAlt + headPeakArc * arc
+                : (isAereo ? airPeakAlt * arc : 0);
 
               setObjects((stepObjs) =>
                 stepObjs.map((o) =>
                   o.type === 'ball'
-                    ? { ...o, x: curX, y: curY, elevation: currentAlt, animProgress: t }
+                    ? {
+                        ...o,
+                        x: curX,
+                        y: curY,
+                        elevation: currentElevation,
+                        altitude: currentElevation,
+                        // Evita que la función visual anule la altura base en t=0 o t=1
+                        animProgress: isCabeza ? undefined : t
+                      }
                     : o
                 )
               );
