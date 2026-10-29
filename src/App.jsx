@@ -3033,11 +3033,13 @@ export default function App() {
     };
     image.src = blobURL;
   };
-  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE (PISO, CABEZA Y AÉREO 100% CALIBRADO)
+  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE (PISO, CABEZA Y AÉREO 100% ESTABLE PC/MÓVIL)
   const animFlightRef = useRef(null);
+  const activeLoopPasserRef = useRef(null);
 
   const stopLoopSequence = () => {
     setIsLoopPlaying(false);
+    activeLoopPasserRef.current = null;
     if (loopIntervalRef.current) {
       clearTimeout(loopIntervalRef.current);
       loopIntervalRef.current = null;
@@ -3054,144 +3056,141 @@ export default function App() {
       return;
     }
 
-    setObjects((current) => {
-      const ball = current.find((o) => o.type === 'ball');
-      const players = current.filter((o) => o.type === 'player');
+    const currentBall = objects.find((o) => o.type === 'ball');
+    const currentPlayers = objects.filter((o) => o.type === 'player');
 
-      if (!ball || players.length < 2) {
-        alert('Se requieren al menos 2 jugadores y 1 balón en la cancha para ejecutar la secuencia.');
-        return current;
+    if (!currentBall || currentPlayers.length < 2) {
+      alert('Se requieren al menos 2 jugadores y 1 balón en la cancha para ejecutar la secuencia.');
+      return;
+    }
+
+    setIsLoopPlaying(true);
+
+    // Jugador más cercano al balón para el primer pase
+    let initialPasser = currentPlayers.reduce((prev, curr) => {
+      const dPrev = Math.hypot(prev.x - currentBall.x, prev.y - currentBall.y);
+      const dCurr = Math.hypot(curr.x - currentBall.x, curr.y - currentBall.y);
+      return dCurr < dPrev ? curr : prev;
+    }, currentPlayers[0]);
+
+    activeLoopPasserRef.current = initialPasser.id;
+
+    const executePass = () => {
+      // 1. Limpieza absoluta de temporizadores previos (evita aceleraciones en móvil)
+      if (animFlightRef.current) {
+        clearInterval(animFlightRef.current);
+        animFlightRef.current = null;
       }
 
-      setIsLoopPlaying(true);
+      setObjects((latest) => {
+        const ball = latest.find((o) => o.type === 'ball');
+        const players = latest.filter((o) => o.type === 'player');
 
-      // Jugador más cercano al balón para comenzar
-      let passer = players.reduce((prev, curr) => {
-        const dPrev = Math.hypot(prev.x - ball.x, prev.y - ball.y);
-        const dCurr = Math.hypot(curr.x - ball.x, curr.y - ball.y);
-        return dCurr < dPrev ? curr : prev;
-      }, players[0]);
+        if (!ball || players.length < 2) {
+          stopLoopSequence();
+          return latest;
+        }
 
-      const executePass = () => {
-        setObjects((freshObjs) => {
-          const freshBall = freshObjs.find((o) => o.type === 'ball');
-          const freshPlayers = freshObjs.filter((o) => o.type === 'player');
+        const passerId = activeLoopPasserRef.current || players[0].id;
+        const passer = players.find((p) => p.id === passerId) || players[0];
+        const candidateReceivers = players.filter((p) => p.id !== passer.id);
 
-          if (!freshBall || freshPlayers.length < 2) {
-            stopLoopSequence();
-            return freshObjs;
+        if (candidateReceivers.length === 0) {
+          stopLoopSequence();
+          return latest;
+        }
+
+        // Vector de orientación del pasador (calibrado para PC y móvil)
+        const rot = passer.rotationY || 0;
+        const dirX = isPC ? Math.sin(rot) : -Math.cos(rot);
+        const dirY = isPC ? Math.cos(rot) : Math.sin(rot);
+
+        // Selección del compañero alineado con la mirada del pasador
+        let bestReceiver = candidateReceivers[0];
+        let bestDot = -Infinity;
+
+        candidateReceivers.forEach((p) => {
+          const dx = p.x - passer.x;
+          const dy = p.y - passer.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const dot = (dx / dist) * dirX + (dy / dist) * dirY;
+          if (dot > bestDot) {
+            bestDot = dot;
+            bestReceiver = p;
           }
-
-          const currentPasser = freshPlayers.find((p) => p.id === passer.id) || freshPlayers[0];
-          const candidateReceivers = freshPlayers.filter((p) => p.id !== currentPasser.id);
-
-          // Vector de orientación del pasador (PC y Móvil)
-          const rot = currentPasser.rotationY || 0;
-          const dirX = isPC ? Math.sin(rot) : -Math.cos(rot);
-          const dirY = isPC ? Math.cos(rot) : Math.sin(rot);
-
-          // Receptor al que apunta directamente con su cuerpo
-          let bestReceiver = candidateReceivers[0];
-          let bestDot = -Infinity;
-
-          candidateReceivers.forEach((p) => {
-            const dx = p.x - currentPasser.x;
-            const dy = p.y - currentPasser.y;
-            const dist = Math.hypot(dx, dy) || 1;
-            const dot = (dx / dist) * dirX + (dy / dist) * dirY;
-            if (dot > bestDot) {
-              bestDot = dot;
-              bestReceiver = p;
-            }
-          });
-
-          const startX = freshBall.x;
-          const startY = freshBall.y;
-          const targetX = bestReceiver.x;
-          const targetY = bestReceiver.y;
-
-          // Modos oficiales según botones: Piso (0), Cabeza (1.8), Aéreo (2.8)
-          const currentElev = Number(freshBall.elevation || 0);
-          const isPiso = currentElev === 0;
-          const isCabeza = Math.abs(currentElev - 1.8) < 0.3;
-          const isAereo = currentElev >= 2.4;
-
-          let t = 0;
-          if (animFlightRef.current) clearInterval(animFlightRef.current);
-
-          animFlightRef.current = setInterval(() => {
-            t += 0.035;
-            if (t >= 1) {
-              clearInterval(animFlightRef.current);
-              animFlightRef.current = null;
-
-              // En la llegada: preserva el modo exacto
-              const finalElev = isCabeza ? 1.8 : (isAereo ? 2.8 : 0);
-
-              setObjects((stepObjs) =>
-                stepObjs.map((o) =>
-                  o.type === 'ball'
-                    ? {
-                        ...o,
-                        x: targetX,
-                        y: targetY,
-                        elevation: finalElev,
-                        altitude: finalElev,
-                        animProgress: undefined
-                      }
-                    : o
-                )
-              );
-
-              passer = bestReceiver;
-              loopIntervalRef.current = setTimeout(executePass, 500);
-            } else {
-              const curX = startX + (targetX - startX) * t;
-              const curY = startY + (targetY - startY) * t;
-              const arc = 4 * t * (1 - t);
-
-              // Altura en vuelo:
-              // 1. Piso: 0 constante (rueda por el césped)
-              // 2. Cabeza: 1.8 base + suave arco de bombeo aéreo (hasta 2.2m) sin descender jamás al suelo
-              // 3. Aéreo: centro parabólico de 0 a 2.8m con caída al pie
-              let curElev = 0;
-              let animProgVal = undefined;
-
-              if (isPiso) {
-                curElev = 0;
-                animProgVal = undefined;
-              } else if (isCabeza) {
-                curElev = 1.8 + 0.45 * arc;
-                animProgVal = undefined; // Sin animProgress para que Three.js use curElev directamente a la altura de la frente
-              } else if (isAereo) {
-                curElev = 2.8;
-                animProgVal = t; // Parábola completa de centro aéreo
-              }
-
-              setObjects((stepObjs) =>
-                stepObjs.map((o) =>
-                  o.type === 'ball'
-                    ? {
-                        ...o,
-                        x: curX,
-                        y: curY,
-                        elevation: curElev,
-                        altitude: curElev,
-                        animProgress: animProgVal
-                      }
-                    : o
-                )
-              );
-            }
-          }, 16);
-
-          return freshObjs;
         });
-      };
 
-      loopIntervalRef.current = setTimeout(executePass, 200);
-      return current;
-    });
+        // Configuración física según modo activo (Piso, Cabeza, Aéreo)
+        const currentElev = Number(ball.elevation || 0);
+        const isCabeza = Math.abs(currentElev - 1.8) < 0.3 || Math.abs(currentElev - 1.72) < 0.3;
+        const isAereo = currentElev >= 2.4;
+
+        const startX = ball.x;
+        const startY = ball.y;
+        const targetX = bestReceiver.x;
+        const targetY = bestReceiver.y;
+
+        // Calibración visual: cabeza a 1.72m de la frente; aéreo arco de 2.8m que inicia y aterriza en 0m
+        const baseElevation = isCabeza ? 1.72 : 0;
+        const arcPeak = isCabeza ? 0.25 : (isAereo ? 2.8 : 0);
+
+        let t = 0;
+
+        // El intervalo corre fuera de closures de mutación múltiple
+        animFlightRef.current = setInterval(() => {
+          t += 0.035;
+          if (t >= 1) {
+            clearInterval(animFlightRef.current);
+            animFlightRef.current = null;
+
+            // Llegada exacta: en Cabeza se sostiene en 1.72m; en Aéreo o Piso descansa en césped (0m)
+            setObjects((stepObjs) =>
+              stepObjs.map((o) =>
+                o.type === 'ball'
+                  ? {
+                      ...o,
+                      x: targetX,
+                      y: targetY,
+                      elevation: baseElevation,
+                      altitude: baseElevation,
+                      animProgress: undefined
+                    }
+                  : o
+              )
+            );
+
+            // Turno del receptor como nuevo pasador
+            activeLoopPasserRef.current = bestReceiver.id;
+            // Pausa táctica de control (550 ms) antes del siguiente toque
+            loopIntervalRef.current = setTimeout(executePass, 550);
+          } else {
+            const curX = startX + (targetX - startX) * t;
+            const curY = startY + (targetY - startY) * t;
+            const parabola = 4 * t * (1 - t);
+            const curElev = baseElevation + arcPeak * parabola;
+
+            setObjects((stepObjs) =>
+              stepObjs.map((o) =>
+                o.type === 'ball'
+                  ? {
+                      ...o,
+                      x: curX,
+                      y: curY,
+                      elevation: curElev,
+                      altitude: curElev,
+                      animProgress: isAereo ? t : undefined
+                    }
+                  : o
+              )
+            );
+          }
+        }, 16);
+
+        return latest;
+      });
+    };
+
+    loopIntervalRef.current = setTimeout(executePass, 200);
   };
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
