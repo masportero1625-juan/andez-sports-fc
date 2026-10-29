@@ -3033,74 +3033,100 @@ export default function App() {
     };
     image.src = blobURL;
   };
-  // PUNTO 6: MOTOR DE REPETICIÓN CONTINUA (PC, TABLET Y MÓVIL)
+  // PUNTO 6: MOTOR DE SECUENCIA CÍCLICA AFINADO Y CONTROLABLE (PC / MÓVIL)
+  const animFlightRef = useRef(null);
+
+  const stopLoopSequence = () => {
+    setIsLoopPlaying(false);
+    if (loopIntervalRef.current) {
+      clearTimeout(loopIntervalRef.current);
+      loopIntervalRef.current = null;
+    }
+    if (animFlightRef.current) {
+      clearInterval(animFlightRef.current);
+      animFlightRef.current = null;
+    }
+  };
+
   const toggleLoopSequence = () => {
     if (isLoopPlaying) {
-      // Pausar y restablecer posiciones
-      setIsLoopPlaying(false);
-      if (loopIntervalRef.current) clearInterval(loopIntervalRef.current);
-      if (initialPositionsRef.current) {
-        setObjects(initialPositionsRef.current);
-        initialPositionsRef.current = null;
+      stopLoopSequence();
+      return;
+    }
+
+    setObjects((current) => {
+      const ball = current.find((o) => o.type === 'ball');
+      const players = current.filter((o) => o.type === 'player');
+
+      if (!ball || players.length < 2) {
+        alert('Se requieren al menos 2 jugadores y 1 balón en la cancha para ejecutar la secuencia de pases.');
+        return current;
       }
-      return;
-    }
 
-    // Identificar balón y jugadores para la secuencia
-    const ball = objects.find((o) => o.type === 'ball');
-    const players = objects.filter((o) => o.type === 'player');
-    if (!ball || players.length < 2) {
-      alert('Se requieren al menos 2 jugadores y 1 balón en la cancha para ejecutar la secuencia de pases.');
-      return;
-    }
+      setIsLoopPlaying(true);
+      let targetIdx = 1;
 
-    // Respaldar posiciones iniciales para poder reiniciar
-    initialPositionsRef.current = JSON.parse(JSON.stringify(objects));
-    setIsLoopPlaying(true);
+      const executeNextPass = () => {
+        setObjects((freshObjs) => {
+          const currentBall = freshObjs.find((o) => o.type === 'ball');
+          const currentPlayers = freshObjs.filter((o) => o.type === 'player');
 
-    let currentIndex = 0;
-    const executePass = () => {
-      const fromPlayer = players[currentIndex % players.length];
-      const nextIndex = (currentIndex + 1) % players.length;
-      const toPlayer = players[nextIndex];
+          if (!currentBall || currentPlayers.length < 2) {
+            stopLoopSequence();
+            return freshObjs;
+          }
 
-      const startX = fromPlayer.x;
-      const startY = fromPlayer.y;
-      const targetX = toPlayer.x;
-      const targetY = toPlayer.y;
+          const targetPlayer = currentPlayers[targetIdx % currentPlayers.length];
+          const startX = currentBall.x;
+          const startY = currentBall.y;
+          const targetX = targetPlayer.x;
+          const targetY = targetPlayer.y;
 
-      const maxHeight = 2.8;
-      let t = 0;
+          // Si el balón tiene elevación asignada vuela con parábola, sino va a ras de suelo
+          const isAir = (currentBall.elevation || 0) > 0.5;
+          const maxHeight = isAir ? 2.8 : 0.05;
 
-      const flightStep = setInterval(() => {
-        t += 0.03;
-        if (t >= 1) {
-          clearInterval(flightStep);
-          setObjects((prev) =>
-            prev.map((o) =>
-              o.type === 'ball'
-                ? { ...o, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
-                : o
-            )
-          );
-          currentIndex = nextIndex;
-          // Espera medio segundo de control del receptor y saca el siguiente pase en bucle continuo
-          loopIntervalRef.current = setTimeout(executePass, 500);
-        } else {
-          const curX = startX + (targetX - startX) * t;
-          const curY = startY + (targetY - startY) * t;
-          setObjects((prev) =>
-            prev.map((o) =>
-              o.type === 'ball'
-                ? { ...o, x: curX, y: curY, elevation: maxHeight, animProgress: t }
-                : o
-            )
-          );
-        }
-      }, 16);
-    };
+          let t = 0;
+          if (animFlightRef.current) clearInterval(animFlightRef.current);
 
-    executePass();
+          animFlightRef.current = setInterval(() => {
+            t += 0.03;
+            if (t >= 1) {
+              clearInterval(animFlightRef.current);
+              animFlightRef.current = null;
+
+              setObjects((stepObjs) =>
+                stepObjs.map((o) =>
+                  o.type === 'ball'
+                    ? { ...o, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
+                    : o
+                )
+              );
+
+              targetIdx = (targetIdx + 1) % currentPlayers.length;
+              // Pausa de recepción de 600ms antes del siguiente pase
+              loopIntervalRef.current = setTimeout(executeNextPass, 600);
+            } else {
+              const curX = startX + (targetX - startX) * t;
+              const curY = startY + (targetY - startY) * t;
+              setObjects((stepObjs) =>
+                stepObjs.map((o) =>
+                  o.type === 'ball'
+                    ? { ...o, x: curX, y: curY, elevation: maxHeight, animProgress: t }
+                    : o
+                )
+              );
+            }
+          }, 16);
+
+          return freshObjs;
+        });
+      };
+
+      // Dispara el primer pase
+      loopIntervalRef.current = setTimeout(executeNextPass, 200);
+      return current;
+    });
   };
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
