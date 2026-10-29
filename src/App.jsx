@@ -3033,7 +3033,7 @@ export default function App() {
     };
     image.src = blobURL;
   };
-  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE (PC / MÓVIL 100% CALIBRADO)
+  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE (PISO, CABEZA Y AÉREO 100% CALIBRADO)
   const animFlightRef = useRef(null);
 
   const stopLoopSequence = () => {
@@ -3065,6 +3065,7 @@ export default function App() {
 
       setIsLoopPlaying(true);
 
+      // Jugador más cercano al balón para comenzar
       let passer = players.reduce((prev, curr) => {
         const dPrev = Math.hypot(prev.x - ball.x, prev.y - ball.y);
         const dCurr = Math.hypot(curr.x - ball.x, curr.y - ball.y);
@@ -3084,10 +3085,12 @@ export default function App() {
           const currentPasser = freshPlayers.find((p) => p.id === passer.id) || freshPlayers[0];
           const candidateReceivers = freshPlayers.filter((p) => p.id !== currentPasser.id);
 
+          // Vector de orientación del pasador (PC y Móvil)
           const rot = currentPasser.rotationY || 0;
           const dirX = isPC ? Math.sin(rot) : -Math.cos(rot);
           const dirY = isPC ? Math.cos(rot) : Math.sin(rot);
 
+          // Receptor al que apunta directamente con su cuerpo
           let bestReceiver = candidateReceivers[0];
           let bestDot = -Infinity;
 
@@ -3095,10 +3098,7 @@ export default function App() {
             const dx = p.x - currentPasser.x;
             const dy = p.y - currentPasser.y;
             const dist = Math.hypot(dx, dy) || 1;
-            const normX = dx / dist;
-            const normY = dy / dist;
-
-            const dot = normX * dirX + normY * dirY;
+            const dot = (dx / dist) * dirX + (dy / dist) * dirY;
             if (dot > bestDot) {
               bestDot = dot;
               bestReceiver = p;
@@ -3110,18 +3110,11 @@ export default function App() {
           const targetX = bestReceiver.x;
           const targetY = bestReceiver.y;
 
-          // Detección estricta del tipo de pase
-          const isCabeza =
-            freshBall.elevation === 'cabeza' ||
-            freshBall.elevation === 1.6 ||
-            (typeof freshBall.elevation === 'number' && freshBall.elevation > 1.0 && freshBall.elevation < 2.3);
-          const isAereo =
-            freshBall.elevation === 'aereo' ||
-            (typeof freshBall.elevation === 'number' && freshBall.elevation >= 2.3);
-
-          const baseHeadAlt = 1.65;
-          const headPeakArc = 0.45; // Arco de bombeo adicional entre cabezas
-          const airPeakAlt = 2.8;
+          // Modos oficiales según botones: Piso (0), Cabeza (1.8), Aéreo (2.8)
+          const currentElev = Number(freshBall.elevation || 0);
+          const isPiso = currentElev === 0;
+          const isCabeza = Math.abs(currentElev - 1.8) < 0.3;
+          const isAereo = currentElev >= 2.4;
 
           let t = 0;
           if (animFlightRef.current) clearInterval(animFlightRef.current);
@@ -3132,7 +3125,9 @@ export default function App() {
               clearInterval(animFlightRef.current);
               animFlightRef.current = null;
 
-              // En la llegada: queda a la altura exacta de la cabeza (1.65m) sin tocar el césped
+              // En la llegada: preserva el modo exacto
+              const finalElev = isCabeza ? 1.8 : (isAereo ? 2.8 : 0);
+
               setObjects((stepObjs) =>
                 stepObjs.map((o) =>
                   o.type === 'ball'
@@ -3140,8 +3135,8 @@ export default function App() {
                         ...o,
                         x: targetX,
                         y: targetY,
-                        elevation: isCabeza ? baseHeadAlt : 0,
-                        altitude: isCabeza ? baseHeadAlt : 0,
+                        elevation: finalElev,
+                        altitude: finalElev,
                         animProgress: undefined
                       }
                     : o
@@ -3153,12 +3148,25 @@ export default function App() {
             } else {
               const curX = startX + (targetX - startX) * t;
               const curY = startY + (targetY - startY) * t;
-
-              // Curva matemática: si es cabeza viaja de 1.65m con un arco leve hasta 2.10m y cae a 1.65m
               const arc = 4 * t * (1 - t);
-              const currentElevation = isCabeza
-                ? baseHeadAlt + headPeakArc * arc
-                : (isAereo ? airPeakAlt * arc : 0);
+
+              // Altura en vuelo:
+              // 1. Piso: 0 constante (rueda por el césped)
+              // 2. Cabeza: 1.8 base + suave arco de bombeo aéreo (hasta 2.2m) sin descender jamás al suelo
+              // 3. Aéreo: centro parabólico de 0 a 2.8m con caída al pie
+              let curElev = 0;
+              let animProgVal = undefined;
+
+              if (isPiso) {
+                curElev = 0;
+                animProgVal = undefined;
+              } else if (isCabeza) {
+                curElev = 1.8 + 0.45 * arc;
+                animProgVal = undefined; // Sin animProgress para que Three.js use curElev directamente a la altura de la frente
+              } else if (isAereo) {
+                curElev = 2.8;
+                animProgVal = t; // Parábola completa de centro aéreo
+              }
 
               setObjects((stepObjs) =>
                 stepObjs.map((o) =>
@@ -3167,10 +3175,9 @@ export default function App() {
                         ...o,
                         x: curX,
                         y: curY,
-                        elevation: currentElevation,
-                        altitude: currentElevation,
-                        // Evita que la función visual anule la altura base en t=0 o t=1
-                        animProgress: isCabeza ? undefined : t
+                        elevation: curElev,
+                        altitude: curElev,
+                        animProgress: animProgVal
                       }
                     : o
                 )
