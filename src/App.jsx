@@ -3716,7 +3716,7 @@ Devuelve estricta y únicamente el array JSON.`;
                     const startX = currentBall.x;
                     const startY = currentBall.y;
 
-                    // Detección de orientación de cancha: PC vs Móvil
+                    // Inversa matemática exacta 1:1 de toWorld
                     const isDesk = window.innerWidth > 768;
                     let targetX, targetY;
 
@@ -3724,9 +3724,9 @@ Devuelve estricta y únicamente el array JSON.`;
                       targetX = Math.max(1, Math.min(104, pt3D.x + 52.5));
                       targetY = Math.max(1, Math.min(67, pt3D.z + 34));
                     } else {
-                      // Corrección de rotación ortogonal táctil para móvil
-                      targetX = Math.max(1, Math.min(104, pt3D.z + 52.5));
-                      targetY = Math.max(1, Math.min(67, -pt3D.x + 34));
+                      // Inversa exacta para móvil: x = 34 - pt3D.z, y = pt3D.x + 52.5
+                      targetX = Math.max(1, Math.min(67, 34 - pt3D.z));
+                      targetY = Math.max(1, Math.min(104, pt3D.x + 52.5));
                     }
 
                     const maxHeight = 3.2;
