@@ -3716,9 +3716,18 @@ Devuelve estricta y únicamente el array JSON.`;
                     const startX = currentBall.x;
                     const startY = currentBall.y;
 
-                    // Inversa matematica exacta 1:1 de toWorld valida para PC y Movil
-                    const targetX = Math.max(1, Math.min(104, pt3D.x + 52.5));
-                    const targetY = Math.max(1, Math.min(67, pt3D.z + 34));
+                    // Detección de orientación de cancha: PC vs Móvil
+                    const isDesk = window.innerWidth > 768;
+                    let targetX, targetY;
+
+                    if (isDesk) {
+                      targetX = Math.max(1, Math.min(104, pt3D.x + 52.5));
+                      targetY = Math.max(1, Math.min(67, pt3D.z + 34));
+                    } else {
+                      // Corrección de rotación ortogonal táctil para móvil
+                      targetX = Math.max(1, Math.min(104, pt3D.z + 52.5));
+                      targetY = Math.max(1, Math.min(67, -pt3D.x + 34));
+                    }
 
                     const maxHeight = 3.2;
                     let t = 0;
@@ -3761,22 +3770,22 @@ Devuelve estricta y únicamente el array JSON.`;
             >
               Dirigir Vuelo
             </button>
-          <div className="h-4 w-px bg-slate-700 mx-1" />
+            <div className="h-4 w-px bg-slate-700 mx-1" />
 
-          {/* Boton para eliminar UNICAMENTE este balon */}
-          <button
-            type="button"
-            title="Eliminar este balón"
-            onClick={() => {
-              setObjects((prev) => prev.filter((o) => o.id !== selectedObj.id));
-              setSelectedObj(null);
-            }}
-            className="px-2 py-1 text-xs rounded-lg bg-red-600/80 hover:bg-red-600 text-white transition flex items-center gap-1"
-          >
-            Borrar
-          </button>
-        </div>
-      )}
+            {/* Boton para eliminar UNICAMENTE este balon */}
+            <button
+              type="button"
+              title="Eliminar este balón"
+              onClick={() => {
+                setObjects((prev) => prev.filter((o) => o.id !== selectedObj.id));
+                setSelectedObj(null);
+              }}
+              className="px-2 py-1 text-xs rounded-lg bg-red-600/80 hover:bg-red-600 text-white transition flex items-center gap-1"
+            >
+              Borrar
+            </button>
+          </div>
+        )}
         {/* MODAL INSERTAR TEXTO TÁCTICO */}
         {textModalOpen && (
           <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
