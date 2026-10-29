@@ -2497,7 +2497,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
                       // Cálculo de orientación vectorial según la proyección activa
                       newRotY = isPC
                         ? Math.atan2(dx, dy)
-                        : Math.atan2(-dy, dx);
+                        : Math.atan2(dy, -dx);
                     }
                   }
                   return { ...o, x: clampedX, y: clampedY, rotationY: newRotY };
