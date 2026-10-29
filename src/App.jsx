@@ -3698,44 +3698,68 @@ Devuelve estricta y únicamente el array JSON.`;
               type="button"
               onClick={() => {
                 if (!selectedObj) return;
-                const isDesk = window.innerWidth > 768;
-                const startX = selectedObj.x;
-                const startY = selectedObj.y;
-                const targetX = isDesk ? Math.min(100, startX + 22) : startX;
-                const targetY = isDesk ? startY : Math.min(100, startY + 22);
-                const maxHeight = 3.2;
-                let t = 0;
+                const ballId = selectedObj.id;
+                
+                const handleTargetClick = (e) => {
+                  window.removeEventListener('pointerdown', handleTargetClick);
+                  
+                  setObjects((currentObjs) => {
+                    const currentBall = currentObjs.find((o) => o.id === ballId);
+                    if (!currentBall) return currentObjs;
 
-                const interval = setInterval(() => {
-                  t += 0.025;
-                  if (t >= 1) {
-                    clearInterval(interval);
-                    setObjects((prev) =>
-                      prev.map((o) =>
-                        o.id === selectedObj.id
-                          ? { ...o, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
-                          : o
-                      )
-                    );
-                    setSelectedObj((prev) =>
-                      prev ? { ...prev, x: targetX, y: targetY, elevation: 0, animProgress: undefined } : prev
-                    );
-                  } else {
-                    const currentX = startX + (targetX - startX) * t;
-                    const currentY = startY + (targetY - startY) * t;
-                    setObjects((prev) =>
-                      prev.map((o) =>
-                        o.id === selectedObj.id
-                          ? { ...o, x: currentX, y: currentY, elevation: maxHeight, animProgress: t }
-                          : o
-                      )
-                    );
-                  }
-                }, 16);
+                    const startX = currentBall.x;
+                    const startY = currentBall.y;
+                    
+                    const isDesk = window.innerWidth > 768;
+                    const clickX = (e.clientX / window.innerWidth) * (isDesk ? 105 : 68);
+                    const clickY = (e.clientY / window.innerHeight) * (isDesk ? 68 : 105);
+
+                    const targetX = Math.max(2, Math.min(isDesk ? 103 : 66, clickX));
+                    const targetY = Math.max(2, Math.min(isDesk ? 66 : 103, clickY));
+                    const maxHeight = 3.4;
+                    let t = 0;
+
+                    const interval = setInterval(() => {
+                      t += 0.025;
+                      if (t >= 1) {
+                        clearInterval(interval);
+                        setObjects((prev) =>
+                          prev.map((o) =>
+                            o.id === ballId
+                              ? { ...o, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
+                              : o
+                          )
+                        );
+                        setSelectedObj((prev) =>
+                          prev && prev.id === ballId
+                            ? { ...prev, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
+                            : prev
+                        );
+                      } else {
+                        const curX = startX + (targetX - startX) * t;
+                        const curY = startY + (targetY - startY) * t;
+                        setObjects((prev) =>
+                          prev.map((o) =>
+                            o.id === ballId
+                              ? { ...o, x: curX, y: curY, elevation: maxHeight, animProgress: t }
+                              : o
+                          )
+                        );
+                      }
+                    }, 16);
+
+                    return currentObjs;
+                  });
+                };
+
+                setTimeout(() => {
+                  window.addEventListener('pointerdown', handleTargetClick, { once: true });
+                }, 100);
               }}
-              className="px-2.5 py-1 text-xs rounded-lg font-medium transition bg-amber-500 hover:bg-amber-400 text-black shadow"
+              className="px-2.5 py-1 text-xs rounded-lg font-medium transition bg-amber-500 hover:bg-amber-400 text-black shadow animate-pulse"
+              title="Presiona y luego toca cualquier parte de la cancha para dirigir el pase aéreo"
             >
-              Probar Vuelo
+              Dirigir Vuelo
             </button>
           <div className="h-4 w-px bg-slate-700 mx-1" />
 
