@@ -3713,19 +3713,12 @@ Devuelve estricta y únicamente el array JSON.`;
                     const currentBall = currentObjs.find((o) => o.id === ballId);
                     if (!currentBall) return currentObjs;
 
-                    const isDesk = window.innerWidth > 768;
                     const startX = currentBall.x;
                     const startY = currentBall.y;
 
-                    // Conversion matemática 1:1 de Three.js (world) a coordenadas tácticas del campo (0-105 / 0-68)
-                    let targetX, targetY;
-                    if (isDesk) {
-                      targetX = Math.max(1, Math.min(104, pt3D.x + 52.5));
-                      targetY = Math.max(1, Math.min(67, pt3D.z + 34));
-                    } else {
-                      targetX = Math.max(1, Math.min(67, pt3D.x + 34));
-                      targetY = Math.max(1, Math.min(104, pt3D.z + 52.5));
-                    }
+                    // Inversa matematica exacta 1:1 de toWorld valida para PC y Movil
+                    const targetX = Math.max(1, Math.min(104, pt3D.x + 52.5));
+                    const targetY = Math.max(1, Math.min(67, pt3D.z + 34));
 
                     const maxHeight = 3.2;
                     let t = 0;
