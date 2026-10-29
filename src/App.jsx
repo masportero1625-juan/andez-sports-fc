@@ -2544,6 +2544,12 @@ const camFov = isPC ? 45 : 55;
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.02, 0]}
+        onPointerDown={(e) => {
+          if (window.__onPickFlightTarget && e.point) {
+            e.stopPropagation();
+            window.__onPickFlightTarget(e.point);
+          }
+        }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
@@ -3700,31 +3706,25 @@ Devuelve estricta y únicamente el array JSON.`;
                 if (!selectedObj) return;
                 const ballId = selectedObj.id;
 
-                const handleDestinationPick = (e) => {
-                  window.removeEventListener('pointerdown', handleDestinationPick);
+                window.__onPickFlightTarget = (pt3D) => {
+                  window.__onPickFlightTarget = null;
 
                   setObjects((currentObjs) => {
                     const currentBall = currentObjs.find((o) => o.id === ballId);
                     if (!currentBall) return currentObjs;
 
+                    const isDesk = window.innerWidth > 768;
                     const startX = currentBall.x;
                     const startY = currentBall.y;
 
-                    // Calibracion milimetrica del rectangulo del visor para PC y Movil
-                    const isDesk = window.innerWidth > 768;
-                    const rect = document.querySelector('canvas')?.getBoundingClientRect() || { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-                    const normX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                    const normY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
+                    // Conversion matemática 1:1 de Three.js (world) a coordenadas tácticas del campo (0-105 / 0-68)
                     let targetX, targetY;
                     if (isDesk) {
-                      // Proyeccion horizontal calibrada para PC
-                      targetX = Math.max(2, Math.min(103, 1 + normX * 103));
-                      targetY = Math.max(2, Math.min(66, 1 + normY * 66));
+                      targetX = Math.max(1, Math.min(104, pt3D.x + 52.5));
+                      targetY = Math.max(1, Math.min(67, pt3D.z + 34));
                     } else {
-                      // Proyeccion simetrica tactil calibrada para Movil
-                      targetX = Math.max(2, Math.min(66, 1 + normX * 66));
-                      targetY = Math.max(2, Math.min(103, 1 + (1 - normY) * 103));
+                      targetX = Math.max(1, Math.min(67, pt3D.x + 34));
+                      targetY = Math.max(1, Math.min(104, pt3D.z + 52.5));
                     }
 
                     const maxHeight = 3.2;
@@ -3762,10 +3762,6 @@ Devuelve estricta y únicamente el array JSON.`;
                     return currentObjs;
                   });
                 };
-
-                setTimeout(() => {
-                  window.addEventListener('pointerdown', handleDestinationPick, { once: true });
-                }, 120);
               }}
               className="px-2.5 py-1 text-xs rounded-lg font-medium transition bg-amber-500 hover:bg-amber-400 text-black shadow animate-pulse"
               title="Toca Dirigir Vuelo y luego pincha el punto exacto de la cancha para enviar el balón"
