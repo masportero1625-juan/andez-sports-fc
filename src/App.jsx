@@ -3786,6 +3786,90 @@ Devuelve estricta y únicamente el array JSON.`;
             </button>
           </div>
         )}
+        {/* PUNTO 4: PANEL FLOTANTE DE ACCIONES Y POSES TÁCTICAS (PC, TABLET, MÓVIL) */}
+        {selectedObj && selectedObj.type === 'player' && (
+          <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-40 bg-zinc-950/90 backdrop-blur-md border border-zinc-700/80 rounded-2xl p-2.5 shadow-2xl flex flex-col gap-2 max-w-[95vw] sm:max-w-md animate-in fade-in duration-200">
+            {/* Cabecera del Jugador / Arquero */}
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5 px-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-3.5 h-3.5 rounded-full border border-white/50"
+                  style={{
+                    backgroundColor:
+                      selectedObj.customColor ||
+                      (selectedObj.role === 'GK'
+                        ? selectedObj.team === 'red'
+                          ? teamColors.gk_away
+                          : teamColors.gk
+                        : selectedObj.team === 'blue'
+                        ? teamColors.blue
+                        : teamColors.red),
+                  }}
+                />
+                <span className="text-xs font-semibold text-zinc-100">
+                  {selectedObj.role === 'GK' ? 'Arquero (GK)' : 'Jugador de Campo'} #{selectedObj.number || selectedObj.id}
+                </span>
+                <span className="text-[10px] text-zinc-400 bg-zinc-800/80 px-1.5 py-0.5 rounded">
+                  Pose: {selectedObj.actionPose || 'Base'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedObj(null)}
+                className="text-zinc-400 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-zinc-800 transition"
+                title="Cerrar menú"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Selector de Acciones Técnicas y Poses */}
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 text-[11px]">
+              {(selectedObj.role === 'GK'
+                ? [
+                    { id: 'idle_gk', label: 'En Espera', icon: '🧤' },
+                    { id: 'ready_gk', label: 'Atento', icon: '⚡' },
+                    { id: 'dive_low', label: 'Estirada Baja', icon: '↙️' },
+                    { id: 'dive_high', label: 'Vuelo Alto', icon: '↗️' },
+                    { id: 'pass_short', label: 'Pase Corto', icon: '👟' },
+                    { id: 'drop_kick', label: 'Saque Volea', icon: '🚀' },
+                  ]
+                : [
+                    { id: 'idle', label: 'Parado', icon: '🧍' },
+                    { id: 'jog', label: 'Trote', icon: '🏃' },
+                    { id: 'sprint', label: 'Sprint', icon: '💨' },
+                    { id: 'pass_short', label: 'Pase Raso', icon: '⚽' },
+                    { id: 'pass_long', label: 'Pase Largo', icon: '🎯' },
+                    { id: 'shot', label: 'Remate', icon: '💥' },
+                    { id: 'header', label: 'Cabezazo', icon: '🤾' },
+                    { id: 'mark', label: 'Perfilado', icon: '🛡️' },
+                  ]
+              ).map((act) => {
+                const isActive = (selectedObj.actionPose || (selectedObj.role === 'GK' ? 'idle_gk' : 'idle')) === act.id;
+                return (
+                  <button
+                    key={act.id}
+                    type="button"
+                    onClick={() => {
+                      setObjects((prev) =>
+                        prev.map((o) => (o.id === selectedObj.id ? { ...o, actionPose: act.id } : o))
+                      );
+                      setSelectedObj((prev) => (prev ? { ...prev, actionPose: act.id } : prev));
+                    }}
+                    className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border font-medium transition ${
+                      isActive
+                        ? 'bg-amber-500 text-black border-amber-400 shadow-md scale-95 font-semibold'
+                        : 'bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 border-zinc-700/60'
+                    }`}
+                  >
+                    <span>{act.icon}</span>
+                    <span>{act.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {/* MODAL INSERTAR TEXTO TÁCTICO */}
         {textModalOpen && (
           <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
