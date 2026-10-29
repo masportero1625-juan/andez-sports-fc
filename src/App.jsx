@@ -3697,17 +3697,38 @@ Devuelve estricta y únicamente el array JSON.`;
           <button
               type="button"
               onClick={() => {
+                if (!selectedObj) return;
+                const isDesk = window.innerWidth > 768;
+                const startX = selectedObj.x;
+                const startY = selectedObj.y;
+                const targetX = isDesk ? Math.min(100, startX + 22) : startX;
+                const targetY = isDesk ? startY : Math.min(100, startY + 22);
+                const maxHeight = 3.2;
                 let t = 0;
+
                 const interval = setInterval(() => {
-                  t += 0.02;
-                  if (t > 1) {
+                  t += 0.025;
+                  if (t >= 1) {
                     clearInterval(interval);
                     setObjects((prev) =>
-                      prev.map((o) => (o.id === selectedObj.id ? { ...o, animProgress: undefined } : o))
+                      prev.map((o) =>
+                        o.id === selectedObj.id
+                          ? { ...o, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
+                          : o
+                      )
+                    );
+                    setSelectedObj((prev) =>
+                      prev ? { ...prev, x: targetX, y: targetY, elevation: 0, animProgress: undefined } : prev
                     );
                   } else {
+                    const currentX = startX + (targetX - startX) * t;
+                    const currentY = startY + (targetY - startY) * t;
                     setObjects((prev) =>
-                      prev.map((o) => (o.id === selectedObj.id ? { ...o, animProgress: t } : o))
+                      prev.map((o) =>
+                        o.id === selectedObj.id
+                          ? { ...o, x: currentX, y: currentY, elevation: maxHeight, animProgress: t }
+                          : o
+                      )
                     );
                   }
                 }, 16);
