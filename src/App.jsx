@@ -2487,10 +2487,22 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       }
 
       setObjects((prev) =>
-        prev.map((o) =>
-          o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o
-        )
-      );
+                prev.map((o) => {
+                  if (o.id !== dragId.current) return o;
+                  let newRotY = o.rotationY || 0;
+                  if (o.type === 'player') {
+                    const dx = clampedX - o.x;
+                    const dy = clampedY - o.y;
+                    if (Math.hypot(dx, dy) > 0.05) {
+                      // Cálculo de orientación vectorial según la proyección activa
+                      newRotY = isPC
+                        ? Math.atan2(dx, dy)
+                        : Math.atan2(-dy, dx);
+                    }
+                  }
+                  return { ...o, x: clampedX, y: clampedY, rotationY: newRotY };
+                })
+              );
     }
   };
 
@@ -2575,6 +2587,7 @@ const camFov = isPC ? 45 : 55;
             <group
               key={obj.id}
               position={[pos.x, 0, pos.z]}
+            rotation={[0, obj.rotationY || 0, 0]}
               onPointerDown={onDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
