@@ -3036,6 +3036,8 @@ export default function App() {
   // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE (PISO, CABEZA Y AÉREO 100% ESTABLE PC/MÓVIL)
   const animFlightRef = useRef(null);
   const activeLoopPasserRef = useRef(null);
+  const currentObjectsRef = useRef(objects);
+  currentObjectsRef.current = objects;
 
   const stopLoopSequence = () => {
     setIsLoopPlaying(false);
@@ -3056,8 +3058,8 @@ export default function App() {
       return;
     }
 
-    const currentBall = objects.find((o) => o.type === 'ball');
-    const currentPlayers = objects.filter((o) => o.type === 'player');
+    const currentBall = currentObjectsRef.current.find((o) => o.type === 'ball');
+    const currentPlayers = currentObjectsRef.current.filter((o) => o.type === 'player');
 
     if (!currentBall || currentPlayers.length < 2) {
       alert('Se requieren al menos 2 jugadores y 1 balón en la cancha para ejecutar la secuencia.');
@@ -3066,7 +3068,6 @@ export default function App() {
 
     setIsLoopPlaying(true);
 
-    // Jugador más cercano al balón para el primer pase
     let initialPasser = currentPlayers.reduce((prev, curr) => {
       const dPrev = Math.hypot(prev.x - currentBall.x, prev.y - currentBall.y);
       const dCurr = Math.hypot(curr.x - currentBall.x, curr.y - currentBall.y);
@@ -3076,118 +3077,126 @@ export default function App() {
     activeLoopPasserRef.current = initialPasser.id;
 
     const executePass = () => {
-      // 1. Limpieza absoluta de temporizadores previos (evita aceleraciones en móvil)
       if (animFlightRef.current) {
         clearInterval(animFlightRef.current);
         animFlightRef.current = null;
       }
 
-      setObjects((latest) => {
-        const ball = latest.find((o) => o.type === 'ball');
-        const players = latest.filter((o) => o.type === 'player');
+      const freshObjs = currentObjectsRef.current;
+      const ball = freshObjs.find((o) => o.type === 'ball');
+      const players = freshObjs.filter((o) => o.type === 'player');
 
-        if (!ball || players.length < 2) {
-          stopLoopSequence();
-          return latest;
+      if (!ball || players.length < 2) {
+        stopLoopSequence();
+        return;
+      }
+
+      const passerId = activeLoopPasserRef.current || players[0].id;
+      const passer = players.find((p) => p.id === passerId) || players[0];
+      const candidateReceivers = players.filter((p) => p.id !== passer.id);
+
+      if (candidateReceivers.length === 0) {
+        stopLoopSequence();
+        return;
+      }
+
+      // Orientación del pasador en PC y Móvil
+      const rot = passer.rotationY || 0;
+      const dirX = isPC ? Math.sin(rot) : -Math.cos(rot);
+      const dirY = isPC ? Math.cos(rot) : Math.sin(rot);
+
+      let bestReceiver = candidateReceivers[0];
+      let bestDot = -Infinity;
+
+      candidateReceivers.forEach((p) => {
+        const dx = p.x - passer.x;
+        const dy = p.y - passer.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const dot = (dx / dist) * dirX + (dy / dist) * dirY;
+        if (dot > bestDot) {
+          bestDot = dot;
+          bestReceiver = p;
         }
-
-        const passerId = activeLoopPasserRef.current || players[0].id;
-        const passer = players.find((p) => p.id === passerId) || players[0];
-        const candidateReceivers = players.filter((p) => p.id !== passer.id);
-
-        if (candidateReceivers.length === 0) {
-          stopLoopSequence();
-          return latest;
-        }
-
-        // Vector de orientación del pasador (calibrado para PC y móvil)
-        const rot = passer.rotationY || 0;
-        const dirX = isPC ? Math.sin(rot) : -Math.cos(rot);
-        const dirY = isPC ? Math.cos(rot) : Math.sin(rot);
-
-        // Selección del compañero alineado con la mirada del pasador
-        let bestReceiver = candidateReceivers[0];
-        let bestDot = -Infinity;
-
-        candidateReceivers.forEach((p) => {
-          const dx = p.x - passer.x;
-          const dy = p.y - passer.y;
-          const dist = Math.hypot(dx, dy) || 1;
-          const dot = (dx / dist) * dirX + (dy / dist) * dirY;
-          if (dot > bestDot) {
-            bestDot = dot;
-            bestReceiver = p;
-          }
-        });
-
-        // Configuración física según modo activo (Piso, Cabeza, Aéreo)
-        const currentElev = Number(ball.elevation || 0);
-        const isCabeza = Math.abs(currentElev - 1.8) < 0.3 || Math.abs(currentElev - 1.72) < 0.3;
-        const isAereo = currentElev >= 2.4;
-
-        const startX = ball.x;
-        const startY = ball.y;
-        const targetX = bestReceiver.x;
-        const targetY = bestReceiver.y;
-
-        // Calibración visual: cabeza a 1.72m de la frente; aéreo arco de 2.8m que inicia y aterriza en 0m
-        const baseElevation = isCabeza ? 1.72 : 0;
-        const arcPeak = isCabeza ? 0.25 : (isAereo ? 2.8 : 0);
-
-        let t = 0;
-
-        // El intervalo corre fuera de closures de mutación múltiple
-        animFlightRef.current = setInterval(() => {
-          t += 0.035;
-          if (t >= 1) {
-            clearInterval(animFlightRef.current);
-            animFlightRef.current = null;
-
-            // Llegada exacta: en Cabeza se sostiene en 1.72m; en Aéreo o Piso descansa en césped (0m)
-            setObjects((stepObjs) =>
-              stepObjs.map((o) =>
-                o.type === 'ball'
-                  ? {
-                      ...o,
-                      x: targetX,
-                      y: targetY,
-                      elevation: baseElevation,
-                      altitude: baseElevation,
-                      animProgress: undefined
-                    }
-                  : o
-              )
-            );
-
-            // Turno del receptor como nuevo pasador
-            activeLoopPasserRef.current = bestReceiver.id;
-            // Pausa táctica de control (550 ms) antes del siguiente toque
-            loopIntervalRef.current = setTimeout(executePass, 550);
-          } else {
-            const curX = startX + (targetX - startX) * t;
-            const curY = startY + (targetY - startY) * t;
-            const parabola = 4 * t * (1 - t);
-            const curElev = baseElevation + arcPeak * parabola;
-
-            setObjects((stepObjs) =>
-              stepObjs.map((o) =>
-                o.type === 'ball'
-                  ? {
-                      ...o,
-                      x: curX,
-                      y: curY,
-                      elevation: curElev,
-                      altitude: curElev,
-                      animProgress: isAereo ? t : undefined
-                    }
-                  : o
-              )
-            );
-          }
-        }, 16);
-
-        return latest;
       });
+
+      const startX = ball.x;
+      const startY = ball.y;
+      const targetX = bestReceiver.x;
+      const targetY = bestReceiver.y;
+
+      // Lectura estricta del modo de juego
+      const currentElev = Number(ball.elevation || 0);
+      const isCabeza = Math.abs(currentElev - 1.8) < 0.3 || Math.abs(currentElev - 1.78) < 0.3;
+      const isAereo = currentElev >= 2.4;
+      const isPiso = !isCabeza && !isAereo;
+
+      let t = 0;
+
+      animFlightRef.current = setInterval(() => {
+        t += 0.03;
+        if (t >= 1) {
+          clearInterval(animFlightRef.current);
+          animFlightRef.current = null;
+
+          // Al llegar al receptor:
+          // Cabeza sostiene la altura en 1.78m; Piso y Aéreo descansan en césped (0m)
+          const arrivalElevation = isCabeza ? 1.78 : 0;
+
+          setObjects((stepObjs) =>
+            stepObjs.map((o) =>
+              o.type === 'ball'
+                ? {
+                    ...o,
+                    x: targetX,
+                    y: targetY,
+                    elevation: arrivalElevation,
+                    altitude: arrivalElevation,
+                    animProgress: undefined
+                  }
+                : o
+            )
+          );
+
+          activeLoopPasserRef.current = bestReceiver.id;
+          loopIntervalRef.current = setTimeout(executePass, 550);
+        } else {
+          const curX = startX + (targetX - startX) * t;
+          const curY = startY + (targetY - startY) * t;
+
+          // Parábolas limpias:
+          // - Cabeza: parte en 1.78m, sube suavemente a 1.95m y vuelve a 1.78m sin tocar el piso.
+          // - Aéreo: réplica exacta de Dirigir Vuelo (2.8m con animProgress).
+          // - Piso: rueda a ras de suelo en 0m.
+          let elevVal = 0;
+          let progressVal = undefined;
+
+          if (isCabeza) {
+            elevVal = 1.78 + 0.18 * (4 * t * (1 - t));
+            progressVal = undefined;
+          } else if (isAereo) {
+            elevVal = 2.8;
+            progressVal = t;
+          } else {
+            elevVal = 0;
+            progressVal = undefined;
+          }
+
+          setObjects((stepObjs) =>
+            stepObjs.map((o) =>
+              o.type === 'ball'
+                ? {
+                    ...o,
+                    x: curX,
+                    y: curY,
+                    elevation: elevVal,
+                    altitude: elevVal,
+                    animProgress: progressVal
+                  }
+                : o
+            )
+          );
+        }
+      }, 16);
     };
 
     loopIntervalRef.current = setTimeout(executePass, 200);
