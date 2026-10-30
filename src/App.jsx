@@ -9,7 +9,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Text, Html, useGLTF, useAnimations, PerspectiveCamera } from '@react-three/drei';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import * as THREE from 'three';
-
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 // CREDENCIALES SUPABASE
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
@@ -1447,50 +1447,32 @@ function buildGlbGoalkeeperStance(root, fwd) {
     }
   };
 }
-
-function buildGlbFieldPlayerStance(root, fwd = 1) {
-  const bones = {};
-  root.traverse((c) => {
-    if (c.isBone) {
-      const k = glbBoneKey(c.name);
-      if (k) bones[k] = c;
+// Catálogo de animaciones FBX de Mixamo
+const FBX_ANIMATIONS = {
+  arquero: {
+    idle: '/animations/arquero/gk_idle_ready.fbx',
+    aerial_catch: '/animations/arquero/gk_aerial_catch.fbx',
+    aerial_save: '/animations/arquero/gk_aerial_save.fbx',
+    body_block: '/animations/arquero/gk_body_block.fbx',
+    diving_low: '/animations/arquero/gk_diving_low_save.fbx',
+    goal_kick: '/animations/arquero/gk_goal_kick.fbx',
+    punt_kick: '/animations/arquero/gk_punt_kick.fbx',
+    scoop_catch: '/animations/arquero/gk_scoop_catch.fbx',
+    short_pass: '/animations/arquero/gk_short_pass.fbx',
+    overhand_throw: '/animations/arquero/gk_overhand_throw.fbx',
+    underhand_throw: '/animations/arquero/gk_underhand_throw.fbx'
+  },
+  campo: {
+      jog: '/campo/field_jog_forward.fbx',
+      sprint: '/campo/field_sprint.fbx',
+      kick_pass: '/campo/field_kick_pass.fbx',
+      shot_power: '/campo/field_shot_power.fbx',
+      strike_motion: '/campo/field_strike_in_motion.fbx',
+      header: '/campo/field_header_jump.fbx',
+      defensive: '/campo/field_defensive_stance.fbx',
+      throw_in: '/campo/field_throw_in.fbx'
     }
-  });
-
-  const saved = [];
-  const targets = [];
-  const addMod = (bone, eulerRot) => {
-    if (!bone) return;
-    saved.push({ b: bone, q: bone.quaternion.clone(), p: bone.position.clone() });
-    const targetQ = bone.quaternion.clone().multiply(new THREE.Quaternion().setFromEuler(eulerRot));
-    targets.push({ bone, q: targetQ });
-  };
-
-  // Brazos pegados al torso
-  addMod(bones.leftarm, new THREE.Euler(0, 0, -0.32));
-  addMod(bones.rightarm, new THREE.Euler(0, 0, 0.32));
-
-  // Codos flexionados hacia adelante
-  addMod(bones.leftforearm, new THREE.Euler(0.45 * fwd, 0, -0.2));
-  addMod(bones.rightforearm, new THREE.Euler(0.45 * fwd, 0, 0.2));
-
-  // Semiflexion de rodillas atletica
-  addMod(bones.leftleg, new THREE.Euler(0.12 * fwd, 0, 0));
-  addMod(bones.rightleg, new THREE.Euler(0.12 * fwd, 0, 0));
-
-  return {
-    apply() {
-      targets.forEach((t) => t.bone.quaternion.copy(t.q));
-    },
-    restore() {
-      saved.forEach((s) => {
-        s.b.quaternion.copy(s.q);
-        s.b.position.copy(s.p);
-      });
-    }
-  };
-}
-
+};
 function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   const { scene, animations } = useGLTF(GLB_URL, DRACO_URL);
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
@@ -1504,39 +1486,47 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
   const teamSeed = useMemo(() => glbHashStr(jerseyColor), [jerseyColor]);
   const seed = useMemo(() => glbHashStr(`${jerseyColor}|${number}`), [jerseyColor, number]);
 
-  // 1. Contextura segun rol / dorsal
+  // 1. Contextura según rol / dorsal (más una pequeña variación individual)
   const customScale = useMemo(() => {
     const p = glbBodyProfile(role, n, seed);
     const base = norm.scale;
     return [base * p.w, base * p.h, base * p.w];
   }, [norm.scale, role, n, seed]);
 
-  // Congelar la pose
+  // Carga y reproducción de animación FBX
   useEffect(() => {
-    const names = Object.keys(actions || {});
-    const action = (actions && actions['mixamo.com']) || (names.length ? actions[names[0]] : null);
-    if (action) {
-      action.reset();
-      action.play();
-      action.paused = true;
-      action.time = GLB_POSE_TIME;
-      if (mixer) mixer.update(0);
-    }
-    return () => { if (mixer) mixer.stopAllAction(); };
-  }, [actions, mixer]);
+    if (!clone || !mixer) return;
+    
+    // Elegimos la animación base: idle para arquero, trote para campo
+    const animPath = isGK ? FBX_ANIMATIONS.arquero.idle : FBX_ANIMATIONS.campo.jog;
+    const loader = new FBXLoader();
 
-  // 2. Postura atletica (arquero y jugadores de campo)
+    let currentAction = null;
+
+    loader.load(animPath, (fbx) => {
+      if (fbx.animations && fbx.animations.length > 0) {
+        const clip = fbx.animations[0];
+        currentAction = mixer.clipAction(clip, clone);
+        currentAction.reset().play();
+      }
+    }, undefined, (err) => {
+      console.warn("No se pudo cargar la animación:", animPath, err);
+    });
+
+    return () => {
+      if (currentAction) currentAction.stop();
+    };
+  }, [clone, mixer, isGK]);
+
+  // 2. Postura de expectativa del arquero (se calcula una vez sobre la pose congelada y se reimpone tras el mixer)
   const stanceRef = useRef(null);
   useEffect(() => {
     stanceRef.current = null;
+    if (!isGK) return undefined;
     let stance = null;
     try {
       clone.updateMatrixWorld(true);
-      if (isGK) {
-        stance = buildGlbGoalkeeperStance(clone, kit.fwd);
-      } else {
-        stance = buildGlbFieldPlayerStance(clone, kit.fwd);
-      }
+      stance = buildGlbGoalkeeperStance(clone, kit.fwd);
     } catch (e) { stance = null; }
     stanceRef.current = stance;
     return () => {
@@ -1822,57 +1812,23 @@ function getBallTexture() {
   return tex;
 }
 
-// Calculo matematico de parabola aerea (Curva cuadratica tipo Bezier)
-function getParabolicElevation(progress, maxElevation = 2.8) {
-  if (maxElevation <= 0) return 0;
-  // Ecuacion parabolica f(t) = 4 * h * t * (1 - t), donde t va de 0 a 1
-  const t = Math.max(0, Math.min(1, progress));
-  return 4 * maxElevation * t * (1 - t);
-}
-
 function Ball3D({ position, isSelected, onClick }) {
-  // Si el balon trae un progreso de animacion (0 a 1), calcula el vuelo parabolico; de lo contrario usa la altura fija
-  const baseAlt = Math.max(0, position?.elevation ?? position?.altitude ?? position?.z ?? 0);
-  const altitude = position?.animProgress !== undefined 
-    ? getParabolicElevation(position.animProgress, baseAlt || 2.8) 
-    : baseAlt;
-
+  const posX = (position?.x ?? 52.5) - 52.5;
+  const posZ = (position?.y ?? 34) - 34;
   const ballTexture = useMemo(() => getBallTexture(), []);
 
-  // La sombra se mantiene en el cesped, se atenua y se achica segun la altura del vuelo
-  const shadowOpacity = Math.max(0.12, 0.45 - altitude * 0.09);
-  const shadowScale = Math.max(0.55, 1 - altitude * 0.12);
-
   return (
-    <group position={[0, 0, 0]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
-      {/* Sombra proyectada fija a ras de cesped */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.015, 0]}
-        scale={[shadowScale, shadowScale, 1]}
-        raycast={() => null}
-      >
-        <circleGeometry args={[0.15, 24]} />
-        <meshBasicMaterial
-          color="#000000"
-          opacity={shadowOpacity}
-          transparent
-          depthWrite={false}
-        />
+    <group position={[posX, 0.11, posZ]} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
+      {/* Sombra proyectada por el balón a escala FIFA */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.10, 0]} raycast={() => null}>
+        <circleGeometry args={[0.14, 16]} />
+        <meshBasicMaterial color="#000000" opacity={0.45} transparent depthWrite={false} />
       </mesh>
 
-      {/* Balon con elevacion tridimensional variable o vuelo parabolico */}
-      <mesh
-        castShadow
-        position={[0, 0.11 + altitude, 0]}
-        rotation={[0.35, 0.6, 0.1]}
-      >
+      {/* Balón reglamentario FIFA (diámetro 22 cm, radio 0.11 m) */}
+      <mesh castShadow rotation={[0.35, 0.6, 0.1]}>
         <sphereGeometry args={[0.11, 32, 24]} />
-        <meshStandardMaterial
-          map={ballTexture}
-          roughness={0.42}
-          metalness={0.02}
-        />
+        <meshStandardMaterial map={ballTexture} roughness={0.42} metalness={0.02} />
       </mesh>
     </group>
   );
@@ -2446,10 +2402,6 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     isDragging.current = true;
     setActiveDragId(obj.id);
 
-    // Ajustar el plano a la altura del objeto antes de calcular el impacto
-    const objAlt = obj?.elevation || obj?.altitude || obj?.z || 0;
-    mathPlane.constant = -objAlt;
-
     // Fijar el anclaje exacto del puntero
     if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
       dragOffset.current.set(
@@ -2465,14 +2417,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     if (!isDragging.current || !dragId.current || !cameraLocked) return;
     e.stopPropagation();
 
-    // 1. Obtener la altura del objeto que se esta arrastrando (0 si es jugador o balon en piso)
-    const activeObj = objects.find((o) => o.id === dragId.current);
-    const objAlt = activeObj?.elevation || activeObj?.altitude || activeObj?.z || 0;
-
-    // 2. Ajustar el plano matematico a la altura real del objeto para que el zoom no desvie el puntero
-    mathPlane.constant = -objAlt;
-
     if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
+      // Arrastre continuo y suave sin saltos escalonados
       const targetWorldX = planeIntersect.x - dragOffset.current.x;
       const targetWorldZ = planeIntersect.z - dragOffset.current.z;
 
@@ -2487,22 +2433,10 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       }
 
       setObjects((prev) =>
-                prev.map((o) => {
-                  if (o.id !== dragId.current) return o;
-                  let newRotY = o.rotationY || 0;
-                  if (o.type === 'player') {
-                    const dx = clampedX - o.x;
-                    const dy = clampedY - o.y;
-                    if (Math.hypot(dx, dy) > 0.05) {
-                      // Cálculo de orientación vectorial según la proyección activa
-                      newRotY = isPC
-                        ? Math.atan2(dx, dy)
-                        : Math.atan2(dy, -dx);
-                    }
-                  }
-                  return { ...o, x: clampedX, y: clampedY, rotationY: newRotY };
-                })
-              );
+        prev.map((o) =>
+          o.id === dragId.current ? { ...o, x: clampedX, y: clampedY } : o
+        )
+      );
     }
   };
 
@@ -2556,12 +2490,6 @@ const camFov = isPC ? 45 : 55;
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.02, 0]}
-        onPointerDown={(e) => {
-          if (window.__onPickFlightTarget && e.point) {
-            e.stopPropagation();
-            window.__onPickFlightTarget(e.point);
-          }
-        }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
@@ -2587,7 +2515,6 @@ const camFov = isPC ? 45 : 55;
             <group
               key={obj.id}
               position={[pos.x, 0, pos.z]}
-            rotation={[0, obj.rotationY || 0, 0]}
               onPointerDown={onDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -2618,12 +2545,12 @@ const camFov = isPC ? 45 : 55;
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
             >
-              {/* Hitbox vertical integral: permite arrastrar el balón tanto en el piso como en el aire */}
-    <mesh position={[0, 2.0, 0]}>
-      <cylinderGeometry args={[1.6, 1.6, 4.2, 12]} />
-      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-    </mesh>
-              <Ball3D position={obj} isSelected={selectedObj?.id === obj.id} onClick={() => setSelectedObj(obj)} />
+              {/* Hitbox invisible ampliada para selección táctil del balón. */}
+              <mesh position={[0, 0.9, 0]}>
+                <sphereGeometry args={[1.4, 12, 10]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
+              <Ball3D position={{ x: obj.x, y: obj.y }} isSelected={selectedObj?.id === obj.id} onClick={() => {}} />
             </group>
           );
         }
@@ -2653,10 +2580,6 @@ const camFov = isPC ? 45 : 55;
 }
 
 export default function App() {
-  // PUNTO 6: ESTADO Y CONTROL DE SECUENCIA CÍCLICA EN BUCLE
-  const [isLoopPlaying, setIsLoopPlaying] = useState(false);
-  const loopIntervalRef = useRef(null);
-  const initialPositionsRef = useRef(null);
   const [isPC, setIsPC] = useState(window.innerWidth > 768);
   const [viewMode, setViewMode] = useState('2d');
   const [cameraLocked, setCameraLocked] = useState(true);
@@ -3033,169 +2956,7 @@ export default function App() {
     };
     image.src = blobURL;
   };
-  // PUNTO 6: MOTOR DE SECUENCIA TÁCTICA INTELIGENTE (BASE ESTABLE 2 Y 3 JUGADORES PC/MÓVIL)
-  const animFlightRef = useRef(null);
-  const exerciseModeRef = useRef('piso');
-  const currentObjectsRef = useRef(objects);
-  currentObjectsRef.current = objects;
 
-  const stopLoopSequence = () => {
-    setIsLoopPlaying(false);
-    if (loopIntervalRef.current) {
-      clearTimeout(loopIntervalRef.current);
-      loopIntervalRef.current = null;
-    }
-    if (animFlightRef.current) {
-      clearInterval(animFlightRef.current);
-      animFlightRef.current = null;
-    }
-  };
-
-  const toggleLoopSequence = () => {
-    if (isLoopPlaying) {
-      stopLoopSequence();
-      return;
-    }
-
-    const currentBall = currentObjectsRef.current.find((o) => o.type === 'ball');
-    const currentPlayers = currentObjectsRef.current.filter((o) => o.type === 'player');
-
-    if (!currentBall || currentPlayers.length < 2) {
-      alert('Se requieren al menos 2 jugadores y 1 balón en la cancha para ejecutar la secuencia.');
-      return;
-    }
-
-    // Fijar el modo de juego según la selección previa
-    const initialElev = Number(currentBall.elevation || 0);
-    if (Math.abs(initialElev - 1.8) < 0.3 || Math.abs(initialElev - 1.76) < 0.3) {
-      exerciseModeRef.current = 'cabeza';
-    } else if (initialElev >= 2.4) {
-      exerciseModeRef.current = 'aereo';
-    } else {
-      exerciseModeRef.current = 'piso';
-    }
-
-    setIsLoopPlaying(true);
-
-    // Pasador inicial: el más cercano a la pelota
-    let passer = currentPlayers.reduce((prev, curr) => {
-      const dPrev = Math.hypot(prev.x - currentBall.x, prev.y - currentBall.y);
-      const dCurr = Math.hypot(curr.x - currentBall.x, curr.y - currentBall.y);
-      return dCurr < dPrev ? curr : prev;
-    }, currentPlayers[0]);
-
-    const executePass = () => {
-      if (animFlightRef.current) {
-        clearInterval(animFlightRef.current);
-        animFlightRef.current = null;
-      }
-
-      const freshObjs = currentObjectsRef.current;
-      const ball = freshObjs.find((o) => o.type === 'ball');
-      const players = freshObjs.filter((o) => o.type === 'player');
-
-      if (!ball || players.length < 2) {
-        stopLoopSequence();
-        return;
-      }
-
-      const currentPasser = players.find((p) => p.id === passer.id) || players[0];
-      const candidateReceivers = players.filter((p) => p.id !== currentPasser.id);
-
-      if (candidateReceivers.length === 0) {
-        stopLoopSequence();
-        return;
-      }
-
-      // La orientación exacta que ya te funcionó en PC y móvil
-      const rot = currentPasser.rotationY || 0;
-      const dirX = isPC ? Math.sin(rot) : -Math.cos(rot);
-      const dirY = isPC ? Math.cos(rot) : Math.sin(rot);
-
-      let bestReceiver = candidateReceivers[0];
-      let bestDot = -Infinity;
-
-      candidateReceivers.forEach((p) => {
-        const dx = p.x - currentPasser.x;
-        const dy = p.y - currentPasser.y;
-        const dist = Math.hypot(dx, dy) || 1;
-        const dot = (dx / dist) * dirX + (dy / dist) * dirY;
-        if (dot > bestDot) {
-          bestDot = dot;
-          bestReceiver = p;
-        }
-      });
-
-      const startX = ball.x;
-      const startY = ball.y;
-      const targetX = bestReceiver.x;
-      const targetY = bestReceiver.y;
-
-      const mode = exerciseModeRef.current;
-      const headHeight = 1.76;
-      let t = 0;
-
-      animFlightRef.current = setInterval(() => {
-        t += 0.03;
-        if (t >= 1) {
-          clearInterval(animFlightRef.current);
-          animFlightRef.current = null;
-
-          // Llegada al receptor
-          const arrivalElevation = mode === 'cabeza' ? headHeight : 0;
-
-          setObjects((stepObjs) =>
-            stepObjs.map((o) =>
-              o.type === 'ball'
-                ? {
-                    ...o,
-                    x: targetX,
-                    y: targetY,
-                    elevation: arrivalElevation,
-                    altitude: arrivalElevation,
-                    animProgress: undefined
-                  }
-                : o
-            )
-          );
-
-          // El receptor toma el balón y es el siguiente pasador
-          passer = bestReceiver;
-          loopIntervalRef.current = setTimeout(executePass, 550);
-        } else {
-          const curX = startX + (targetX - startX) * t;
-          const curY = startY + (targetY - startY) * t;
-
-          let elevVal = 0;
-
-          if (mode === 'cabeza') {
-            elevVal = headHeight + 0.18 * (4 * t * (1 - t));
-          } else if (mode === 'aereo') {
-            elevVal = 2.8 * (4 * t * (1 - t));
-          } else {
-            elevVal = 0;
-          }
-
-          setObjects((stepObjs) =>
-            stepObjs.map((o) =>
-              o.type === 'ball'
-                ? {
-                    ...o,
-                    x: curX,
-                    y: curY,
-                    elevation: elevVal,
-                    altitude: elevVal,
-                    animProgress: undefined
-                  }
-                : o
-            )
-          );
-        }
-      }, 16);
-    };
-
-    loopIntervalRef.current = setTimeout(executePass, 200);
-  };
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -3453,14 +3214,7 @@ Devuelve estricta y únicamente el array JSON.`;
           )}
 
           <button onClick={() => setShowLibraryModal(true)} className="text-zinc-300 hover:text-amber-400" title="Biblioteca y Gestión"><Folder className="w-5 h-5" /></button>
-          <button
-  type="button"
-  onClick={toggleLoopSequence}
-  className={`transition p-1 rounded ${isLoopPlaying ? 'text-amber-400 animate-pulse bg-amber-500/20' : 'text-zinc-300 hover:text-amber-400'}`}
-  title={isLoopPlaying ? "Pausar Secuencia Cíclica" : "Reproducir Secuencia Cíclica en Bucle"}
->
-  <Play className={`w-5 h-5 ${isLoopPlaying ? 'fill-amber-400' : ''}`} />
-</button>
+          <button onClick={() => setShowSystemsMenu(true)} className="text-zinc-300 hover:text-amber-400" title="Sistemas Tácticos"><Play className="w-5 h-5" /></button>
           <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} title={`Vista: ${pitchMode === 'full' ? 'Media Cancha' : 'Cancha Entera'}`} className={`p-1 rounded transition ${pitchMode === 'half' ? 'bg-red-600 text-white px-1.5' : 'text-zinc-300 hover:text-amber-400'}`}><RotateCcw className="w-5 h-5" />{pitchMode === 'half' && <span className="text-xs font-bold ml-0.5">1/2</span>}</button>
           
           <button
@@ -3852,127 +3606,7 @@ Devuelve estricta y únicamente el array JSON.`;
             </Scene3DBoundary>
           </div>
         
-        {/* Selector de altura y gestion del balon seleccionado */}
-      {selectedObj && selectedObj.type === 'ball' && (
-        <div className="fixed bottom-16 left-4 md:left-6 z-50 bg-slate-900/95 text-white px-3 py-2 rounded-xl backdrop-blur-md border border-slate-700 flex items-center gap-2 shadow-2xl">
-          <span className="text-xs font-semibold text-amber-400">Balón:</span>
-          <button
-            type="button"
-            onClick={() => {
-              setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 0 } : o));
-              setSelectedObj((prev) => ({ ...prev, elevation: 0 }));
-            }}
-            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition ${(!selectedObj.elevation || selectedObj.elevation === 0) ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
-          >
-            Piso
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 1.8 } : o));
-              setSelectedObj((prev) => ({ ...prev, elevation: 1.8 }));
-            }}
-            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 1.8 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
-          >
-            Cabeza
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 2.8 } : o));
-              setSelectedObj((prev) => ({ ...prev, elevation: 2.8 }));
-            }}
-            className={`px-2.5 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 2.8 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
-          >
-            Aéreo
-          </button>
-          <button
-              type="button"
-              onClick={() => {
-                if (!selectedObj) return;
-                const ballId = selectedObj.id;
 
-                window.__onPickFlightTarget = (pt3D) => {
-                  window.__onPickFlightTarget = null;
-
-                  setObjects((currentObjs) => {
-                    const currentBall = currentObjs.find((o) => o.id === ballId);
-                    if (!currentBall) return currentObjs;
-
-                    const startX = currentBall.x;
-                    const startY = currentBall.y;
-
-                    // Inversa matemática exacta 1:1 de toWorld
-                    const isDesk = window.innerWidth > 768;
-                    let targetX, targetY;
-
-                    if (isDesk) {
-                      targetX = Math.max(1, Math.min(104, pt3D.x + 52.5));
-                      targetY = Math.max(1, Math.min(67, pt3D.z + 34));
-                    } else {
-                      // Inversa exacta para móvil: x = 34 - pt3D.z, y = pt3D.x + 52.5
-                      targetX = Math.max(1, Math.min(67, 34 - pt3D.z));
-                      targetY = Math.max(1, Math.min(104, pt3D.x + 52.5));
-                    }
-
-                    const maxHeight = 3.2;
-                    let t = 0;
-
-                    const interval = setInterval(() => {
-                      t += 0.025;
-                      if (t >= 1) {
-                        clearInterval(interval);
-                        setObjects((prev) =>
-                          prev.map((o) =>
-                            o.id === ballId
-                              ? { ...o, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
-                              : o
-                          )
-                        );
-                        setSelectedObj((prev) =>
-                          prev && prev.id === ballId
-                            ? { ...prev, x: targetX, y: targetY, elevation: 0, animProgress: undefined }
-                            : prev
-                        );
-                      } else {
-                        const curX = startX + (targetX - startX) * t;
-                        const curY = startY + (targetY - startY) * t;
-                        setObjects((prev) =>
-                          prev.map((o) =>
-                            o.id === ballId
-                              ? { ...o, x: curX, y: curY, elevation: maxHeight, animProgress: t }
-                              : o
-                          )
-                        );
-                      }
-                    }, 16);
-
-                    return currentObjs;
-                  });
-                };
-              }}
-              className="px-2.5 py-1 text-xs rounded-lg font-medium transition bg-amber-500 hover:bg-amber-400 text-black shadow animate-pulse"
-              title="Toca Dirigir Vuelo y luego pincha el punto exacto de la cancha para enviar el balón"
-            >
-              Dirigir Vuelo
-            </button>
-            <div className="h-4 w-px bg-slate-700 mx-1" />
-
-            {/* Boton para eliminar UNICAMENTE este balon */}
-            <button
-              type="button"
-              title="Eliminar este balón"
-              onClick={() => {
-                setObjects((prev) => prev.filter((o) => o.id !== selectedObj.id));
-                setSelectedObj(null);
-              }}
-              className="px-2 py-1 text-xs rounded-lg bg-red-600/80 hover:bg-red-600 text-white transition flex items-center gap-1"
-            >
-              Borrar
-            </button>
-          </div>
-        )}
-        
         {/* MODAL INSERTAR TEXTO TÁCTICO */}
         {textModalOpen && (
           <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
@@ -4741,24 +4375,7 @@ Devuelve estricta y únicamente el array JSON.`;
           <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk_away', customColor: teamColors.gk_away })} style={{ backgroundColor: teamColors.gk_away }} className="w-9 h-9 rounded-full border-2 border-white text-white font-black text-xs shadow hover:scale-105 transition-transform" title="Arquero Visitante">1</button>
           <button onClick={() => addElement('player', { team: 'blue', customColor: teamColors.blue })} style={{ backgroundColor: teamColors.blue }} className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform" title="Jugador Equipo 1">11</button>
           <button onClick={() => addElement('player', { team: 'red', customColor: teamColors.red })} style={{ backgroundColor: teamColors.red }} className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform" title="Jugador Equipo 2">11</button>
-          <button
-  type="button"
-  onClick={() => {
-    const isDesk = window.innerWidth > 768;
-    const newBall = {
-      id: `ball-${Date.now()}`,
-      type: 'ball',
-      x: isDesk ? 52.5 : 34,
-      y: isDesk ? 34 : 52.5,
-      elevation: 0
-    };
-    setObjects((prev) => [...prev, newBall]);
-    setSelectedObj(newBall);
-  }}
-  className="w-9 h-9 rounded-full bg-white text-sm shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition"
->
-  ⚽
-</button>
+          <button onClick={() => addElement('ball')} className="w-9 h-9 rounded-full bg-white text-sm shadow hover:scale-105 transition-transform">⚽</button>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
