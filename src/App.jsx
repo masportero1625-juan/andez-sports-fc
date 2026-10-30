@@ -1506,6 +1506,7 @@ const FBX_ANIMATIONS = {
     underhand_throw: '/animations/arquero/gk_underhand_throw.fbx'
   },
   campo: {
+    idle: '/campo/field_defensive_stance.fbx',
     jog: '/campo/field_jog_forward.fbx',
     sprint: '/campo/field_sprint.fbx',
     kick_pass: '/campo/field_kick_pass.fbx',
@@ -1516,10 +1517,44 @@ const FBX_ANIMATIONS = {
     throw_in: '/campo/field_throw_in.fbx'
   }
 };
-function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, animation }) {
-  const { scene, animations } = useGLTF(GLB_URL, DRACO_URL);
+
+// Cache en memoria para que los archivos FBX se descarguen solo 1 vez en toda la sesión
+const _fbxClipCache = new Map();
+const _fbxLoader = new FBXLoader();
+
+function loadFbxClip(url) {
+  if (_fbxClipCache.has(url)) return _fbxClipCache.get(url);
+  const promise = new Promise((resolve) => {
+    _fbxLoader.load(
+      url,
+      (fbx) => {
+        if (fbx.animations && fbx.animations.length > 0) {
+          const clip = fbx.animations[0];
+          resolve(clip);
+        } else {
+          resolve(null);
+        }
+      },
+      undefined,
+      (err) => {
+        console.warn(`[Andez FBX] No se pudo cargar: ${url}`, err);
+        resolve(null);
+      }
+    );
+  });
+  _fbxClipCache.set(url, promise);
+  return promise;
+}
+
+function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, animation }) {
+  const { scene } = useGLTF(GLB_URL, DRACO_URL);
+  
+  // Clonación limpia del esqueleto
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
-  const { actions, mixer } = useAnimations(animations, clone);
+  
+  // Mixer propio por instancia sin pasar animaciones nativas del GLB
+  const mixer = useMemo(() => new THREE.AnimationMixer(clone), [clone]);
+
   const norm = useMemo(() => getGlbNormalization(scene), [scene]);
   const kit = useMemo(() => getGlbKitInfo(scene), [scene]);
 
@@ -1529,58 +1564,48 @@ function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, anima
   const teamSeed = useMemo(() => glbHashStr(jerseyColor), [jerseyColor]);
   const seed = useMemo(() => glbHashStr(`${jerseyColor}|${number}`), [jerseyColor, number]);
 
-  // 1. Contextura segun rol / dorsal
+  // Contextura física según rol táctico
   const customScale = useMemo(() => {
     const p = glbBodyProfile(role, n, seed);
     const base = norm.scale;
     return [base * p.w, base * p.h, base * p.w];
   }, [norm.scale, role, n, seed]);
 
-  // Carga y reproducción de animación FBX dinámica
+  // Enlace y transición cruzada (crossfade) de la pose FBX
   useEffect(() => {
-    if (!mixer || !clone) return;
-
-    // Determinar la ruta según el rol y animación solicitada
+    let active = true;
     const animCategory = isGK ? FBX_ANIMATIONS.arquero : FBX_ANIMATIONS.campo;
-    const defaultKey = isGK ? 'idle' : 'jog';
-    const targetUrl = (animation && animCategory[animation]) ? animCategory[animation] : animCategory[defaultKey];
+    const defaultKey = isGK ? 'idle' : 'idle';
+    const targetKey = (animation && animCategory[animation]) ? animation : defaultKey;
+    const targetUrl = animCategory[targetKey] || animCategory[defaultKey];
 
     if (!targetUrl) return;
 
-    const loader = new FBXLoader();
-    let currentAction = null;
+    loadFbxClip(targetUrl).then((clip) => {
+      if (!active || !clip || !mixer) return;
 
-    loader.load(
-      targetUrl,
-      (fbx) => {
-        if (fbx.animations && fbx.animations.length > 0) {
-          const clip = fbx.animations[0];
-          mixer.stopAllAction();
-          currentAction = mixer.clipAction(clip, clone);
-          currentAction.reset();
-          currentAction.fadeIn(0.2).play();
-        }
-      },
-      undefined,
-      (err) => console.error("Error cargando animación FBX:", targetUrl, err)
-    );
+      const newAction = mixer.clipAction(clip, clone);
+      newAction.reset();
+      newAction.setLoop(THREE.LoopRepeat, Infinity);
+      newAction.fadeIn(0.25).play();
+
+      return () => {
+        newAction.fadeOut(0.2);
+      };
+    });
 
     return () => {
-      if (currentAction) {
-        currentAction.fadeOut(0.2);
-      }
+      active = false;
+      mixer.stopAllAction();
     };
   }, [mixer, clone, isGK, animation]);
 
-  // Actualizar la animacion en cada frame
+  // Actualización única por frame (se eliminó la llamada duplicada)
   useFrame((_, delta) => {
-    if (mixer) mixer.update(delta);
-  });
-  useFrame((_, delta) => {
-    if (mixer) mixer.update(delta);
+    mixer.update(delta);
   });
 
-  // 3. Piel, cabello, camiseta (textura procedural con dorsal) y shorts con ribete lateral
+  // Materiales PBR, dorsales y render de equipación
   useLayoutEffect(() => {
     const owned = [];
     const skinColor = PLAYER_SKINS[(n * 3 + (teamSeed % PLAYER_SKINS.length)) % PLAYER_SKINS.length];
@@ -1590,7 +1615,6 @@ function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, anima
     if (!_glbNamesLogged) {
       _glbNamesLogged = true;
       console.info('[player.glb] partes detectadas:', kit.names.join(' · '));
-      if (!kit.shirtFound) console.warn('[player.glb] No se encontró ninguna malla de camiseta (nombre con shirt/jersey/camis/top/torso). Revisa los nombres de arriba.');
     }
 
     clone.updateMatrixWorld(true);
@@ -1616,7 +1640,7 @@ function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, anima
           mat.metalness = 0.05;
           if (kit.ok) {
             const jt = getGlbJerseyTexture(jerseyColor, number, kit.shirt);
-            mat.map = null; // se descarta la textura de fábrica (y su "7")
+            mat.map = null;
             mat.color.set('#ffffff');
             glbInjectBindProjection(mat, 'glb-jersey-v1', GLB_JERSEY_DECL, GLB_JERSEY_FRAG, {
               uB2S: { value: rel },
@@ -1647,20 +1671,18 @@ function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, anima
             mat.color.set(baseHex);
           }
         } else if (kind === 'hair') {
-        const avgLuma = glbTintTowards(mat, hairColor, 0.4, 4);
-        if (avgLuma < 0.2) mat.emissive.set(hairColor).multiplyScalar(0.45);
-        mat.roughness = 0.9;
-      } else if (kind === 'eye') {
-        // Ojos realistas: esclerótica clara con brillo corneal vivo
-        if (mat.color) mat.color.set('#f8fafc');
-        mat.roughness = 0.1;
-        mat.metalness = 0.1;
-      } else if (kind === 'skin') {
-        glbTintTowards(mat, skinColor);
-        // Piel humana PBR: dispersión suave sin brillo plástico
-        mat.roughness = 0.65;
-        mat.metalness = 0.05;
-      }
+          const avgLuma = glbTintTowards(mat, hairColor, 0.4, 4);
+          if (avgLuma < 0.2) mat.emissive.set(hairColor).multiplyScalar(0.45);
+          mat.roughness = 0.9;
+        } else if (kind === 'eye') {
+          if (mat.color) mat.color.set('#f8fafc');
+          mat.roughness = 0.1;
+          mat.metalness = 0.1;
+        } else if (kind === 'skin') {
+          glbTintTowards(mat, skinColor);
+          mat.roughness = 0.65;
+          mat.metalness = 0.05;
+        }
         mat.needsUpdate = true;
         return mat;
       });
@@ -1670,7 +1692,6 @@ function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, anima
     return () => owned.forEach((m) => m.dispose());
   }, [clone, kit, jerseyColor, number, n, teamSeed]);
 
-  // Los pies del modelo se apoyan en y = 0 con la escala real de este jugador
   const footY = -norm.minY * customScale[1];
 
   return (
@@ -1683,7 +1704,6 @@ function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, anima
           scale={customScale}
         />
       </group>
-      {/* Sin sprites ni parches: el dorsal está impreso en la textura de la camiseta */}
     </group>
   );
 }
@@ -2636,8 +2656,9 @@ const camFov = isPC ? 45 : 55;
                 color={col}
                 number={obj.number}
                 role={(obj.role === 'GK' || obj.team === 'gk' || obj.team === 'gk_away') ? 'GK' : obj.role}
+                animation={obj.animation}
                 isSelected={selectedObj?.id === obj.id}
-                onClick={() => {}}
+                onClick={() => setSelectedObj(obj)}
               />
             </group>
           );
