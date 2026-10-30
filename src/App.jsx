@@ -1576,7 +1576,9 @@ function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, anima
   useFrame((_, delta) => {
     if (mixer) mixer.update(delta);
   });
-  useFrame(() => { if (stanceRef.current) stanceRef.current.apply(); });
+  useFrame((_, delta) => {
+    if (mixer) mixer.update(delta);
+  });
 
   // 3. Piel, cabello, camiseta (textura procedural con dorsal) y shorts con ribete lateral
   useLayoutEffect(() => {
