@@ -9,7 +9,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Text, Html, useGLTF, useAnimations, PerspectiveCamera } from '@react-three/drei';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import * as THREE from 'three';
-
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 // CREDENCIALES SUPABASE
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
@@ -1490,8 +1490,33 @@ function buildGlbFieldPlayerStance(root, fwd = 1) {
     }
   };
 }
-
-function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
+// Catálogo de animaciones FBX de Mixamo
+const FBX_ANIMATIONS = {
+  arquero: {
+    idle: '/animations/arquero/gk_idle_ready.fbx',
+    aerial_catch: '/animations/arquero/gk_aerial_catch.fbx',
+    aerial_save: '/animations/arquero/gk_aerial_save.fbx',
+    body_block: '/animations/arquero/gk_body_block.fbx',
+    diving_low: '/animations/arquero/gk_diving_low_save.fbx',
+    goal_kick: '/animations/arquero/gk_goal_kick.fbx',
+    punt_kick: '/animations/arquero/gk_punt_kick.fbx',
+    scoop_catch: '/animations/arquero/gk_scoop_catch.fbx',
+    short_pass: '/animations/arquero/gk_short_pass.fbx',
+    overhand_throw: '/animations/arquero/gk_overhand_throw.fbx',
+    underhand_throw: '/animations/arquero/gk_underhand_throw.fbx'
+  },
+  campo: {
+    jog: '/campo/field_jog_forward.fbx',
+    sprint: '/campo/field_sprint.fbx',
+    kick_pass: '/campo/field_kick_pass.fbx',
+    shot_power: '/campo/field_shot_power.fbx',
+    strike_motion: '/campo/field_strike_in_motion.fbx',
+    header: '/campo/field_header_jump.fbx',
+    defensive: '/campo/field_defensive_stance.fbx',
+    throw_in: '/campo/field_throw_in.fbx'
+  }
+};
+function GLBPlayer({ color, number, isSelected, onclick, facing = 0, role, animation }) {
   const { scene, animations } = useGLTF(GLB_URL, DRACO_URL);
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { actions, mixer } = useAnimations(animations, clone);
@@ -1511,39 +1536,46 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role }) {
     return [base * p.w, base * p.h, base * p.w];
   }, [norm.scale, role, n, seed]);
 
-  // Congelar la pose
+  // Carga y reproducción de animación FBX dinámica
   useEffect(() => {
-    const names = Object.keys(actions || {});
-    const action = (actions && actions['mixamo.com']) || (names.length ? actions[names[0]] : null);
-    if (action) {
-      action.reset();
-      action.play();
-      action.paused = true;
-      action.time = GLB_POSE_TIME;
-      if (mixer) mixer.update(0);
-    }
-    return () => { if (mixer) mixer.stopAllAction(); };
-  }, [actions, mixer]);
+    if (!mixer || !clone) return;
 
-  // 2. Postura atletica (arquero y jugadores de campo)
-  const stanceRef = useRef(null);
-  useEffect(() => {
-    stanceRef.current = null;
-    let stance = null;
-    try {
-      clone.updateMatrixWorld(true);
-      if (isGK) {
-        stance = buildGlbGoalkeeperStance(clone, kit.fwd);
-      } else {
-        stance = buildGlbFieldPlayerStance(clone, kit.fwd);
-      }
-    } catch (e) { stance = null; }
-    stanceRef.current = stance;
+    // Determinar la ruta según el rol y animación solicitada
+    const animCategory = isGK ? FBX_ANIMATIONS.arquero : FBX_ANIMATIONS.campo;
+    const defaultKey = isGK ? 'idle' : 'jog';
+    const targetUrl = (animation && animCategory[animation]) ? animCategory[animation] : animCategory[defaultKey];
+
+    if (!targetUrl) return;
+
+    const loader = new FBXLoader();
+    let currentAction = null;
+
+    loader.load(
+      targetUrl,
+      (fbx) => {
+        if (fbx.animations && fbx.animations.length > 0) {
+          const clip = fbx.animations[0];
+          mixer.stopAllAction();
+          currentAction = mixer.clipAction(clip, clone);
+          currentAction.reset();
+          currentAction.fadeIn(0.2).play();
+        }
+      },
+      undefined,
+      (err) => console.error("Error cargando animación FBX:", targetUrl, err)
+    );
+
     return () => {
-      if (stance) stance.restore();
-      stanceRef.current = null;
+      if (currentAction) {
+        currentAction.fadeOut(0.2);
+      }
     };
-  }, [clone, actions, mixer, isGK, kit]);
+  }, [mixer, clone, isGK, animation]);
+
+  // Actualizar la animacion en cada frame
+  useFrame((_, delta) => {
+    if (mixer) mixer.update(delta);
+  });
   useFrame(() => { if (stanceRef.current) stanceRef.current.apply(); });
 
   // 3. Piel, cabello, camiseta (textura procedural con dorsal) y shorts con ribete lateral
