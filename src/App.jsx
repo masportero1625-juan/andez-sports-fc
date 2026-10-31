@@ -5,11 +5,12 @@ import {
   Upload, Printer, Edit2, Video, Square, Download, Sparkles, Gift,
   CheckCircle2, Clock, Users, DollarSign, Type, Shield, Move
 } from 'lucide-react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Text, Html, useGLTF, useAnimations, PerspectiveCamera } from '@react-three/drei';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment';
 // CREDENCIALES SUPABASE
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
@@ -1055,6 +1056,7 @@ const GLB_RE_HAIR = /hair|pelo|cabello/;
 const GLB_RE_SKIN = /body|skin|head|face|arm|hand|leg|cuerpo|piel/;
 function glbClassify(label) {
   if (/eye|iris|cornea|pupil|ojo/i.test(label)) return 'eye';
+  if (/shoe|boot|cleat|sneaker|calzado|footwear/i.test(label)) return 'shoes';
   if (GLB_RE_SHIRT.test(label)) return 'shirt';
   if (GLB_RE_SHORTS.test(label)) return 'shorts';
   if (GLB_RE_HAIR.test(label)) return 'hair';
@@ -1490,7 +1492,7 @@ function buildGlbFieldPlayerStance(root, fwd = 1) {
     }
   };
 }
-// Catálogo de animaciones FBX de Mixamo
+// ---------- Animaciones FBX de Mixamo: catálogo, acciones tácticas y caché global ----------
 const FBX_ANIMATIONS = {
   arquero: {
     idle: '/animations/arquero/gk_idle_ready.fbx',
@@ -1518,7 +1520,90 @@ const FBX_ANIMATIONS = {
   }
 };
 
-// Cache en memoria para que los archivos FBX se descarguen solo 1 vez en toda la sesión
+// Opciones del menú contextual flotante (la clave coincide con FBX_ANIMATIONS)
+const GK_ACTION_LIST = [
+  { key: 'idle', label: 'Atento', icon: '🧤' },
+  { key: 'aerial_catch', label: 'Atrapada Aérea', icon: '🙌' },
+  { key: 'aerial_save', label: 'Desvío Volador', icon: '🦅' },
+  { key: 'body_block', label: 'Bloqueo', icon: '🛡️' },
+  { key: 'diving_low', label: 'Caída Baja', icon: '🤸' },
+  { key: 'goal_kick', label: 'Saque de Meta', icon: '🥅' },
+  { key: 'punt_kick', label: 'Volea', icon: '🦶' },
+  { key: 'scoop_catch', label: 'Atrapada Baja', icon: '🧺' },
+  { key: 'short_pass', label: 'Pase Corto', icon: '➡️' },
+  { key: 'overhand_throw', label: 'Saque Alto', icon: '💪' },
+  { key: 'underhand_throw', label: 'Saque Bajo', icon: '🎳' }
+];
+const FIELD_ACTION_LIST = [
+  { key: 'defensive', label: 'Postura Base', icon: '🧍' },
+  { key: 'jog', label: 'Trote', icon: '🏃' },
+  { key: 'sprint', label: 'Sprint', icon: '⚡' },
+  { key: 'kick_pass', label: 'Pase', icon: '➡️' },
+  { key: 'shot_power', label: 'Remate Potente', icon: '🚀' },
+  { key: 'strike_motion', label: 'Disparo en Carrera', icon: '🎯' },
+  { key: 'header', label: 'Cabezazo', icon: '⬆️' },
+  { key: 'throw_in', label: 'Saque Lateral', icon: '🙆' }
+];
+
+// Poses que se mantienen en bucle; el resto son acciones puntuales que vuelven solas a la postura base
+const FBX_LOOPING = new Set(['idle', 'defensive', 'jog', 'sprint']);
+
+// Acciones que despachan el balón: distancia (m), altura máxima de la parábola (m), instante del contacto (ms),
+// duración del vuelo (ms) y altura inicial del balón si sale de las manos (hold)
+const BALL_NEAR_M = 4.5; // el balón se considera "asignado" al jugador si está a esta distancia o menos
+const BALL_ACTIONS = {
+  kick_pass: { dist: 16, arc: 0.3, delay: 460, dur: 950 },
+  short_pass: { dist: 9, arc: 0, delay: 420, dur: 800 },
+  shot_power: { dist: 30, arc: 1.1, delay: 520, dur: 900 },
+  strike_motion: { dist: 24, arc: 0.8, delay: 480, dur: 880 },
+  goal_kick: { dist: 40, arc: 7, delay: 650, dur: 1900 },
+  punt_kick: { dist: 38, arc: 10, delay: 720, dur: 2000 },
+  overhand_throw: { dist: 30, arc: 4.5, delay: 620, dur: 1400, hold: 2.1 },
+  underhand_throw: { dist: 14, arc: 0.8, delay: 520, dur: 950, hold: 0.9 },
+  throw_in: { dist: 14, arc: 3.2, delay: 650, dur: 1250, hold: 2.1 },
+  header: { dist: 9, arc: 0.9, delay: 620, dur: 900, hold: 1.8 }
+};
+
+// Misma regla que usa GLBPlayer para decidir si un jugador es arquero
+function playerIsGoalkeeper(o) {
+  if (!o) return false;
+  const r = String(o.role || '').toUpperCase();
+  return r === 'GK' || r === 'POR' || o.team === 'gk' || o.team === 'gk_away' || parseInt(o.number, 10) === 1;
+}
+
+// Medidas del esqueleto del clon en reposo (se calculan antes de aplicar cualquier postura o clip)
+const _cloneRigCache = new WeakMap();
+function fbxLegLength(root) {
+  const b = {};
+  root.traverse((o) => {
+    if (o.isBone || o.type === 'Bone') {
+      const k = glbBoneKey(o.name);
+      if (k && !b[k]) b[k] = o;
+    }
+  });
+  if (!b.leftleg || !b.leftfoot) return 0;
+  const up = b.leftupleg ? b.leftupleg.position.length() : 0;
+  return up + b.leftleg.position.length() + b.leftfoot.position.length();
+}
+function getCloneRig(root) {
+  if (_cloneRigCache.has(root)) return _cloneRigCache.get(root);
+  const bones = {};
+  root.traverse((o) => {
+    if (o.isBone) {
+      const k = glbBoneKey(o.name);
+      if (k && !bones[k]) bones[k] = o;
+    }
+  });
+  const rig = {
+    bones,
+    restHips: bones.hips ? bones.hips.position.clone() : new THREE.Vector3(),
+    legLen: fbxLegLength(root)
+  };
+  _cloneRigCache.set(root, rig);
+  return rig;
+}
+
+// Caché en memoria: cada archivo .fbx se descarga UNA sola vez por sesión, aunque haya 22 jugadores pidiéndolo a la vez
 const _fbxClipCache = new Map();
 const _fbxLoader = new FBXLoader();
 
@@ -1528,10 +1613,15 @@ function loadFbxClip(url) {
     _fbxLoader.load(
       url,
       (fbx) => {
-        if (fbx.animations && fbx.animations.length > 0) {
-          const clip = fbx.animations[0];
-          resolve(clip);
-        } else {
+        try {
+          const clip = fbx.animations && fbx.animations.length > 0 ? fbx.animations[0] : null;
+          if (clip) {
+            clip.__legLen = fbxLegLength(fbx); // proporción del esqueleto Mixamo original (para escalar la altura de la cadera)
+            resolve(clip);
+          } else {
+            resolve(null);
+          }
+        } catch (e) {
           resolve(null);
         }
       },
@@ -1543,20 +1633,119 @@ function loadFbxClip(url) {
     );
   });
   _fbxClipCache.set(url, promise);
+  // Un fallo puntual no queda "pegado": en la próxima petición se vuelve a intentar
+  promise.then((clip) => { if (!clip) _fbxClipCache.delete(url); });
   return promise;
 }
 
-function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, animation }) {
+// Descarga ordenada (de a un clip) de las acciones de un rol, para que el menú responda al instante
+const _fbxPrefetched = new Set();
+function prefetchFbxCategory(cat) {
+  if (_fbxPrefetched.has(cat) || !FBX_ANIMATIONS[cat]) return;
+  _fbxPrefetched.add(cat);
+  const urls = [...new Set(Object.values(FBX_ANIMATIONS[cat]))];
+  let i = 0;
+  const next = () => {
+    if (i >= urls.length) return;
+    loadFbxClip(urls[i++]).then(() => setTimeout(next, 120));
+  };
+  next();
+}
+
+// Prepara un clip Mixamo para el esqueleto del GLB:
+//  - reasigna los nombres de huesos (mixamorig:Hips / mixamorigHips / Hips)
+//  - descarta pistas de escala y de traslación que no sean la de la cadera
+//  - escala la altura de la cadera a las proporciones del GLB (cm -> m, piernas más largas o cortas)
+//  - ANULA el root motion: Hips.position en X y Z queda fija (el jugador no se desliza ni se repliega de su coordenada táctica),
+//    conservando la rotación y la altura natural en Y
+const _fbxPlayableCache = new Map();
+function getPlayableFbxClip(raw, url, clone) {
+  const rig = getCloneRig(clone);
+  const hips = rig.bones.hips;
+  if (!hips) return raw;
+  const sig = `${url}|${hips.name}|${rig.restHips.x.toFixed(3)},${rig.restHips.y.toFixed(3)},${rig.restHips.z.toFixed(3)}|${rig.legLen.toFixed(3)}`;
+  if (_fbxPlayableCache.has(sig)) return _fbxPlayableCache.get(sig);
+
+  const isHipsPos = (t) => t.name.toLowerCase().includes('hips.position');
+  let posScale = 1;
+  if (raw.__legLen > 1e-6 && rig.legLen > 1e-6) {
+    posScale = rig.legLen / raw.__legLen;
+  } else {
+    const ht = raw.tracks.find(isHipsPos);
+    if (ht && Math.abs(ht.values[1]) > 1e-4 && rig.restHips.y > 1e-6) {
+      const r = rig.restHips.y / Math.abs(ht.values[1]);
+      posScale = (r > 0.3 && r < 3) ? 1 : Math.pow(10, Math.round(Math.log10(r)));
+    }
+  }
+  if (!(posScale > 0.001 && posScale < 1000)) posScale = 1;
+
+  const out = [];
+  raw.tracks.forEach((t) => {
+    const dot = t.name.lastIndexOf('.');
+    if (dot < 0) return;
+    const nodeKey = glbBoneKey(t.name.slice(0, dot));
+    const prop = t.name.slice(dot + 1);
+    const bone = rig.bones[nodeKey];
+    if (!bone) return;
+    const trackName = `${bone.name}.${prop}`;
+    if (prop === 'quaternion') {
+      out.push(new THREE.QuaternionKeyframeTrack(trackName, t.times.slice(), t.values.slice()));
+    } else if (prop === 'position' && (nodeKey === 'hips' || isHipsPos(t))) {
+      const v = t.values.slice();
+      for (let i = 0; i + 2 < v.length; i += 3) {
+        v[i + 1] *= posScale;          // altura natural de la cadera
+        v[i] = rig.restHips.x;         // sin traslación horizontal (X)
+        v[i + 2] = rig.restHips.z;     // sin traslación horizontal (Z)
+      }
+      out.push(new THREE.VectorKeyframeTrack(trackName, t.times.slice(), v));
+    }
+  });
+  if (out.length === 0) {
+    _fbxPlayableCache.set(sig, null);
+    return null;
+  }
+  const clip = new THREE.AnimationClip(`andez-${url.split('/').pop()}`, -1, out);
+  _fbxPlayableCache.set(sig, clip);
+  return clip;
+}
+
+// Entorno de iluminación procedural (sin descargas) para que piel, ojos, tela y botines reaccionen a la luz como materiales PBR reales
+const _playerEnvCache = new WeakMap();
+function getPlayerEnvMap(gl) {
+  if (!gl) return null;
+  if (_playerEnvCache.has(gl)) return _playerEnvCache.get(gl);
+  let tex = null;
+  try {
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const room = new RoomEnvironment();
+    tex = pmrem.fromScene(room, 0.04).texture;
+    pmrem.dispose();
+  } catch (e) {
+    tex = null;
+  }
+  _playerEnvCache.set(gl, tex);
+  return tex;
+}
+const GLB_ENV_INTENSITY = { shirt: 0.22, shorts: 0.18, hair: 0.1, eye: 1.0, skin: 0.4, shoes: 0.45 };
+const GLB_SHOE_COLORS = ['#0b0f19', '#f8fafc', '#1e293b', '#16a34a', '#f97316'];
+
+function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, animation, animNonce = 0 }) {
   const { scene } = useGLTF(GLB_URL, DRACO_URL);
-  
-  // Clonación limpia del esqueleto
-  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene]);
-  
-  // Mixer propio por instancia sin pasar animaciones nativas del GLB
+  const gl = useThree((state) => state.gl);
+
+  // Clonación limpia del esqueleto (las medidas de reposo se guardan antes de aplicar posturas o clips)
+  const clone = useMemo(() => {
+    const c = SkeletonUtils.clone(scene);
+    getCloneRig(c);
+    return c;
+  }, [scene]);
+
+  // Un mixer por instancia; se actualiza UNA sola vez por frame (más abajo)
   const mixer = useMemo(() => new THREE.AnimationMixer(clone), [clone]);
 
   const norm = useMemo(() => getGlbNormalization(scene), [scene]);
   const kit = useMemo(() => getGlbKitInfo(scene), [scene]);
+  const envMap = useMemo(() => getPlayerEnvMap(gl), [gl]);
 
   const n = parseInt(number, 10) || 0;
   const isGK = role === 'GK' || n === 1;
@@ -1571,38 +1760,82 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     return [base * p.w, base * p.h, base * p.w];
   }, [norm.scale, role, n, seed]);
 
-  // Enlace y transición cruzada (crossfade) de la pose FBX
+  // Postura atlética de respaldo: el jugador nunca se ve en T-pose mientras llegan los FBX (o si alguno no existe)
+  useLayoutEffect(() => {
+    let st = null;
+    try {
+      st = isGK ? buildGlbGoalkeeperStance(clone, kit.fwd) : buildGlbFieldPlayerStance(clone, kit.fwd);
+    } catch (e) {
+      st = null;
+    }
+    if (st && st.apply) st.apply();
+    return () => { if (st && st.restore) st.restore(); };
+  }, [clone, isGK, kit]);
+
+  // Enlace y transición cruzada: obj.animation -> clip FBX (fadeIn 0.25 / fadeOut 0.2). Las acciones puntuales vuelven solas a la postura base
+  const playState = useRef({ action: null, key: null, token: 0 });
   useEffect(() => {
-    let active = true;
-    const animCategory = isGK ? FBX_ANIMATIONS.arquero : FBX_ANIMATIONS.campo;
-    const defaultKey = isGK ? 'idle' : 'idle';
-    const targetKey = (animation && animCategory[animation]) ? animation : defaultKey;
-    const targetUrl = animCategory[targetKey] || animCategory[defaultKey];
+    let alive = true;
+    const cat = isGK ? FBX_ANIMATIONS.arquero : FBX_ANIMATIONS.campo;
+    const st = playState.current;
 
-    if (!targetUrl) return;
+    const play = (reqKey, fade) => {
+      const key = cat[reqKey] ? reqKey : 'idle';
+      const url = cat[key];
+      if (!url) return;
+      const token = ++st.token;
+      loadFbxClip(url).then((raw) => {
+        if (!alive || token !== st.token || !raw) return;
+        const clip = getPlayableFbxClip(raw, url, clone);
+        if (!clip) return;
+        const looping = FBX_LOOPING.has(key);
+        const next = mixer.clipAction(clip, clone);
+        const prev = st.action;
+        next.reset();
+        next.setLoop(looping ? THREE.LoopRepeat : THREE.LoopOnce, looping ? Infinity : 1);
+        next.clampWhenFinished = !looping;
+        next.enabled = true;
+        next.setEffectiveTimeScale(1);
+        next.setEffectiveWeight(1);
+        // Desfase en las poses en bucle para que los 22 jugadores no respiren al unísono
+        if (looping && !prev) next.time = ((seed % 997) / 997) * clip.duration;
+        if (prev && prev !== next) prev.fadeOut(0.2);
+        next.fadeIn(prev === next ? 0.05 : fade).play();
+        st.action = next;
+        st.key = key;
+      });
+    };
 
-    loadFbxClip(targetUrl).then((clip) => {
-      if (!active || !clip || !mixer) return;
+    const onFinished = (e) => {
+      if (e.action === st.action && !FBX_LOOPING.has(st.key)) {
+        play(isGK ? 'idle' : 'defensive', 0.3);
+      }
+    };
+    mixer.addEventListener('finished', onFinished);
 
-      const newAction = mixer.clipAction(clip, clone);
-      newAction.reset();
-      newAction.setLoop(THREE.LoopRepeat, Infinity);
-      newAction.fadeIn(0.25).play();
-
-      return () => {
-        newAction.fadeOut(0.2);
-      };
-    });
+    const wanted = (animation && cat[animation]) ? animation : 'idle';
+    play(wanted, 0.25);
 
     return () => {
-      active = false;
-      mixer.stopAllAction();
+      alive = false;
+      mixer.removeEventListener('finished', onFinished);
     };
-  }, [mixer, clone, isGK, animation]);
+  }, [mixer, clone, isGK, animation, animNonce, seed]);
 
-  // Actualización única por frame (se eliminó la llamada duplicada)
+  // Limpieza al desmontar el jugador
+  useEffect(() => {
+    const st = playState.current;
+    return () => {
+      mixer.stopAllAction();
+      mixer.uncacheRoot(clone);
+      st.action = null;
+      st.key = null;
+    };
+  }, [mixer, clone]);
+
+  // Actualización única por frame (con tope de delta para evitar saltos al volver a la pestaña)
   useFrame((_, delta) => {
-    mixer.update(delta);
+    mixer.update(Math.min(delta, 0.05));
   });
 
   // Materiales PBR, dorsales y render de equipación
@@ -1610,6 +1843,7 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     const owned = [];
     const skinColor = PLAYER_SKINS[(n * 3 + (teamSeed % PLAYER_SKINS.length)) % PLAYER_SKINS.length];
     const hairColor = PLAYER_HAIRS[(n * 5 + 3 + ((teamSeed >>> 3) % PLAYER_HAIRS.length)) % PLAYER_HAIRS.length];
+    const shoeColor = GLB_SHOE_COLORS[(n * 7 + (teamSeed % 5)) % GLB_SHOE_COLORS.length];
     const lightKit = playerHexLuma(jerseyColor) > 0.78;
 
     if (!_glbNamesLogged) {
@@ -1633,11 +1867,12 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
       const next = list.map((m) => {
         const mat = m.clone();
         owned.push(mat);
-        const kind = glbClassify(glbPartLabel(child, mat));
+        const label = glbPartLabel(child, mat);
+        const kind = glbClassify(label);
 
         if (kind === 'shirt') {
-          mat.roughness = 0.65;
-          mat.metalness = 0.05;
+          mat.roughness = 0.7;
+          mat.metalness = 0.02;
           if (kit.ok) {
             const jt = getGlbJerseyTexture(jerseyColor, number, kit.shirt);
             mat.map = null;
@@ -1654,6 +1889,7 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
           }
         } else if (kind === 'shorts') {
           mat.roughness = 0.8;
+          mat.metalness = 0;
           const baseHex = lightKit ? '#1f2937' : '#f8fafc';
           const trimHex = lightKit ? '#f8fafc' : '#0f172a';
           if (kit.ok) {
@@ -1674,14 +1910,29 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
           const avgLuma = glbTintTowards(mat, hairColor, 0.4, 4);
           if (avgLuma < 0.2) mat.emissive.set(hairColor).multiplyScalar(0.45);
           mat.roughness = 0.9;
+          mat.metalness = 0;
         } else if (kind === 'eye') {
-          if (mat.color) mat.color.set('#f8fafc');
-          mat.roughness = 0.1;
-          mat.metalness = 0.1;
+          if (/lash|pesta/.test(label)) {
+            if (mat.color) mat.color.set('#0b0b0d');
+            mat.roughness = 0.9;
+            mat.metalness = 0;
+          } else {
+            if (mat.color) mat.color.set('#f8fafc');
+            mat.roughness = 0.1;
+            mat.metalness = 0.05;
+          }
+        } else if (kind === 'shoes') {
+          glbTintTowards(mat, shoeColor, 0.25, 3);
+          mat.roughness = 0.55;
+          mat.metalness = 0.08;
         } else if (kind === 'skin') {
           glbTintTowards(mat, skinColor);
           mat.roughness = 0.65;
           mat.metalness = 0.05;
+        }
+        if (envMap) {
+          mat.envMap = envMap;
+          mat.envMapIntensity = GLB_ENV_INTENSITY[kind] ?? 0.2;
         }
         mat.needsUpdate = true;
         return mat;
@@ -1690,7 +1941,7 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     });
 
     return () => owned.forEach((m) => m.dispose());
-  }, [clone, kit, jerseyColor, number, n, teamSeed]);
+  }, [clone, kit, jerseyColor, number, n, teamSeed, envMap]);
 
   const footY = -norm.minY * customScale[1];
 
@@ -2472,7 +2723,7 @@ function StadiumEnvironment() {
   );
 }
 
-function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC }) {
+function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC, onDragStart }) {
   const isDragging = useRef(false);
   const dragId = useRef(null);
   const dragOffset = useRef(new THREE.Vector3());
@@ -2495,6 +2746,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
   const handlePointerDown = (e, obj) => {
     if (!cameraLocked) return;
     e.stopPropagation();
+    if (onDragStart) onDragStart(obj);
     setSelectedObj(obj);
     dragId.current = obj.id;
     isDragging.current = true;
@@ -2596,9 +2848,16 @@ const camFov = isPC ? 45 : 55;
         position={[22, 42, 24]}
         intensity={2.1}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-bias={-0.0001}
+        shadow-mapSize-width={isPC ? 4096 : 2048}
+        shadow-mapSize-height={isPC ? 4096 : 2048}
+        shadow-camera-left={-64}
+        shadow-camera-right={64}
+        shadow-camera-top={64}
+        shadow-camera-bottom={-64}
+        shadow-camera-near={5}
+        shadow-camera-far={140}
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.03}
       />
       <directionalLight position={[-20, 24, -20]} intensity={0.45} color="#e0f2fe" />
 
@@ -2655,8 +2914,9 @@ const camFov = isPC ? 45 : 55;
               <TacticalPlayer3D
                 color={col}
                 number={obj.number}
-                role={(obj.role === 'GK' || obj.team === 'gk' || obj.team === 'gk_away') ? 'GK' : obj.role}
+                role={(obj.role === 'GK' || obj.role === 'POR' || obj.team === 'gk' || obj.team === 'gk_away') ? 'GK' : obj.role}
                 animation={obj.animation}
+                animNonce={obj.animNonce}
                 isSelected={selectedObj?.id === obj.id}
                 onClick={() => setSelectedObj(obj)}
               />
@@ -2704,6 +2964,51 @@ const camFov = isPC ? 45 : 55;
         return null;
       })}
     </>
+  );
+}
+
+// ---------- Menú contextual flotante de acciones del jugador 3D (PC y móvil) ----------
+function PlayerActionBar({ player, onAction, onClose }) {
+  const gk = playerIsGoalkeeper(player);
+  const list = gk ? GK_ACTION_LIST : FIELD_ACTION_LIST;
+  const active = player.animation && player.animation !== 'idle' ? player.animation : (gk ? 'idle' : 'defensive');
+
+  // Se descargan en segundo plano (de a un clip) las animaciones de este rol, para que cada botón responda de inmediato
+  useEffect(() => { prefetchFbxCategory(gk ? 'arquero' : 'campo'); }, [gk]);
+
+  return (
+    <div
+      className="no-print fixed left-1/2 -translate-x-1/2 bottom-[72px] z-50 w-[calc(100vw-1rem)] max-w-4xl rounded-2xl border border-zinc-700 bg-zinc-950/95 px-2 pt-1.5 pb-2 shadow-2xl backdrop-blur-md"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between px-1 pb-1">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-amber-400">
+          {gk ? 'Arquero' : 'Jugador'} #{player.number} · Acciones
+        </span>
+        <button type="button" onClick={onClose} className="p-1 text-zinc-400 hover:text-white" aria-label="Cerrar menú de acciones">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div
+        className="flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible"
+        style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+      >
+        {list.map((a) => (
+          <button
+            key={a.key}
+            type="button"
+            onClick={() => onAction(a.key)}
+            className={`shrink-0 min-h-[44px] px-3 rounded-xl text-xs font-bold border whitespace-nowrap transition active:scale-95 ${
+              active === a.key
+                ? 'bg-amber-500 text-black border-amber-300 shadow-lg'
+                : 'bg-zinc-900 text-zinc-200 border-zinc-700 hover:bg-zinc-800'
+            }`}
+          >
+            <span className="mr-1">{a.icon}</span>{a.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -3251,6 +3556,121 @@ export default function App() {
 
     loopIntervalRef.current = setTimeout(executePass, 200);
   };
+  // ---------- ACCIONES TÁCTICAS DEL JUGADOR 3D: animación Mixamo + cinemática jugador-balón ----------
+  const actionFxRef = useRef({ raf: null, runRaf: null, timers: [] });
+  const cancelPlayerFx = () => {
+    const fx = actionFxRef.current;
+    if (fx.raf) { cancelAnimationFrame(fx.raf); fx.raf = null; }
+    if (fx.runRaf) { cancelAnimationFrame(fx.runRaf); fx.runRaf = null; }
+    fx.timers.forEach((t) => clearTimeout(t));
+    fx.timers = [];
+  };
+  useEffect(() => () => cancelPlayerFx(), []);
+
+  // Dirección a la que apunta el jugador, en coordenadas 2D (misma convención que la secuencia de pases)
+  const facingDir2D = (rot) => ({
+    dx: isPC ? Math.sin(rot) : -Math.cos(rot),
+    dy: isPC ? Math.cos(rot) : Math.sin(rot)
+  });
+  const clampPitch = (x, y) => ({
+    x: Math.max(1, Math.min(isPC ? 104 : 67, x)),
+    y: Math.max(1, Math.min(isPC ? 67 : 104, y))
+  });
+  const findNearBall = (pl) => {
+    let best = null;
+    let bestD = BALL_NEAR_M;
+    currentObjectsRef.current.forEach((o) => {
+      if (o.type !== 'ball') return;
+      const d = Math.hypot(o.x - pl.x, o.y - pl.y);
+      if (d <= bestD) { bestD = d; best = o; }
+    });
+    return best;
+  };
+
+  // Salida del balón hacia donde apunta el jugador (pase, remate, saque, lanzamiento)
+  const launchBallFromAction = (pl, key) => {
+    const cfg = BALL_ACTIONS[key];
+    const ball = cfg ? findNearBall(pl) : null;
+    if (!cfg || !ball) return;
+    const { dx, dy } = facingDir2D(pl.rotationY || 0);
+    const fx = actionFxRef.current;
+    const timer = setTimeout(() => {
+      const fresh = currentObjectsRef.current.find((o) => o.id === ball.id) || ball;
+      const sx = fresh.x;
+      const sy = fresh.y;
+      const end = clampPitch(sx + dx * cfg.dist, sy + dy * cfg.dist);
+      const t0 = performance.now();
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / cfg.dur);
+        const e = cfg.arc >= 1.5 ? p : 1 - Math.pow(1 - p, 1.5);
+        const bx = sx + (end.x - sx) * e;
+        const by = sy + (end.y - sy) * e;
+        const elev = p >= 1 ? 0 : (cfg.hold || 0) * (1 - p) + 4 * cfg.arc * p * (1 - p);
+        setObjects((prev) => prev.map((o) => (
+          o.id === ball.id ? { ...o, x: bx, y: by, elevation: elev, altitude: elev, animProgress: undefined } : o
+        )));
+        fx.raf = p < 1 ? requestAnimationFrame(step) : null;
+      };
+      if (fx.raf) cancelAnimationFrame(fx.raf);
+      fx.raf = requestAnimationFrame(step);
+    }, cfg.delay);
+    fx.timers.push(timer);
+  };
+
+  // Trote / sprint con el balón cerca: el jugador avanza hacia donde mira y conduce el balón a sus pies
+  const startCarryRun = (pl, key) => {
+    const ball = findNearBall(pl);
+    if (!ball) return;
+    const sprint = key === 'sprint';
+    const speed = sprint ? 6.5 : 3.4;
+    const dur = sprint ? 2400 : 3000;
+    const { dx, dy } = facingDir2D(pl.rotationY || 0);
+    const sx = pl.x;
+    const sy = pl.y;
+    const end = clampPitch(sx + dx * speed * (dur / 1000), sy + dy * speed * (dur / 1000));
+    const relX0 = ball.x - sx;
+    const relY0 = ball.y - sy;
+    const AHEAD = 0.9;
+    const t0 = performance.now();
+    const fx = actionFxRef.current;
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const e = 0.5 * p + 0.5 * p * p * (3 - 2 * p);
+      const px = sx + (end.x - sx) * e;
+      const py = sy + (end.y - sy) * e;
+      const k = Math.min(1, p / 0.2);
+      const kk = k * k * (3 - 2 * k);
+      const ob = clampPitch(px + relX0 + (dx * AHEAD - relX0) * kk, py + relY0 + (dy * AHEAD - relY0) * kk);
+      const bounce = p >= 1 ? 0 : 0.14 * Math.abs(Math.sin(p * (dur / 1000) * (sprint ? 9 : 6)));
+      setObjects((prev) => prev.map((o) => {
+        if (o.id === pl.id) return { ...o, x: px, y: py };
+        if (o.id === ball.id) return { ...o, x: ob.x, y: ob.y, elevation: bounce, altitude: bounce, animProgress: undefined };
+        return o;
+      }));
+      if (p < 1) {
+        fx.runRaf = requestAnimationFrame(step);
+      } else {
+        fx.runRaf = null;
+        const settle = (o) => ({ ...o, animation: 'defensive', animNonce: (o.animNonce || 0) + 1 });
+        setObjects((prev) => prev.map((o) => (o.id === pl.id ? settle(o) : o)));
+        setSelectedObj((prev) => (prev && prev.id === pl.id ? settle(prev) : prev));
+      }
+    };
+    fx.runRaf = requestAnimationFrame(step);
+  };
+
+  // Botón del menú: actualiza obj.animation (el GLBPlayer hace la transición suave) y dispara la cinemática del balón
+  const handlePlayerAction = (playerId, key) => {
+    cancelPlayerFx();
+    const pl = currentObjectsRef.current.find((o) => o.id === playerId);
+    if (!pl) return;
+    const patch = (o) => ({ ...o, animation: key, animNonce: (o.animNonce || 0) + 1 });
+    setObjects((prev) => prev.map((o) => (o.id === playerId ? patch(o) : o)));
+    setSelectedObj((prev) => (prev && prev.id === playerId ? patch(prev) : prev));
+    if (BALL_ACTIONS[key]) launchBallFromAction(pl, key);
+    else if (key === 'jog' || key === 'sprint') startCarryRun(pl, key);
+  };
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -3878,7 +4298,7 @@ Devuelve estricta y únicamente el array JSON.`;
               <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
                 <Canvas
                   frameloop={viewMode === '3d' ? 'always' : 'never'}
-                  dpr={[1, 1.5]}
+                  dpr={[1, isPC ? 2 : 1.5]}
                   shadows
                   gl={{ antialias: true, powerPreference: "high-performance" }}
                   className="w-full h-full touch-none select-none"
@@ -3900,6 +4320,7 @@ Devuelve estricta y únicamente el array JSON.`;
                       cameraLocked={cameraLocked}
                       recordHistory={recordHistory}
                       isPC={isPC}
+                      onDragStart={cancelPlayerFx}
                     />
                   </Suspense>
                 </Canvas>
@@ -4028,6 +4449,19 @@ Devuelve estricta y únicamente el array JSON.`;
           </div>
         )}
         
+        {/* Menú contextual de acciones del jugador seleccionado (vista 3D) */}
+        {viewMode === '3d' && selectedObj && selectedObj.type === 'player' && (() => {
+          const livePlayer = objects.find((o) => o.id === selectedObj.id);
+          if (!livePlayer) return null;
+          return (
+            <PlayerActionBar
+              player={livePlayer}
+              onAction={(key) => handlePlayerAction(livePlayer.id, key)}
+              onClose={() => setSelectedObj(null)}
+            />
+          );
+        })()}
+
         {/* MODAL INSERTAR TEXTO TÁCTICO */}
         {textModalOpen && (
           <div className="absolute inset-0 bg-black/75 flex items-center justify-center p-4 z-50 no-print">
