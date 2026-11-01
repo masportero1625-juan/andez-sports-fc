@@ -95,18 +95,105 @@ const DEFAULT_PLANS = [
   { id: 'p-gold', name: 'Plan Oro (6 Dispositivos)', seats: 6, price: 35000 }
 ];
 
+const TACTICAL_SYSTEMS_LIST = [
+  '4-4-2', '4-5-1', '4-3-3', '3-5-2', '3-4-3',
+  '4-2-3-1', '4-3-2-1', '4-3-1-2', '3-4-2-1', '3-4-1-2'
+];
+
 const GET_TACTICAL_SYSTEMS = (isLand) => {
   if (isLand) {
     return {
-      '4-3-3': [{n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},{n:'6',r:'CDM',x:40,y:34},{n:'8',r:'CM',x:52,y:22},{n:'10',r:'CAM',x:52,y:46},{n:'7',r:'RW',x:74,y:12},{n:'11',r:'LW',x:74,y:56},{n:'9',r:'ST',x:82,y:34}],
-      '4-4-2': [{n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},{n:'6',r:'CM',x:48,y:24},{n:'8',r:'CM',x:48,y:44},{n:'7',r:'RM',x:56,y:10},{n:'11',r:'LM',x:56,y:58},{n:'9',r:'ST',x:78,y:26},{n:'10',r:'ST',x:78,y:42}],
-      '3-5-2': [{n:'1',r:'GK',x:8,y:34},{n:'2',r:'CB',x:22,y:18},{n:'4',r:'CB',x:21,y:34},{n:'3',r:'CB',x:22,y:50},{n:'6',r:'CDM',x:38,y:34},{n:'8',r:'CM',x:50,y:23},{n:'10',r:'CM',x:50,y:45},{n:'7',r:'RWB',x:56,y:8},{n:'11',r:'LWB',x:56,y:60},{n:'9',r:'ST',x:78,y:26},{n:'19',r:'ST',x:78,y:42}]
+      '4-4-2': [
+        {n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},
+        {n:'6',r:'CM',x:48,y:24},{n:'8',r:'CM',x:48,y:44},{n:'7',r:'RM',x:56,y:10},{n:'11',r:'LM',x:56,y:58},{n:'9',r:'ST',x:78,y:26},{n:'10',r:'ST',x:78,y:42}
+      ],
+      '4-5-1': [
+        {n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},
+        {n:'6',r:'CDM',x:42,y:34},{n:'8',r:'CM',x:52,y:22},{n:'10',r:'CM',x:52,y:46},{n:'7',r:'RM',x:64,y:10},{n:'11',r:'LM',x:64,y:58},{n:'9',r:'ST',x:82,y:34}
+      ],
+      '4-3-3': [
+        {n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},
+        {n:'6',r:'CDM',x:42,y:34},{n:'8',r:'CM',x:52,y:22},{n:'10',r:'CAM',x:52,y:46},{n:'7',r:'RW',x:74,y:12},{n:'11',r:'LW',x:74,y:56},{n:'9',r:'ST',x:82,y:34}
+      ],
+      '3-5-2': [
+        {n:'1',r:'GK',x:8,y:34},{n:'2',r:'CB',x:22,y:18},{n:'4',r:'CB',x:21,y:34},{n:'3',r:'CB',x:22,y:50},
+        {n:'6',r:'CDM',x:38,y:34},{n:'8',r:'CM',x:50,y:23},{n:'10',r:'CM',x:50,y:45},{n:'7',r:'RWB',x:56,y:8},{n:'11',r:'LWB',x:56,y:60},
+        {n:'9',r:'ST',x:78,y:26},{n:'10',r:'ST',x:78,y:42}
+      ],
+      '3-4-3': [
+        {n:'1',r:'GK',x:8,y:34},{n:'2',r:'CB',x:22,y:18},{n:'4',r:'CB',x:21,y:34},{n:'3',r:'CB',x:22,y:50},
+        {n:'6',r:'CM',x:45,y:24},{n:'8',r:'CM',x:45,y:44},{n:'7',r:'RM',x:54,y:10},{n:'11',r:'LM',x:54,y:58},
+        {n:'17',r:'RW',x:74,y:14},{n:'19',r:'LW',x:74,y:54},{n:'9',r:'ST',x:82,y:34}
+      ],
+      '4-2-3-1': [
+        {n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},
+        {n:'6',r:'CDM',x:42,y:25},{n:'8',r:'CDM',x:42,y:43},{n:'10',r:'CAM',x:60,y:34},{n:'7',r:'RAM',x:64,y:12},{n:'11',r:'LAM',x:64,y:56},{n:'9',r:'ST',x:82,y:34}
+      ],
+      '4-3-2-1': [
+        {n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},
+        {n:'6',r:'CM',x:45,y:18},{n:'8',r:'CDM',x:44,y:34},{n:'10',r:'CM',x:45,y:50},{n:'7',r:'CAM',x:64,y:24},{n:'11',r:'CAM',x:64,y:44},{n:'9',r:'ST',x:82,y:34}
+      ],
+      '4-3-1-2': [
+        {n:'1',r:'GK',x:8,y:34},{n:'4',r:'CB',x:22,y:24},{n:'3',r:'CB',x:22,y:44},{n:'2',r:'RB',x:30,y:10},{n:'5',r:'LB',x:30,y:58},
+        {n:'6',r:'CM',x:45,y:18},{n:'8',r:'CDM',x:44,y:34},{n:'11',r:'CM',x:45,y:50},{n:'10',r:'CAM',x:60,y:34},{n:'7',r:'ST',x:78,y:26},{n:'9',r:'ST',x:78,y:42}
+      ],
+      '3-4-2-1': [
+        {n:'1',r:'GK',x:8,y:34},{n:'2',r:'CB',x:22,y:18},{n:'4',r:'CB',x:21,y:34},{n:'3',r:'CB',x:22,y:50},
+        {n:'6',r:'CM',x:45,y:24},{n:'8',r:'CM',x:45,y:44},{n:'7',r:'RM',x:52,y:10},{n:'11',r:'LM',x:52,y:58},
+        {n:'17',r:'CAM',x:65,y:24},{n:'18',r:'CAM',x:65,y:44},{n:'9',r:'ST',x:82,y:34}
+      ],
+      '3-4-1-2': [
+        {n:'1',r:'GK',x:8,y:34},{n:'2',r:'CB',x:22,y:18},{n:'4',r:'CB',x:21,y:34},{n:'3',r:'CB',x:22,y:50},
+        {n:'6',r:'CM',x:45,y:24},{n:'8',r:'CM',x:45,y:44},{n:'7',r:'RM',x:52,y:10},{n:'11',r:'LM',x:52,y:58},
+        {n:'10',r:'CAM',x:62,y:34},{n:'9',r:'ST',x:78,y:26},{n:'19',r:'ST',x:78,y:42}
+      ]
     };
   }
   return {
-    '4-3-3': [{n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},{n:'6',r:'CDM',x:34,y:64},{n:'8',r:'CM',x:22,y:52},{n:'10',r:'CAM',x:46,y:52},{n:'7',r:'RW',x:12,y:32},{n:'11',r:'LW',x:56,y:32},{n:'9',r:'ST',x:34,y:24}],
-    '4-4-2': [{n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},{n:'6',r:'CM',x:24,y:56},{n:'8',r:'CM',x:44,y:56},{n:'7',r:'RM',x:10,y:48},{n:'11',r:'LM',x:58,y:48},{n:'9',r:'ST',x:26,y:26},{n:'10',r:'ST',x:42,y:26}],
-    '3-5-2': [{n:'1',r:'GK',x:34,y:96},{n:'2',r:'CB',x:18,y:82},{n:'4',r:'CB',x:34,y:83},{n:'3',r:'CB',x:50,y:82},{n:'6',r:'CDM',x:34,y:66},{n:'8',r:'CM',x:23,y:54},{n:'10',r:'CM',x:45,y:54},{n:'7',r:'RWB',x:8,y:48},{n:'11',r:'LWB',x:60,y:48},{n:'9',r:'ST',x:26,y:26},{n:'19',r:'ST',x:42,y:26}]
+    '4-4-2': [
+      {n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},
+      {n:'6',r:'CM',x:24,y:56},{n:'8',r:'CM',x:44,y:56},{n:'7',r:'RM',x:10,y:48},{n:'11',r:'LM',x:58,y:48},{n:'9',r:'ST',x:26,y:26},{n:'10',r:'ST',x:42,y:26}
+    ],
+    '4-5-1': [
+      {n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},
+      {n:'6',r:'CDM',x:34,y:65},{n:'8',r:'CM',x:22,y:52},{n:'10',r:'CM',x:46,y:52},{n:'7',r:'RM',x:10,y:42},{n:'11',r:'LM',x:58,y:42},{n:'9',r:'ST',x:34,y:24}
+    ],
+    '4-3-3': [
+      {n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},
+      {n:'6',r:'CDM',x:34,y:64},{n:'8',r:'CM',x:22,y:52},{n:'10',r:'CAM',x:46,y:52},{n:'7',r:'RW',x:12,y:32},{n:'11',r:'LW',x:56,y:32},{n:'9',r:'ST',x:34,y:24}
+    ],
+    '3-5-2': [
+      {n:'1',r:'GK',x:34,y:96},{n:'2',r:'CB',x:18,y:82},{n:'4',r:'CB',x:34,y:83},{n:'3',r:'CB',x:50,y:82},
+      {n:'6',r:'CDM',x:34,y:66},{n:'8',r:'CM',x:23,y:54},{n:'10',r:'CM',x:45,y:54},{n:'7',r:'RWB',x:8,y:48},{n:'11',r:'LWB',x:60,y:48},
+      {n:'9',r:'ST',x:26,y:26},{n:'10',r:'ST',x:42,y:26}
+    ],
+    '3-4-3': [
+      {n:'1',r:'GK',x:34,y:96},{n:'2',r:'CB',x:18,y:82},{n:'4',r:'CB',x:34,y:83},{n:'3',r:'CB',x:50,y:82},
+      {n:'6',r:'CM',x:24,y:58},{n:'8',r:'CM',x:44,y:58},{n:'7',r:'RM',x:10,y:50},{n:'11',r:'LM',x:58,y:50},
+      {n:'17',r:'RW',x:14,y:32},{n:'19',r:'LW',x:54,y:32},{n:'9',r:'ST',x:34,y:24}
+    ],
+    '4-2-3-1': [
+      {n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},
+      {n:'6',r:'CDM',x:25,y:64},{n:'8',r:'CDM',x:43,y:64},{n:'10',r:'CAM',x:34,y:46},{n:'7',r:'RAM',x:12,y:42},{n:'11',r:'LAM',x:56,y:42},{n:'9',r:'ST',x:34,y:24}
+    ],
+    '4-3-2-1': [
+      {n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},
+      {n:'6',r:'CM',x:18,y:60},{n:'8',r:'CDM',x:34,y:62},{n:'10',r:'CM',x:50,y:60},{n:'7',r:'CAM',x:24,y:42},{n:'11',r:'CAM',x:44,y:42},{n:'9',r:'ST',x:34,y:24}
+    ],
+    '4-3-1-2': [
+      {n:'1',r:'GK',x:34,y:96},{n:'4',r:'CB',x:23,y:82},{n:'3',r:'CB',x:45,y:82},{n:'2',r:'RB',x:10,y:74},{n:'5',r:'LB',x:58,y:74},
+      {n:'6',r:'CM',x:18,y:60},{n:'8',r:'CDM',x:34,y:62},{n:'11',r:'CM',x:50,y:60},{n:'10',r:'CAM',x:34,y:46},{n:'7',r:'ST',x:26,y:26},{n:'9',r:'ST',x:42,y:26}
+    ],
+    '3-4-2-1': [
+      {n:'1',r:'GK',x:34,y:96},{n:'2',r:'CB',x:18,y:82},{n:'4',r:'CB',x:34,y:83},{n:'3',r:'CB',x:50,y:82},
+      {n:'6',r:'CM',x:24,y:58},{n:'8',r:'CM',x:44,y:58},{n:'7',r:'RM',x:10,y:52},{n:'11',r:'LM',x:58,y:52},
+      {n:'17',r:'CAM',x:24,y:40},{n:'18',r:'CAM',x:44,y:40},{n:'9',r:'ST',x:34,y:24}
+    ],
+    '3-4-1-2': [
+      {n:'1',r:'GK',x:34,y:96},{n:'2',r:'CB',x:18,y:82},{n:'4',r:'CB',x:34,y:83},{n:'3',r:'CB',x:50,y:82},
+      {n:'6',r:'CM',x:24,y:58},{n:'8',r:'CM',x:44,y:58},{n:'7',r:'RM',x:10,y:52},{n:'11',r:'LM',x:58,y:52},
+      {n:'10',r:'CAM',x:34,y:44},{n:'9',r:'ST',x:26,y:26},{n:'19',r:'ST',x:42,y:26}
+    ]
   };
 };
 
@@ -3365,6 +3452,30 @@ export default function App() {
   const svgRef = useRef(null);
   const isDraggingRef = useRef(false);
   const [selectedObj, setSelectedObj] = useState(null);
+  // ESTADOS MODULARES Y LÍNEA DE TIEMPO TIPO TACTICALPAD
+  const [bottomBarMode, setBottomBarMode] = useState('menu');
+  const [rosterTeam, setRosterTeam] = useState('blue');
+  const [showSystemsModal, setShowSystemsModal] = useState(null);
+  const [frames, setFrames] = useState([
+    { id: 1, name: 'Marco 1', objects: [], drawings: [] }
+  ]);
+  const [activeFrameIndex, setActiveFrameIndex] = useState(0);
+
+  const handleAddFrame = () => {
+    const currentObjs = JSON.parse(JSON.stringify(objects));
+    const nextIdx = frames.length;
+    setFrames(prev => [
+      ...prev,
+      { id: Date.now(), name: `Marco \${nextIdx + 1}`, objects: currentObjs, drawings: [] }
+    ]);
+    setActiveFrameIndex(nextIdx);
+  };
+
+  const handleDeleteFrame = (idx) => {
+    if (frames.length <= 1) return;
+    setFrames(prev => prev.filter((_, i) => i !== idx));
+    setActiveFrameIndex(prev => Math.max(0, prev - 1));
+  };
 
   const exportBoardAsImage = () => {
     if (!svgRef.current) return;
@@ -3737,23 +3848,19 @@ export default function App() {
 
     setIsGeneratingPrompt(true);
     const isHalf = pitchMode === 'half';
-    const systemInstruction = `Eres un DT y analista táctico profesional de fútbol.
-Convierte la solicitud del usuario en un array JSON con las posiciones exactas en el campo.
-GEOMETRÍA Y MEDIDAS OFICIALES (Eje X: 0 a 105 largo, Eje Y: 0 a 68 ancho):
-- Centro del campo: X=52.5, Y=34.
-- Portería Izquierda: X=2, Y=34.
-- Área Chica Izquierda: X va de 0 a 5.5, Y va de 24.8 a 43.2.
-- Área Grande Izquierda: X va de 0 a 16.5, Y va de 13.8 a 54.2.
-- Punto penal: X=11, Y=34.
-- Medialuna: X=18 a 22, Y entre 26 y 42.
-- Bandas: Y=8 e Y=60.
-FORMATO OBLIGATORIO:
-- Jugador: {"id": "p_1", "type": "player", "number": "1", "name": "Arquero", "x": 3, "y": 34, "team": "blue"}
-- Balón: {"id": "b_1", "type": "ball", "x": 6, "y": 34}
-- Maniquí: {"id": "m_1", "type": "dummy", "name": "Barrera", "x": 20, "y": 34, "rotation": 90}
-- Cono: {"id": "c_1", "type": "cone", "color": "#ea580c", "x": 30, "y": 34, "rotation": 0}
-- Mini portería: {"id": "mg_1", "type": "mini_goal", "x": 35, "y": 34, "rotation": 0}
-Devuelve estricta y únicamente el array JSON.`;
+    const systemInstruction = `Eres el Director Técnico y Analista Metodológico de Élite de Andez Sports Tactics Pro.
+La cancha mide oficialmente 105 metros de largo (Eje X: 0 a 105) y 68 metros de ancho (Eje Y: 0 a 68).
+Centro del campo en (52.5, 34). Áreas grandes de X=0 a 16.5 y de X=88.5 a 105.
+
+Catálogo de elementos disponibles:
+- Jugador: {"id": "p_1", "type": "player", "number": "4", "role": "CB", "team": "blue"|"red"|"gk"|"gk_away", "x": 25, "y": 34}
+- Balón: {"id": "b_1", "type": "ball", "x": 26, "y": 34, "elevation": 0}
+- Cono: {"id": "c_1", "type": "cone", "color": "#ea580c"|"#2563eb"|"#eab308", "x": 20, "y": 30}
+- Valla: {"id": "h_1", "type": "hurdle", "x": 22, "y": 30}
+- Maniquí de tiro libre: {"id": "m_1", "type": "dummy", "x": 30, "y": 34, "rotation": 90}
+- Mini Portería: {"id": "mg_1", "type": "mini_goal", "x": 35, "y": 34}
+
+Calcula con precisión métrica la solicitud y devuelve estricta y únicamente el array JSON con los objetos posicionados.`;
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
@@ -4029,16 +4136,39 @@ Devuelve estricta y únicamente el array JSON.`;
                 <circle cx={pitchMode === 'half' ? 53 : 52.5} cy="34" r="0.8" fill="white" />
                 <rect x="2" y="13.8" width="16.5" height="40.4" />
                 <rect x="2" y="24.8" width="5.5" height="18.4" />
-                <rect x="-0.8" y="30.3" width="2.8" height="7.32" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
+                {/* ARCO IZQUIERDO CENITAL CON RED BLANCA */}
+                <g>
+                  <rect x="-0.8" y="30.34" width="2.8" height="7.32" fill="rgba(255,255,255,0.08)" stroke="#ffffff" strokeWidth="0.5" />
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <line key={`lh-${i}`} x1="-0.8" y1={30.34 + (i + 1) * 1.46} x2="2" y2={30.34 + (i + 1) * 1.46} stroke="#ffffff" strokeWidth="0.2" opacity="0.6" strokeDasharray="0.5 0.5" />
+                  ))}
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <line key={`lv-${j}`} x1={-0.8 + (j + 1) * 0.7} y1="30.34" x2={-0.8 + (j + 1) * 0.7} y2="37.66" stroke="#ffffff" strokeWidth="0.2" opacity="0.6" strokeDasharray="0.5 0.5" />
+                  ))}
+                  <line x1="2" y1="30.34" x2="2" y2="37.66" stroke="#ffffff" strokeWidth="1.1" />
+                </g>
+
                 <path d="M 18.5 28 A 9.15 9.15 0 0 1 18.5 40" />
+
                 {!pitchMode.includes('half') && (
                   <>
                     <rect x="86.5" y="13.8" width="16.5" height="40.4" />
                     <rect x="97.5" y="24.8" width="5.5" height="18.4" />
-                    <rect x="103" y="30.3" width="2.8" height="7.32" stroke="#eab308" strokeWidth="0.9" fill="rgba(255,255,255,0.2)" />
+                    {/* ARCO DERECHO CENITAL CON RED BLANCA */}
+                    <g>
+                      <rect x="103" y="30.34" width="2.8" height="7.32" fill="rgba(255,255,255,0.08)" stroke="#ffffff" strokeWidth="0.5" />
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <line key={`rh-${i}`} x1="103" y1={30.34 + (i + 1) * 1.46} x2="105.8" y2={30.34 + (i + 1) * 1.46} stroke="#ffffff" strokeWidth="0.2" opacity="0.6" strokeDasharray="0.5 0.5" />
+                      ))}
+                      {Array.from({ length: 3 }).map((_, j) => (
+                        <line key={`rv-${j}`} x1={103 + (j + 1) * 0.7} y1="30.34" x2={103 + (j + 1) * 0.7} y2="37.66" stroke="#ffffff" strokeWidth="0.2" opacity="0.6" strokeDasharray="0.5 0.5" />
+                      ))}
+                      <line x1="103" y1="30.34" x2="103" y2="37.66" stroke="#ffffff" strokeWidth="1.1" />
+                    </g>
                     <path d="M 86.5 28 A 9.15 9.15 0 0 0 86.5 40" />
                   </>
                 )}
+                
               </g>
             ) : (
               <g stroke="white" strokeWidth="0.8" fill="none">
@@ -5175,88 +5305,97 @@ Devuelve estricta y únicamente el array JSON.`;
 
       {/* FOOTER */}
       <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 no-print overflow-x-auto max-w-full">
-        <div className="flex items-center gap-2">
-          <button onClick={() => { if (historyIndex > 0) { setHistoryIndex(historyIndex - 1); setObjects(history[historyIndex - 1]); } }} disabled={historyIndex <= 0} className="p-1.5 text-zinc-300 disabled:opacity-30"><Undo2 className="w-5 h-5" /></button>
-          <button onClick={() => { if (historyIndex < history.length - 1) { setHistoryIndex(historyIndex + 1); setObjects(history[historyIndex + 1]); } }} disabled={historyIndex >= history.length - 1} className="p-1.5 text-zinc-300 disabled:opacity-30"><Redo2 className="w-5 h-5" /></button>
-        </div>
-
-        {/* PALETA DE CAMISETAS FLOTANTE */}
-        {showKitPalette && (
-          <div className="fixed bottom-16 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-2.5 shadow-2xl flex items-center gap-3 overflow-x-auto z-40 animate-fade-in no-print">
-            <div className="flex items-center gap-1 shrink-0">
-              {[
-                { id: 'blue', label: 'Eq. 1' },
-                { id: 'red', label: 'Eq. 2' },
-                { id: 'gk', label: 'Arq. 1' },
-                { id: 'gk_away', label: 'Arq. 2' }
-              ].map(target => (
-                <button
-                  key={target.id}
-                  onClick={() => setKitTarget(target.id)}
-                  className={`px-2 py-1 rounded-lg text-xs font-bold transition ${kitTarget === target.id ? 'bg-amber-500 text-black shadow' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
-                >
-                  {target.label}
-                </button>
-              ))}
-            </div>
-            <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-0.5" />
-            <div className="flex items-center gap-1.5 shrink-0">
-              {officialKitColors.map(c => (
-                <button
-                  key={c.hex}
-                  title={c.name}
-                  onClick={() => handleUpdateKitColor(c.hex)}
-                  style={{ backgroundColor: c.hex }}
-                  className={`w-6 h-6 rounded-full border border-black/30 transition-transform ${teamColors[kitTarget] === c.hex ? 'scale-125 ring-2 ring-amber-400 ring-offset-2 ring-offset-black' : 'hover:scale-110'}`}
-                />
-              ))}
-            </div>
-            <div className="h-5 w-[1px] bg-zinc-800 shrink-0 mx-0.5" />
-            <button onClick={() => setShowKitPalette(false)} className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0">
-              Listo ✕
+        {/* MODO 1: MENÚ PRINCIPAL TACTICALPAD */}
+        {bottomBarMode === 'menu' && (
+          <div className="flex items-center justify-around w-full max-w-4xl mx-auto px-2">
+            <button onClick={() => { if (confirm('¿Nuevo proyecto? Se limpiará la pizarra.')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
+              <span className="text-lg">📄</span>
+              <span className="text-[10px] font-medium">Nuevo</span>
+            </button>
+            <button onClick={() => setShowLibraryModal(true)} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
+              <span className="text-lg">📁</span>
+              <span className="text-[10px] font-medium">Abrir</span>
+            </button>
+            <button onClick={() => handleSaveExercise()} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
+              <span className="text-lg">💾</span>
+              <span className="text-[10px] font-medium">Guardar</span>
+            </button>
+            <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
+              <span className="text-lg">🏟️</span>
+              <span className="text-[10px] font-medium">Campo</span>
+            </button>
+            <button onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} className="flex flex-col items-center text-amber-400 hover:text-amber-300 font-bold transition">
+              <span className="text-lg">🧊</span>
+              <span className="text-[10px]">3D</span>
+            </button>
+            <button onClick={() => setShowMaterialsModal(true)} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
+              <span className="text-lg">📦</span>
+              <span className="text-[10px] font-medium">Materiales</span>
             </button>
           </div>
         )}
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={() => setShowKitPalette(prev => !prev)}
-            className={`px-2 py-1 rounded-xl text-xs font-bold border transition ${showKitPalette ? 'bg-amber-500 text-black border-amber-400 shadow-md' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'}`}
-            title="Personalizar colores de camisetas y arqueros"
-          >
-            🎨 Camisetas
-          </button>
-          <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk', customColor: teamColors.gk })} style={{ backgroundColor: teamColors.gk }} className="w-9 h-9 rounded-full border-2 border-white text-white font-black text-xs shadow hover:scale-105 transition-transform" title="Arquero Local">1</button>
-          <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk_away', customColor: teamColors.gk_away })} style={{ backgroundColor: teamColors.gk_away }} className="w-9 h-9 rounded-full border-2 border-white text-white font-black text-xs shadow hover:scale-105 transition-transform" title="Arquero Visitante">1</button>
-          <button onClick={() => addElement('player', { team: 'blue', customColor: teamColors.blue })} style={{ backgroundColor: teamColors.blue }} className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform" title="Jugador Equipo 1">11</button>
-          <button onClick={() => addElement('player', { team: 'red', customColor: teamColors.red })} style={{ backgroundColor: teamColors.red }} className="w-9 h-9 rounded-full border-2 border-white text-white font-bold text-xs shadow hover:scale-105 transition-transform" title="Jugador Equipo 2">11</button>
-          <button
-  type="button"
-  onClick={() => {
-    const isDesk = window.innerWidth > 768;
-    const newBall = {
-      id: `ball-${Date.now()}`,
-      type: 'ball',
-      x: isDesk ? 52.5 : 34,
-      y: isDesk ? 34 : 52.5,
-      elevation: 0
-    };
-    setObjects((prev) => [...prev, newBall]);
-    setSelectedObj(newBall);
-  }}
-  className="w-9 h-9 rounded-full bg-white text-sm shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition"
->
-  ⚽
-</button>
-        </div>
+        {/* MODO 2: PLANTILLA DE DORSALES (ROSTER) */}
+        {bottomBarMode === 'roster' && (
+          <div className="flex items-center gap-2 overflow-x-auto w-full py-1 px-2">
+            <button onClick={() => setBottomBarMode('menu')} className="px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white rounded text-xs shrink-0 font-bold">
+              ✕ Cerrar
+            </button>
+            <div className="h-6 w-[1px] bg-zinc-800 shrink-0" />
+            <button onClick={() => addElement('player', { role: 'GK', number: '1', team: rosterTeam === 'blue' ? 'gk' : 'gk_away', customColor: rosterTeam === 'blue' ? teamColors.gk : teamColors.gk_away })} style={{ backgroundColor: rosterTeam === 'blue' ? teamColors.gk : teamColors.gk_away }} className="w-8 h-8 rounded-full border border-white text-white font-black text-xs shrink-0 shadow">
+              1 (GK)
+            </button>
+            {['2','3','4','5','6','7','8','9','10','11','12','14','17','19','20'].map(num => (
+              <button 
+                key={num} 
+                onClick={() => addElement('player', { team: rosterTeam, number: num, customColor: teamColors[rosterTeam] })} 
+                style={{ backgroundColor: teamColors[rosterTeam] }} 
+                className="w-8 h-8 rounded-full border border-white text-white font-bold text-xs shrink-0 hover:scale-105 shadow transition"
+              >
+                {num}
+              </button>
+            ))}
+            <button
+              onClick={() => {
+                const newBall = { id: `ball-${Date.now()}`, type: 'ball', x: 52.5, y: 34, elevation: 0 };
+                setObjects(prev => [...prev, newBall]);
+              }}
+              className="w-8 h-8 rounded-full bg-white text-xs shrink-0 shadow flex items-center justify-center hover:scale-110"
+            >
+              ⚽
+            </button>
+          </div>
+        )}
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400'}`} title="Texto Explicativo"><Type className="w-5 h-5" /></button>
-          <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'text-zinc-400'}`} title="Goma de Borrar"><Eraser className="w-5 h-5" /></button>
-          <button onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); recordHistory([]); } }} className="p-1.5 text-red-400 hover:text-red-300" title="Vaciar Cancha Completa"><Trash2 className="w-5 h-5" /></button>
-          <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300'}`} title="Trazados y Flechas"><PenTool className="w-5 h-5" /></button>
-        </div>
+        {/* MODO 3: HERRAMIENTAS Y LÍNEA DE TIEMPO */}
+        {(bottomBarMode === 'tools' || bottomBarMode === 'timeline') && (
+          <div className="flex items-center justify-between w-full px-2">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setBottomBarMode(bottomBarMode === 'timeline' ? 'tools' : 'timeline')} className={`px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 ${bottomBarMode === 'timeline' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-300'}`}>
+                🎬 {bottomBarMode === 'timeline' ? 'Ocultar Marcos' : 'Línea de Tiempo'}
+              </button>
+              {bottomBarMode === 'timeline' && (
+                <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-0.5">
+                  <span className="text-zinc-400 text-xs font-semibold mr-1">{frames[activeFrameIndex]?.name || 'Marco 1'}:</span>
+                  {frames.map((_, idx) => (
+                    <button key={idx} onClick={() => setActiveFrameIndex(idx)} className={`w-5 h-5 rounded text-[11px] font-bold ${activeFrameIndex === idx ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300'}`}>
+                      {idx + 1}
+                    </button>
+                  ))}
+                  <button onClick={handleAddFrame} className="w-5 h-5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs ml-1 flex items-center justify-center" title="Añadir Marco">+</button>
+                  <button onClick={() => handleDeleteFrame(activeFrameIndex)} className="text-zinc-500 hover:text-red-400 ml-1 text-xs">🗑️</button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300 hover:bg-zinc-800'}`} title="Trazados y Flechas"><PenTool className="w-4 h-4" /></button>
+              <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:bg-zinc-800'}`} title="Texto Explicativo"><Type className="w-4 h-4" /></button>
+              <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:bg-zinc-800'}`} title="Goma de Borrar"><Eraser className="w-4 h-4" /></button>
+              <button onClick={() => { if (confirm('¿Vaciar pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} className="p-1.5 text-red-400 hover:text-red-300" title="Vaciar"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          </div>
+        )}
       </footer>
     </div>
-  );
-}
+  )}
