@@ -4232,13 +4232,14 @@ Calcula con precisión métrica la solicitud y devuelve estricta y únicamente e
               <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.5" markerHeight="3.5" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
             </defs>
 
-            {/* CÉSPED TIPO TACTICALPAD VERDE OLIVA / PRADERA SUAVE */}
-<rect width="600" height="600" x="-250" y="-250" fill="#73983b" />
-<g opacity="0.18">
-  {Array.from({ length: 30 }).map((_, i) => (
-    <rect key={i} x={-10 + i * 4.4} y="-50" width="2.2" height="180" fill={i % 2 === 0 ? "#000000" : "#ffffff"} opacity="0.35" />
-  ))}
-</g>
+            {/* CÉSPED NATURAL PROFESIONAL TACTICALPAD */}
+            <defs>
+              <pattern id="tp-grass-stripes" width="10.5" height="100" patternUnits="userSpaceOnUse">
+                <rect x="0" y="0" width="5.25" height="100" fill="#739b3a" />
+                <rect x="5.25" y="0" width="5.25" height="100" fill="#7ba440" />
+              </pattern>
+            </defs>
+            <rect width="600" height="600" x="-250" y="-250" fill="url(#tp-grass-stripes)" />
 
             {/* LÍNEAS REGLAMENTARIAS Y ARCOS */}
             {isPC ? (
@@ -5418,97 +5419,7 @@ Calcula con precisión métrica la solicitud y devuelve estricta y únicamente e
 
       {/* FOOTER */}
       <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 no-print overflow-x-auto max-w-full">
-        {/* MODO 1: MENÚ PRINCIPAL TACTICALPAD */}
-        {bottomBarMode === 'menu' && (
-          <div className="flex items-center justify-around w-full max-w-4xl mx-auto px-2">
-            <button onClick={() => { if (confirm('¿Nuevo proyecto? Se limpiará la pizarra.')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
-              <span className="text-lg">📄</span>
-              <span className="text-[10px] font-medium">Nuevo</span>
-            </button>
-            <button onClick={() => setShowLibraryModal(true)} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
-              <span className="text-lg">📁</span>
-              <span className="text-[10px] font-medium">Abrir</span>
-            </button>
-            <button onClick={() => handleSaveExercise()} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
-              <span className="text-lg">💾</span>
-              <span className="text-[10px] font-medium">Guardar</span>
-            </button>
-            <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
-              <span className="text-lg">🏟️</span>
-              <span className="text-[10px] font-medium">Campo</span>
-            </button>
-            <button onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} className="flex flex-col items-center text-amber-400 hover:text-amber-300 font-bold transition">
-              <span className="text-lg">🧊</span>
-              <span className="text-[10px]">3D</span>
-            </button>
-            <button onClick={() => setShowMaterialsModal(true)} className="flex flex-col items-center text-zinc-400 hover:text-white transition">
-              <span className="text-lg">📦</span>
-              <span className="text-[10px] font-medium">Materiales</span>
-            </button>
-          </div>
-        )}
-
-        {/* MODO 2: PLANTILLA DE DORSALES (ROSTER) */}
-        {bottomBarMode === 'roster' && (
-          <div className="flex items-center gap-2 overflow-x-auto w-full py-1 px-2">
-            <button onClick={() => setBottomBarMode('menu')} className="px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white rounded text-xs shrink-0 font-bold">
-              ✕ Cerrar
-            </button>
-            <div className="h-6 w-[1px] bg-zinc-800 shrink-0" />
-            <button onClick={() => addElement('player', { role: 'GK', number: '1', team: rosterTeam === 'blue' ? 'gk' : 'gk_away', customColor: rosterTeam === 'blue' ? teamColors.gk : teamColors.gk_away })} style={{ backgroundColor: rosterTeam === 'blue' ? teamColors.gk : teamColors.gk_away }} className="w-8 h-8 rounded-full border border-white text-white font-black text-xs shrink-0 shadow">
-              1 (GK)
-            </button>
-            {['2','3','4','5','6','7','8','9','10','11','12','14','17','19','20'].map(num => (
-              <button 
-                key={num} 
-                onClick={() => addElement('player', { team: rosterTeam, number: num, customColor: teamColors[rosterTeam] })} 
-                style={{ backgroundColor: teamColors[rosterTeam] }} 
-                className="w-8 h-8 rounded-full border border-white text-white font-bold text-xs shrink-0 hover:scale-105 shadow transition"
-              >
-                {num}
-              </button>
-            ))}
-            <button
-              onClick={() => {
-                const newBall = { id: `ball-${Date.now()}`, type: 'ball', x: 52.5, y: 34, elevation: 0 };
-                setObjects(prev => [...prev, newBall]);
-              }}
-              className="w-8 h-8 rounded-full bg-white text-xs shrink-0 shadow flex items-center justify-center hover:scale-110"
-            >
-              ⚽
-            </button>
-          </div>
-        )}
-
-        {/* MODO 3: HERRAMIENTAS Y LÍNEA DE TIEMPO */}
-        {(bottomBarMode === 'tools' || bottomBarMode === 'timeline') && (
-          <div className="flex items-center justify-between w-full px-2">
-            <div className="flex items-center gap-2">
-              <button onClick={() => setBottomBarMode(bottomBarMode === 'timeline' ? 'tools' : 'timeline')} className={`px-2.5 py-1 rounded text-xs font-bold transition flex items-center gap-1 ${bottomBarMode === 'timeline' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-300'}`}>
-                🎬 {bottomBarMode === 'timeline' ? 'Ocultar Marcos' : 'Línea de Tiempo'}
-              </button>
-              {bottomBarMode === 'timeline' && (
-                <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded px-2 py-0.5">
-                  <span className="text-zinc-400 text-xs font-semibold mr-1">{frames[activeFrameIndex]?.name || 'Marco 1'}:</span>
-                  {frames.map((_, idx) => (
-                    <button key={idx} onClick={() => setActiveFrameIndex(idx)} className={`w-5 h-5 rounded text-[11px] font-bold ${activeFrameIndex === idx ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300'}`}>
-                      {idx + 1}
-                    </button>
-                  ))}
-                  <button onClick={handleAddFrame} className="w-5 h-5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs ml-1 flex items-center justify-center" title="Añadir Marco">+</button>
-                  <button onClick={() => handleDeleteFrame(activeFrameIndex)} className="text-zinc-500 hover:text-red-400 ml-1 text-xs">🗑️</button>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded ${tool === 'draw' ? 'bg-amber-500 text-black' : 'text-zinc-300 hover:bg-zinc-800'}`} title="Trazados y Flechas"><PenTool className="w-4 h-4" /></button>
-              <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded ${tool === 'text' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:bg-zinc-800'}`} title="Texto Explicativo"><Type className="w-4 h-4" /></button>
-              <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded ${tool === 'eraser' ? 'bg-red-600 text-white' : 'text-zinc-400 hover:bg-zinc-800'}`} title="Goma de Borrar"><Eraser className="w-4 h-4" /></button>
-              <button onClick={() => { if (confirm('¿Vaciar pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} className="p-1.5 text-red-400 hover:text-red-300" title="Vaciar"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          </div>
-        )}
+        <footer></footer>
       </footer>
     </div>
   )}
