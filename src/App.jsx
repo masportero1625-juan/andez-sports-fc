@@ -3861,7 +3861,7 @@ Catálogo disponible:
 Devuelve estricta y únicamente un array JSON válido con los objetos posicionados, sin explicaciones ni markdown. Ejemplo: [{"id":"p_1","type":"player","number":"1","role":"GK","team":"blue","x":11,"y":34}]`;
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
