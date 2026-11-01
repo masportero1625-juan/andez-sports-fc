@@ -3837,43 +3837,52 @@ export default function App() {
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
 
   const handleGenerateTacticalPrompt = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!promptText.trim() || isGeneratingPrompt) return;
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      alert("No se encontró la clave VITE_GEMINI_API_KEY en las variables de entorno.");
+      alert("⚠️ Falta la clave VITE_GEMINI_API_KEY en las variables de entorno de Vercel.");
       return;
     }
 
     setIsGeneratingPrompt(true);
-    const isHalf = pitchMode === 'half';
-    const systemInstruction = `Eres el Director Técnico y Analista Metodológico de Élite de Andez Sports Tactics Pro.
+    const systemInstruction = `Eres el Director Técnico y Diseñador Táctico de Élite de Andez Sports Tactics Pro.
 La cancha mide oficialmente 105 metros de largo (Eje X: 0 a 105) y 68 metros de ancho (Eje Y: 0 a 68).
-Centro del campo en (52.5, 34). Áreas grandes de X=0 a 16.5 y de X=88.5 a 105.
+Centro del campo: (52.5, 34). Punto penal izquierdo: (11, 34). Área grande izquierda: X de 0 a 16.5, Y de 13.8 a 54.2.
 
-Catálogo de elementos disponibles:
-- Jugador: {"id": "p_1", "type": "player", "number": "4", "role": "CB", "team": "blue"|"red"|"gk"|"gk_away", "x": 25, "y": 34}
-- Balón: {"id": "b_1", "type": "ball", "x": 26, "y": 34, "elevation": 0}
-- Cono: {"id": "c_1", "type": "cone", "color": "#ea580c"|"#2563eb"|"#eab308", "x": 20, "y": 30}
-- Valla: {"id": "h_1", "type": "hurdle", "x": 22, "y": 30}
-- Maniquí de tiro libre: {"id": "m_1", "type": "dummy", "x": 30, "y": 34, "rotation": 90}
-- Mini Portería: {"id": "mg_1", "type": "mini_goal", "x": 35, "y": 34}
+Catálogo disponible:
+- Jugador: {"id": "p_1", "type": "player", "number": "1", "role": "GK", "name": "Arquero", "team": "blue", "x": 11, "y": 34}
+- Balón: {"id": "b_1", "type": "ball", "x": 11, "y": 34, "elevation": 0}
+- Cono: {"id": "c_1", "type": "cone", "color": "#ea580c", "x": 52.5, "y": 25}
+- Maniquí: {"id": "m_1", "type": "dummy", "x": 20, "y": 34, "rotation": 90}
+- Mini portería: {"id": "mg_1", "type": "mini_goal", "x": 35, "y": 34}
 
-Calcula con precisión métrica la solicitud y devuelve estricta y únicamente el array JSON con los objetos posicionados.`;
+Devuelve estricta y únicamente un array JSON válido con los objetos posicionados, sin explicaciones ni markdown. Ejemplo: [{"id":"p_1","type":"player","number":"1","role":"GK","team":"blue","x":11,"y":34}]`;
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `Instrucción táctica: "${promptText}"` }] }],
           systemInstruction: { parts: [{ text: systemInstruction }] },
-          generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.1
+          }
         })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Error del servidor HTTP ${response.status}`);
+      }
+
       const data = await response.json();
       let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      
       const parsedObjects = JSON.parse(rawText);
 
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
@@ -3881,8 +3890,11 @@ Calcula con precisión métrica la solicitud y devuelve estricta y únicamente e
         recordHistory(parsedObjects);
         setShowPromptModal(false);
         setPromptText('');
+      } else {
+        alert("La IA no devolvió objetos válidos para posicionar.");
       }
     } catch (err) {
+      console.error("Detalle error Gemini:", err);
       alert("Error al consultar Gemini: " + err.message);
     } finally {
       setIsGeneratingPrompt(false);
