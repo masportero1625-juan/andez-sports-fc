@@ -3842,7 +3842,14 @@ export default function App() {
 
     setIsGeneratingPrompt(true);
 
-    // Repartidor que envía cada elemento a su estado real en la pizarra
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      alert("⚠️ Falta VITE_GEMINI_API_KEY.");
+      setIsGeneratingPrompt(false);
+      return;
+    }
+
+    // Despachador de capas gráficas: distribuye a objects, drawings y textBlocks
     const dispatchTacticalElements = (list) => {
       const fieldObjects = [];
       const newDrawings = [];
@@ -3851,7 +3858,7 @@ export default function App() {
       list.forEach((item, idx) => {
         const itemType = (item.type || '').toLowerCase();
 
-        // 1. Líneas y flechas tácticas -> van a drawings
+        // 1. Líneas y flechas
         if (itemType === 'arrow' || itemType === 'line' || itemType === 'drawing') {
           const sx = Number(item.start?.x ?? item.startX ?? item.x ?? 11);
           const sy = Number(item.start?.y ?? item.startY ?? item.y ?? 34);
@@ -3870,23 +3877,23 @@ export default function App() {
           return;
         }
 
-        // 2. Rótulos de texto táctico -> van a textBlocks
+        // 2. Textos e instrucciones
         if (itemType === 'text') {
-          const val = item.text || item.content || item.label || 'ZONA DE SALIDA';
+          const val = item.text || item.content || item.label || 'ZONA TÁCTICA';
           newTextBlocks.push({
             id: item.id || `text_${idx}_${Date.now()}`,
             text: val,
             x: Number(item.x ?? 25),
             y: Number(item.y ?? 34),
             color: item.color || '#ffffff',
-            size: item.size || 2.8,
+            size: item.size || 2.5,
             isBold: true,
             isUnderline: false
           });
           return;
         }
 
-        // 3. Jugadores, balón y materiales -> van a objects
+        // 3. Fichas de jugadores, balones y accesorios (conos, vallas, estacas, escaleras, etc.)
         fieldObjects.push({
           ...item,
           id: item.id || `obj_${idx}_${Date.now()}`,
@@ -3907,92 +3914,22 @@ export default function App() {
       }
     };
 
-    // Motor táctico de alta velocidad
-    const buildInstantTactics = (text) => {
-      const t = text.toLowerCase();
-      const list = [];
-
-      // Jugadores y balón
-      if (t.includes('arquero') || t.includes('portero') || t.includes('(1)') || t.includes('1')) {
-        list.push({ id: 'p_gk', type: 'player', number: '1', role: 'GK', team: 'gk', x: 11, y: 34 });
-        list.push({ id: 'b_1', type: 'ball', x: 12.5, y: 34 });
-      }
-      if (t.includes('central') || t.includes('defensas') || t.includes('salida')) {
-        list.push({ id: 'p_cb1', type: 'player', number: '2', role: 'CB', team: 'blue', x: 16.5, y: 20 });
-        list.push({ id: 'p_cb2', type: 'player', number: '3', role: 'CB', team: 'blue', x: 16.5, y: 48 });
-      }
-      if (t.includes('medio') || t.includes('volante') || t.includes('5')) {
-        list.push({ id: 'p_mcd', type: 'player', number: '5', role: 'MCD', team: 'blue', x: 26, y: 34 });
-      }
-      if (t.includes('rojo') || t.includes('presion') || t.includes('rival')) {
-        list.push({ id: 'p_opp1', type: 'player', number: '9', role: 'ST', team: 'red', x: 23, y: 23 });
-        list.push({ id: 'p_opp2', type: 'player', number: '11', role: 'ST', team: 'red', x: 23, y: 45 });
-        list.push({ id: 'p_opp3', type: 'player', number: '10', role: 'CAM', team: 'red', x: 31, y: 34 });
-      }
-
-      // Líneas
-      if (t.includes('linea') || t.includes('pase') || t.includes('desmarque')) {
-        list.push({
-          id: 'l_pass',
-          type: 'arrow',
-          startX: 11,
-          startY: 34,
-          endX: 16.5,
-          endY: 48,
-          style: 'solid',
-          color: '#ffffff'
-        });
-        list.push({
-          id: 'l_run',
-          type: 'arrow',
-          startX: 26,
-          startY: 34,
-          endX: 45,
-          endY: 34,
-          style: 'dashed',
-          color: '#facc15'
-        });
-      }
-
-      // Textos
-      if (t.includes('texto') || t.includes('zona')) {
-        list.push({
-          id: 't_zone',
-          type: 'text',
-          text: 'ZONA DE SALIDA',
-          x: 20,
-          y: 12,
-          color: '#ffffff'
-        });
-      }
-
-      // Accesorios
-      if (t.includes('cono')) {
-        list.push({ id: 'c_1', type: 'cone', x: 35, y: 25, color: '#ea580c' });
-        list.push({ id: 'c_2', type: 'cone', x: 35, y: 43, color: '#ea580c' });
-      }
-      if (t.includes('maniqu') || t.includes('dummy')) {
-        list.push({ id: 'm_1', type: 'dummy', x: 55, y: 25, rotation: 90 });
-        list.push({ id: 'm_2', type: 'dummy', x: 55, y: 43, rotation: 90 });
-      }
-
-      return list.length > 0 ? list : [
-        { id: 'p_1', type: 'player', number: '1', role: 'GK', team: 'gk', x: 11, y: 34 },
-        { id: 'b_1', type: 'ball', x: 12.5, y: 34 }
-      ];
-    };
-
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 9000); // 9 segundos para permitir a Gemini completar el análisis
 
-    const promptDirecto = `Motor táctico Andez Sports (105x68 m). Centro (52.5, 34). Áreas X: 0-16.5 y 88.5-105. Punto penal: (11, 34).
-Instrucción: "${promptText}".
-Devuelve solo un array JSON plano con objetos: player, ball, arrow (con startX, startY, endX, endY, style), text (con text, x, y), cone, dummy, hurdle, mini_goal.`;
+    const promptDirecto = `Motor táctico Andez Sports (105x68 m). Centro en (52.5, 34).
+Instrucción del usuario: "${promptText}".
+
+Genera un array JSON plano interpretando todos los elementos pedidos:
+- Jugadores: {"id":"p1","type":"player","number":"8","role":"MC","team":"blue"|"red","x":15,"y":20}
+- Balón: {"id":"b1","type":"ball","x":25,"y":34}
+- Flechas: {"id":"l1","type":"arrow","startX":15,"startY":20,"endX":35,"endY":20,"style":"dashed"|"solid","color":"#facc15"|"#ffffff"}
+- Textos: {"id":"t1","type":"text","text":"COORDINACIÓN","x":15,"y":15,"color":"#ffffff"}
+- Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal","x":20,"y":20,"color":"#ea580c"}
+
+Devuelve ÚNICAMENTE el array JSON iniciando con [ y terminando con ]:`;
 
     try {
-      if (!apiKey) throw new Error("Sin API Key");
-
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4001,7 +3938,7 @@ Devuelve solo un array JSON plano con objetos: player, ball, arrow (con startX, 
           contents: [{ parts: [{ text: promptDirecto }] }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 800,
+            maxOutputTokens: 1200,
             responseMimeType: "application/json"
           }
         })
@@ -4022,12 +3959,12 @@ Devuelve solo un array JSON plano con objetos: player, ball, arrow (con startX, 
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
         dispatchTacticalElements(parsedObjects);
       } else {
-        throw new Error("Respuesta vacía");
+        alert("La IA no encontró objetos válidos para esa instrucción.");
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      const instantList = buildInstantTactics(promptText);
-      dispatchTacticalElements(instantList);
+      console.error("Error táctico:", err);
+      alert("Error en generación: " + (err.name === 'AbortError' ? "La IA tardó más de 9 segundos en responder." : err.message));
     } finally {
       setIsGeneratingPrompt(false);
       setShowPromptModal(false);
