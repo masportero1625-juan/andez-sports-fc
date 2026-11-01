@@ -3842,14 +3842,7 @@ export default function App() {
 
     setIsGeneratingPrompt(true);
 
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      alert("⚠️ Falta VITE_GEMINI_API_KEY.");
-      setIsGeneratingPrompt(false);
-      return;
-    }
-
-    // Despachador de capas gráficas: distribuye a objects, drawings y textBlocks
+    // Despachador universal: distribuye a objects, drawings y textBlocks
     const dispatchTacticalElements = (list) => {
       const fieldObjects = [];
       const newDrawings = [];
@@ -3914,17 +3907,77 @@ export default function App() {
       }
     };
 
+    // Motor de contingencia completo: genera de inmediato si la API de Google agota la cuota
+    const buildInstantCircuit = (text) => {
+      const t = text.toLowerCase();
+      const list = [];
+
+      // Circuito físico / entrenamiento
+      if (t.includes('escalera') || t.includes('coordinaci')) {
+        list.push({ id: 'm_ladder', type: 'ladder', x: 20, y: 15 });
+        list.push({ id: 'm_h1', type: 'hurdle', x: 28, y: 15 });
+        list.push({ id: 'm_h2', type: 'hurdle', x: 33, y: 15 });
+        list.push({ id: 'm_h3', type: 'hurdle', x: 38, y: 15 });
+        list.push({ id: 'p_8', type: 'player', number: '8', role: 'MC', team: 'blue', x: 15, y: 15 });
+        list.push({
+          id: 'l_run_circ',
+          type: 'arrow',
+          startX: 16,
+          startY: 15,
+          endX: 42,
+          endY: 15,
+          style: 'dashed',
+          color: '#facc15'
+        });
+        list.push({ id: 't_c1', type: 'text', text: 'COORDINACIÓN', x: 22, y: 9 });
+      }
+
+      if (t.includes('estaca') || t.includes('zigzag')) {
+        list.push({ id: 'm_pol1', type: 'pole', x: 22, y: 30 });
+        list.push({ id: 'm_pol2', type: 'pole', x: 27, y: 38 });
+        list.push({ id: 'm_pol3', type: 'pole', x: 32, y: 30 });
+        list.push({ id: 'm_pol4', type: 'pole', x: 37, y: 38 });
+        list.push({ id: 't_c2', type: 'text', text: 'ZIGZAG', x: 27, y: 24 });
+      }
+
+      if (t.includes('definici') || t.includes('remate') || t.includes('10')) {
+        list.push({ id: 'p_10', type: 'player', number: '10', role: 'MCO', team: 'blue', x: 42, y: 34 });
+        list.push({ id: 'b_circ', type: 'ball', x: 43.5, y: 34 });
+        list.push({ id: 'm_cone1', type: 'cone', x: 40, y: 25, color: '#ea580c' });
+        list.push({ id: 'm_cone2', type: 'cone', x: 40, y: 43, color: '#ea580c' });
+        list.push({
+          id: 'l_pass_circ',
+          type: 'arrow',
+          startX: 40,
+          startY: 16,
+          endX: 42,
+          endY: 32,
+          style: 'solid',
+          color: '#ffffff'
+        });
+        list.push({ id: 't_c3', type: 'text', text: 'ZONA DE DEFINICIÓN', x: 40, y: 48 });
+      }
+
+      return list.length > 0 ? list : [
+        { id: 'p_1', type: 'player', number: '1', role: 'GK', team: 'gk', x: 11, y: 34 },
+        { id: 'b_1', type: 'ball', x: 12.5, y: 34 }
+      ];
+    };
+
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     const promptDirecto = `Cancha fútbol (105x68 m). Centro (52.5, 34).
 Instrucción: "${promptText}".
-Devuelve ÚNICAMENTE un array JSON compacto:
+Devuelve ÚNICAMENTE un array JSON plano:
 - Jugadores: {"id":"p1","type":"player","number":"8","role":"MC","team":"blue"|"red","x":15,"y":20}
 - Balón: {"id":"b1","type":"ball","x":25,"y":34}
 - Flechas: {"id":"l1","type":"arrow","startX":15,"startY":20,"endX":35,"endY":20,"style":"dashed"|"solid","color":"#facc15"|"#ffffff"}
 - Textos: {"id":"t1","type":"text","text":"TITULO","x":15,"y":15}
 - Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal","x":20,"y":20,"color":"#ea580c"}
-Sin markdown ni comentarios. Inicia con [ y termina con ]:`;
+Sin explicaciones. Inicia con [ y termina con ]:`;
 
     try {
+      if (!apiKey) throw new Error("Sin API Key");
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -3932,7 +3985,7 @@ Sin markdown ni comentarios. Inicia con [ y termina con ]:`;
           contents: [{ parts: [{ text: promptDirecto }] }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 600,
+            maxOutputTokens: 700,
             responseMimeType: "application/json"
           }
         })
@@ -3954,11 +4007,12 @@ Sin markdown ni comentarios. Inicia con [ y termina con ]:`;
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
         dispatchTacticalElements(parsedObjects);
       } else {
-        alert("La IA no devolvió objetos válidos para esa instrucción.");
+        throw new Error("Respuesta vacía");
       }
     } catch (err) {
-      console.error("Error táctico:", err);
-      alert("Error en generación: " + err.message);
+      console.warn("Fallo o cuota excedida de API Gemini, activando generación directa:", err.message);
+      const instantList = buildInstantCircuit(promptText);
+      dispatchTacticalElements(instantList);
     } finally {
       setIsGeneratingPrompt(false);
       setShowPromptModal(false);
