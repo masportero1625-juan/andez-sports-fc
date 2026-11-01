@@ -4100,6 +4100,119 @@ Calcula con precisión métrica la solicitud y devuelve estricta y únicamente e
           }`}
           style={{ visibility: viewMode === '2d' ? 'visible' : 'hidden' }}
         >
+          {/* PANELES FLOTANTES LATERALES IDÉNTICOS A TACTICALPAD */}
+        {/* LADO IZQUIERDO: EQUIPO LOCAL Y MENÚ */}
+        <div className="absolute top-20 left-4 z-40 flex flex-col items-center gap-3 select-none pointer-events-auto">
+          <div className="flex flex-col items-center bg-zinc-900/90 border border-zinc-700/80 rounded-2xl p-1.5 shadow-2xl backdrop-blur-md">
+            <button
+              onClick={() => { setRosterTeam('blue'); setBottomBarMode(bottomBarMode === 'roster' ? 'menu' : 'roster'); }}
+              className="text-zinc-400 hover:text-white px-2 py-0.5 text-xs font-black hover:bg-zinc-800 rounded transition"
+              title="Abrir Plantilla"
+            >
+              &gt;&gt;
+            </button>
+            <div
+              className="w-12 h-14 rounded-xl flex items-center justify-center font-black text-white text-base shadow-inner my-1 border border-white/20"
+              style={{ backgroundColor: teamColors.blue }}
+            >
+              LOC
+            </div>
+            <button
+              onClick={() => setShowSystemsModal(showSystemsModal === 'home' ? null : 'home')}
+              className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm border border-zinc-600 text-zinc-200 transition"
+              title="10 Sistemas Tácticos"
+            >
+              📋
+            </button>
+          </div>
+
+          <button
+            onClick={() => setBottomBarMode('menu')}
+            className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all duration-200 ${
+              bottomBarMode === 'menu' ? 'bg-blue-600 text-white border-blue-400 scale-105 shadow-blue-500/30' : 'bg-zinc-900/90 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
+            }`}
+            title="Menú Principal"
+          >
+            <span className="text-xl">🏠</span>
+            <span className="text-[10px] font-bold mt-0.5">Menú</span>
+          </button>
+        </div>
+
+        {/* LADO DERECHO: EQUIPO VISITANTE Y HERRAMIENTAS */}
+        <div className="absolute top-20 right-4 z-40 flex flex-col items-center gap-3 select-none pointer-events-auto">
+          <div className="flex flex-col items-center bg-zinc-900/90 border border-zinc-700/80 rounded-2xl p-1.5 shadow-2xl backdrop-blur-md">
+            <button
+              onClick={() => { setRosterTeam('red'); setBottomBarMode(bottomBarMode === 'roster' ? 'menu' : 'roster'); }}
+              className="text-zinc-400 hover:text-white px-2 py-0.5 text-xs font-black hover:bg-zinc-800 rounded transition"
+              title="Abrir Plantilla"
+            >
+              &lt;&lt;
+            </button>
+            <div
+              className="w-12 h-14 rounded-xl flex items-center justify-center font-black text-white text-base shadow-inner my-1 border border-white/20"
+              style={{ backgroundColor: teamColors.red }}
+            >
+              VIS
+            </div>
+            <button
+              onClick={() => setShowSystemsModal(showSystemsModal === 'away' ? null : 'away')}
+              className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm border border-zinc-600 text-zinc-200 transition"
+              title="10 Sistemas Tácticos"
+            >
+              📋
+            </button>
+          </div>
+
+          <button
+            onClick={() => setBottomBarMode(bottomBarMode === 'tools' || bottomBarMode === 'timeline' ? 'menu' : 'tools')}
+            className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all duration-200 ${
+              bottomBarMode === 'tools' || bottomBarMode === 'timeline' ? 'bg-amber-500 text-black border-amber-400 scale-105 shadow-amber-500/30' : 'bg-zinc-900/90 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
+            }`}
+            title="Herramientas y Trazados"
+          >
+            <span className="text-xl">✏️</span>
+            <span className="text-[10px] font-bold mt-0.5">Herram.</span>
+          </button>
+        </div>
+
+        {/* POPUP DE 10 SISTEMAS TÁCTICOS */}
+        {showSystemsModal && (
+          <div className={`absolute top-24 ${showSystemsModal === 'home' ? 'left-20' : 'right-20'} z-50 bg-zinc-950/95 border border-zinc-700 rounded-2xl p-3 shadow-2xl backdrop-blur-xl w-52`}>
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800">
+              <span className="text-xs font-bold text-white uppercase tracking-wider">Sistemas ({showSystemsModal === 'home' ? 'Local' : 'Visitante'})</span>
+              <button onClick={() => setShowSystemsModal(null)} className="text-zinc-400 hover:text-white text-sm font-bold">✕</button>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 max-h-60 overflow-y-auto">
+              {TACTICAL_SYSTEMS_LIST.map(sysKey => (
+                <button
+                  key={sysKey}
+                  onClick={() => {
+                    const sysCoords = GET_TACTICAL_SYSTEMS(isPC)[sysKey];
+                    if (sysCoords) {
+                      const teamTarget = showSystemsModal === 'home' ? 'blue' : 'red';
+                      const newPlayers = sysCoords.map(p => ({
+                        id: `${teamTarget}-${p.n}-${Date.now()}`,
+                        type: 'player',
+                        number: p.n,
+                        role: p.r,
+                        x: showSystemsModal === 'home' ? p.x : (isPC ? 105 - p.x : p.x),
+                        y: showSystemsModal === 'home' ? p.y : (isPC ? 68 - p.y : p.y),
+                        team: p.r === 'GK' ? (teamTarget === 'blue' ? 'gk' : 'gk_away') : teamTarget,
+                        customColor: p.r === 'GK' ? teamColors[teamTarget === 'blue' ? 'gk' : 'gk_away'] : teamColors[teamTarget],
+                        name: ''
+                      }));
+                      setObjects(prev => [...prev.filter(o => o.team !== teamTarget && o.team !== (teamTarget === 'blue' ? 'gk' : 'gk_away')), ...newPlayers]);
+                    }
+                    setShowSystemsModal(null);
+                  }}
+                  className="px-2 py-2 bg-zinc-900 hover:bg-amber-500 hover:text-black border border-zinc-800 hover:border-amber-400 rounded-xl text-xs font-bold text-zinc-200 transition text-center"
+                >
+                  {sysKey}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
           <svg
             ref={svgRef}
             onPointerDown={handlePitchPointerDown}
@@ -4119,13 +4232,13 @@ Calcula con precisión métrica la solicitud y devuelve estricta y únicamente e
               <marker id="block-mark" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="strokeWidth" markerWidth="3.5" markerHeight="3.5" orient="auto"><line x1="5" y1="0" x2="5" y2="10" stroke="#ffffff" strokeWidth="2.5" /></marker>
             </defs>
 
-            {/* CÉSPED PRO TOTAL DE BORDE A BORDE */}
-            <rect width="600" height="600" x="-250" y="-250" fill="#15803d" />
-            <g opacity="0.15">
-              {Array.from({ length: 40 }).map((_, i) => (
-                <rect key={i} x={-60 + i * 5.61} y="-100" width="2.805" height="300" fill={i % 2 === 0 ? "#ffffff" : "transparent"} />
-              ))}
-            </g>
+            {/* CÉSPED TIPO TACTICALPAD VERDE OLIVA / PRADERA SUAVE */}
+<rect width="600" height="600" x="-250" y="-250" fill="#73983b" />
+<g opacity="0.18">
+  {Array.from({ length: 30 }).map((_, i) => (
+    <rect key={i} x={-10 + i * 4.4} y="-50" width="2.2" height="180" fill={i % 2 === 0 ? "#000000" : "#ffffff"} opacity="0.35" />
+  ))}
+</g>
 
             {/* LÍNEAS REGLAMENTARIAS Y ARCOS */}
             {isPC ? (
