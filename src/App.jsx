@@ -3879,7 +3879,7 @@ export default function App() {
 
         // 2. Textos e instrucciones
         if (itemType === 'text') {
-          const val = item.text || item.content || item.label || 'ZONA TÁCTICA';
+          const val = item.text || item.content || item.label || 'INSTRUCCIÓN';
           newTextBlocks.push({
             id: item.id || `text_${idx}_${Date.now()}`,
             text: val,
@@ -3893,7 +3893,7 @@ export default function App() {
           return;
         }
 
-        // 3. Fichas de jugadores, balones y accesorios (conos, vallas, estacas, escaleras, etc.)
+        // 3. Fichas de jugadores, balones y accesorios
         fieldObjects.push({
           ...item,
           id: item.id || `obj_${idx}_${Date.now()}`,
@@ -3914,39 +3914,34 @@ export default function App() {
       }
     };
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000); // 9 segundos para permitir a Gemini completar el análisis
-
-    const promptDirecto = `Motor táctico Andez Sports (105x68 m). Centro en (52.5, 34).
-Instrucción del usuario: "${promptText}".
-
-Genera un array JSON plano interpretando todos los elementos pedidos:
+    const promptDirecto = `Cancha fútbol (105x68 m). Centro (52.5, 34).
+Instrucción: "${promptText}".
+Devuelve ÚNICAMENTE un array JSON compacto:
 - Jugadores: {"id":"p1","type":"player","number":"8","role":"MC","team":"blue"|"red","x":15,"y":20}
 - Balón: {"id":"b1","type":"ball","x":25,"y":34}
 - Flechas: {"id":"l1","type":"arrow","startX":15,"startY":20,"endX":35,"endY":20,"style":"dashed"|"solid","color":"#facc15"|"#ffffff"}
-- Textos: {"id":"t1","type":"text","text":"COORDINACIÓN","x":15,"y":15,"color":"#ffffff"}
+- Textos: {"id":"t1","type":"text","text":"TITULO","x":15,"y":15}
 - Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal","x":20,"y":20,"color":"#ea580c"}
-
-Devuelve ÚNICAMENTE el array JSON iniciando con [ y terminando con ]:`;
+Sin markdown ni comentarios. Inicia con [ y termina con ]:`;
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptDirecto }] }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 1200,
+            maxOutputTokens: 600,
             responseMimeType: "application/json"
           }
         })
       });
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+      }
 
       const data = await response.json();
       let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
@@ -3959,12 +3954,11 @@ Devuelve ÚNICAMENTE el array JSON iniciando con [ y terminando con ]:`;
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
         dispatchTacticalElements(parsedObjects);
       } else {
-        alert("La IA no encontró objetos válidos para esa instrucción.");
+        alert("La IA no devolvió objetos válidos para esa instrucción.");
       }
     } catch (err) {
-      clearTimeout(timeoutId);
       console.error("Error táctico:", err);
-      alert("Error en generación: " + (err.name === 'AbortError' ? "La IA tardó más de 9 segundos en responder." : err.message));
+      alert("Error en generación: " + err.message);
     } finally {
       setIsGeneratingPrompt(false);
       setShowPromptModal(false);
