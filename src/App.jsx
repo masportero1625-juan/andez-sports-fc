@@ -3849,53 +3849,38 @@ export default function App() {
       return;
     }
 
-    // Esquema estricto y completo: soporta jugadores, materiales, líneas tácticas y textos
-    const tacticalSchema = {
-      type: "ARRAY",
-      items: {
-        type: "OBJECT",
-        properties: {
-          id: { type: "STRING" },
-          type: { type: "STRING", enum: ["player", "ball", "cone", "hurdle", "dummy", "mini_goal", "arrow", "line", "text"] },
-          number: { type: "STRING" },
-          role: { type: "STRING" },
-          team: { type: "STRING", enum: ["blue", "red", "gk", "gk_away"] },
-          color: { type: "STRING" },
-          x: { type: "NUMBER" },
-          y: { type: "NUMBER" },
-          x2: { type: "NUMBER" },
-          y2: { type: "NUMBER" },
-          text: { type: "STRING" },
-          label: { type: "STRING" },
-          style: { type: "STRING", enum: ["solid", "dashed"] }
-        },
-        required: ["id", "type", "x", "y"]
-      }
-    };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // Corte automático en 10s máximo
 
-    const systemInstruction = `Director Técnico Andez Sports Tactics Pro. Cancha de fútbol oficial (105x68 m). Eje X: 0 a 105, Eje Y: 0 a 68. Centro en (52.5, 34). Áreas: X=0 a 16.5 y X=88.5 a 105. Punto penal: (11, 34).
-Tipos permitidos:
-- "player": fichas de jugadores (team: blue|red|gk).
-- "ball": balón.
-- "cone", "dummy", "hurdle", "mini_goal": materiales.
-- "arrow" o "line": líneas tácticas con x, y (inicio) y x2, y2 (fin). style: "solid" para pase o "dashed" para desmarque.
-- "text": carteles o consignas tácticas en el campo (usa propiedad text o label, y coordenadas x, y).
-Calcula las coordenadas métricas de la jugada solicitada.`;
+    const promptDirecto = `Eres el motor táctico de una pizarra de fútbol oficial (105x68 m). Centro en (52.5, 34). Áreas X: 0 a 16.5 y 88.5 a 105. Punto penal: (11, 34).
+Instrucción táctica: "${promptText}"
+
+Devuelve ÚNICAMENTE un array JSON válido sin texto, sin explicaciones y sin formato markdown.
+Objetos permitidos:
+- Jugador: {"id":"p_1","type":"player","number":"1","role":"GK","team":"blue"|"red"|"gk","x":11,"y":34}
+- Balón: {"id":"b_1","type":"ball","x":12,"y":34}
+- Accesorios: {"id":"c_1","type":"cone"|"hurdle"|"dummy"|"mini_goal","x":20,"y":30,"color":"#ea580c"}
+- Líneas: {"id":"l_1","type":"arrow"|"line","x":11,"y":34,"x2":25,"y":20,"style":"solid"|"dashed"}
+- Textos: {"id":"t_1","type":"text","text":"ZONA DE SALIDA","x":25,"y":34}
+
+Responde directamente iniciando con [ y terminando con ]:`;
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }],
-          systemInstruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ parts: [{ text: promptDirecto }] }],
           generationConfig: {
             temperature: 0.1,
-            responseMimeType: "application/json",
-            responseSchema: tacticalSchema
+            maxOutputTokens: 1500,
+            responseMimeType: "application/json"
           }
         })
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -3903,8 +3888,13 @@ Calcula las coordenadas métricas de la jugada solicitada.`;
       }
 
       const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      const parsedObjects = JSON.parse(rawText || '[]');
+      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+      const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) rawText = jsonMatch[0];
+
+      const parsedObjects = JSON.parse(rawText);
 
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
         setObjects(parsedObjects);
@@ -3912,11 +3902,16 @@ Calcula las coordenadas métricas de la jugada solicitada.`;
         setShowPromptModal(false);
         setPromptText('');
       } else {
-        alert("No se pudieron generar posiciones para esa orden.");
+        alert("La IA no devolvió objetos válidos.");
       }
     } catch (err) {
-      console.error("Error en generación:", err);
-      alert("Error al consultar Gemini: " + err.message);
+      clearTimeout(timeoutId);
+      console.error("Error táctico:", err);
+      if (err.name === 'AbortError') {
+        alert("La solicitud excedió el tiempo límite. Intenta nuevamente.");
+      } else {
+        alert("Error al consultar Gemini: " + err.message);
+      }
     } finally {
       setIsGeneratingPrompt(false);
     }
