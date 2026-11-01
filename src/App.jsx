@@ -5419,7 +5419,165 @@ Calcula con precisión métrica la solicitud y devuelve estricta y únicamente e
 
       {/* FOOTER */}
       <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 no-print overflow-x-auto max-w-full">
-        <footer></footer>
+        {/* BARRA INFERIOR MODULAR TACTICALPAD COMPLETA */}
+        <div className="w-full flex flex-col items-center select-none">
+          {/* LÍNEA DE TIEMPO / FOTOGRAMAS */}
+          {bottomBarMode === 'timeline' && (
+            <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-4 flex items-center justify-between shadow-2xl backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-400">🎬 Marcos:</span>
+                <div className="flex items-center gap-1.5 overflow-x-auto max-w-xl py-0.5">
+                  {frames.map((f, idx) => (
+                    <button
+                      key={f.id || idx}
+                      onClick={() => {
+                        setActiveFrameIndex(idx);
+                        if (frames[idx]?.objects) setObjects(frames[idx].objects);
+                        if (frames[idx]?.drawings) setDrawings(frames[idx].drawings);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                        activeFrameIndex === idx
+                          ? 'bg-amber-500 text-black shadow-lg scale-105'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleAddFrame}
+                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow flex items-center gap-1 transition"
+                  title="Nuevo Marco (Duplicar Jugada)"
+                >
+                  <span>+</span> Añadir
+                </button>
+                <button
+                  onClick={() => handleDeleteFrame(activeFrameIndex)}
+                  className="p-1 bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white rounded-lg text-xs transition"
+                  title="Eliminar Marco Actual"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleLoopSequence}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                    isLoopPlaying ? 'bg-amber-500 text-black animate-pulse' : 'bg-blue-600 text-white hover:bg-blue-500'
+                  }`}
+                >
+                  <Play className={`w-3.5 h-3.5 ${isLoopPlaying ? 'fill-black' : 'fill-white'}`} />
+                  <span>{isLoopPlaying ? 'Pausar' : 'Reproducir'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* PALETA DE CAMISETAS EXPANDIBLE */}
+          {showKitPalette && (
+            <div className="w-full bg-zinc-950 border-b border-zinc-800 py-1.5 px-3 flex items-center justify-between gap-2 overflow-x-auto">
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-zinc-400 text-xs font-bold mr-1">Camisetas:</span>
+                {[
+                  { id: 'blue', label: 'Local' },
+                  { id: 'red', label: 'Visita' },
+                  { id: 'gk', label: 'Arq. Loc' },
+                  { id: 'gk_away', label: 'Arq. Vis' }
+                ].map(target => (
+                  <button
+                    key={target.id}
+                    onClick={() => setKitTarget(target.id)}
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold transition ${
+                      kitTarget === target.id ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    {target.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                {officialKitColors.map(c => (
+                  <button
+                    key={c.hex}
+                    title={c.name}
+                    onClick={() => handleUpdateKitColor(c.hex)}
+                    style={{ backgroundColor: c.hex }}
+                    className={`w-5 h-5 rounded-full border border-black/30 transition-transform ${
+                      teamColors[kitTarget] === c.hex ? 'scale-125 ring-2 ring-amber-400' : 'hover:scale-110'
+                    }`}
+                  />
+                ))}
+              </div>
+              <button onClick={() => setShowKitPalette(false)} className="text-zinc-400 hover:text-white text-xs px-2">✕</button>
+            </div>
+          )}
+
+          {/* CUERPO PRINCIPAL DE LA BARRA INFERIOR */}
+          <div className="w-full flex items-center justify-between px-3 py-1.5">
+            {/* LADO IZQUIERDO: ACCESOS A MENÚ Y PLANTILLA */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setBottomBarMode(bottomBarMode === 'menu' ? 'tools' : 'menu')}
+                className={`px-3 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
+                  bottomBarMode === 'menu' ? 'bg-blue-600 text-white border-blue-400 shadow' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
+                }`}
+              >
+                <span>🏠</span> Menú
+              </button>
+
+              <button
+                onClick={() => setShowKitPalette(prev => !prev)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition ${
+                  showKitPalette ? 'bg-amber-500 text-black border-amber-400 shadow' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
+                }`}
+                title="Personalizar Colores de Camisetas"
+              >
+                🎨 Camisetas
+              </button>
+
+              <button
+                onClick={() => setBottomBarMode(bottomBarMode === 'timeline' ? 'tools' : 'timeline')}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 ${
+                  bottomBarMode === 'timeline' ? 'bg-amber-500 text-black border-amber-400 shadow' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
+                }`}
+                title="Línea de Tiempo y Animación de Marcos"
+              >
+                <span>🎬</span> Animación
+              </button>
+            </div>
+
+            {/* CENTRO: FICHAS RÁPIDAS DE JUGADORES Y BALÓN */}
+            <div className="flex items-center gap-2">
+              <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk', customColor: teamColors.gk })} style={{ backgroundColor: teamColors.gk }} className="w-8 h-8 rounded-full border border-white text-white font-black text-xs shadow hover:scale-110 transition-transform" title="Arquero Local">1</button>
+              <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk_away', customColor: teamColors.gk_away })} style={{ backgroundColor: teamColors.gk_away }} className="w-8 h-8 rounded-full border border-white text-white font-black text-xs shadow hover:scale-110 transition-transform" title="Arquero Visitante">1</button>
+              <button onClick={() => addElement('player', { team: 'blue', customColor: teamColors.blue })} style={{ backgroundColor: teamColors.blue }} className="w-8 h-8 rounded-full border border-white text-white font-bold text-xs shadow hover:scale-110 transition-transform" title="Jugador Local">11</button>
+              <button onClick={() => addElement('player', { team: 'red', customColor: teamColors.red })} style={{ backgroundColor: teamColors.red }} className="w-8 h-8 rounded-full border border-white text-white font-bold text-xs shadow hover:scale-110 transition-transform" title="Jugador Visitante">11</button>
+              <button
+                type="button"
+                onClick={() => {
+                  const newBall = { id: `ball-${Date.now()}`, type: 'ball', x: isPC ? 52.5 : 34, y: isPC ? 34 : 52.5, elevation: 0 };
+                  setObjects(prev => [...prev, newBall]);
+                }}
+                className="w-8 h-8 rounded-full bg-white text-sm shadow hover:scale-110 active:scale-95 transition flex items-center justify-center"
+                title="Añadir Balón"
+              >
+                ⚽
+              </button>
+            </div>
+
+            {/* LADO DERECHO: HERRAMIENTAS DE EDICIÓN Y TRAZADO */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded-lg border transition ${tool === 'draw' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'}`} title="Trazados, Líneas y Flechas"><PenTool className="w-4 h-4" /></button>
+              <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded-lg border transition ${tool === 'text' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800'}`} title="Texto Explicativo"><Type className="w-4 h-4" /></button>
+              <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded-lg border transition ${tool === 'eraser' ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800'}`} title="Goma de Borrar"><Eraser className="w-4 h-4" /></button>
+              <button onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} className="p-1.5 rounded-lg bg-zinc-900 text-red-400 hover:text-red-300 border border-zinc-700 hover:bg-zinc-800 transition" title="Vaciar Cancha"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   )}
