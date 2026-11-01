@@ -3907,7 +3907,7 @@ export default function App() {
       }
     };
 
-    // Motor de contingencia completo: genera de inmediato si la API de Google agota la cuota
+    // Motor de contingencia completo
     const buildInstantCircuit = (text) => {
       const t = text.toLowerCase();
       const list = [];
@@ -3929,7 +3929,7 @@ export default function App() {
           style: 'dashed',
           color: '#facc15'
         });
-        list.push({ id: 't_c1', type: 'text', text: 'COORDINACIÓN', x: 22, y: 9 });
+        list.push({ id: 't_c1', type: 'text', text: 'COORDINACIÓN', x: 20, y: 9 });
       }
 
       if (t.includes('estaca') || t.includes('zigzag')) {
@@ -3955,7 +3955,19 @@ export default function App() {
           style: 'solid',
           color: '#ffffff'
         });
-        list.push({ id: 't_c3', type: 'text', text: 'ZONA DE DEFINICIÓN', x: 40, y: 48 });
+        list.push({ id: 't_c3', type: 'text', text: 'ZONA DE DEFINICIÓN', x: 38, y: 48 });
+      }
+
+      // Jugada de salida de balón si coincide
+      if (t.includes('arquero') || t.includes('salida')) {
+        list.push({ id: 'p_gk', type: 'player', number: '1', role: 'GK', team: 'gk', x: 11, y: 34 });
+        list.push({ id: 'b_1', type: 'ball', x: 12.5, y: 34 });
+        list.push({ id: 'p_cb1', type: 'player', number: '2', role: 'CB', team: 'blue', x: 16.5, y: 20 });
+        list.push({ id: 'p_cb2', type: 'player', number: '3', role: 'CB', team: 'blue', x: 16.5, y: 48 });
+        list.push({ id: 'p_mcd', type: 'player', number: '5', role: 'MCD', team: 'blue', x: 26, y: 34 });
+        list.push({ id: 'l_pass', type: 'arrow', startX: 11, startY: 34, endX: 16.5, endY: 48, style: 'solid', color: '#ffffff' });
+        list.push({ id: 'l_run', type: 'arrow', startX: 26, startY: 34, endX: 45, endY: 34, style: 'dashed', color: '#facc15' });
+        list.push({ id: 't_zone', type: 'text', text: 'ZONA DE SALIDA', x: 20, y: 12, color: '#ffffff' });
       }
 
       return list.length > 0 ? list : [
@@ -3975,21 +3987,28 @@ Devuelve ÚNICAMENTE un array JSON plano:
 - Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal","x":20,"y":20,"color":"#ea580c"}
 Sin explicaciones. Inicia con [ y termina con ]:`;
 
+    // Timeout de seguridad en 4.5 segundos
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
+
     try {
       if (!apiKey) throw new Error("Sin API Key");
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptDirecto }] }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 700,
+            maxOutputTokens: 600,
             responseMimeType: "application/json"
           }
         })
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -4010,9 +4029,10 @@ Sin explicaciones. Inicia con [ y termina con ]:`;
         throw new Error("Respuesta vacía");
       }
     } catch (err) {
-      console.warn("Fallo o cuota excedida de API Gemini, activando generación directa:", err.message);
-      const instantList = buildInstantCircuit(promptText);
-      dispatchTacticalElements(instantList);
+      clearTimeout(timeoutId);
+      // Pase lo que pase (demora de red, cuota o aborto), se despacha de inmediato
+      const fallbackList = buildInstantCircuit(promptText);
+      dispatchTacticalElements(fallbackList);
     } finally {
       setIsGeneratingPrompt(false);
       setShowPromptModal(false);
