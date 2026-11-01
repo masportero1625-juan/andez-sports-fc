@@ -3863,7 +3863,7 @@ Catálogo de elementos disponibles:
 Calcula con precisión métrica la solicitud y devuelve estricta y únicamente el array JSON con los objetos posicionados, sin texto extra ni formato markdown. Ejemplo: [{"id":"p_1","type":"player","number":"1","role":"GK","team":"blue","x":11,"y":34}]`;
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
