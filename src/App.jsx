@@ -3842,7 +3842,7 @@ export default function App() {
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      alert("⚠️ Falta la clave VITE_GEMINI_API_KEY en las variables de entorno de Vercel.");
+      alert("⚠️ Falta la clave VITE_GEMINI_API_KEY en las variables de entorno.");
       return;
     }
 
@@ -3862,63 +3862,46 @@ Catálogo de elementos disponibles:
 
 Calcula con precisión métrica la solicitud y devuelve estricta y únicamente el array JSON con los objetos posicionados, sin texto extra ni formato markdown. Ejemplo: [{"id":"p_1","type":"player","number":"1","role":"GK","team":"blue","x":11,"y":34}]`;
 
-    const candidateEndpoints = [
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`
-    ];
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Instrucción táctica: "${promptText}"` }] }],
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          generationConfig: {
+            temperature: 0.2
+          }
+        })
+      });
 
-    let success = false;
-    let lastError = null;
-
-    for (const url of candidateEndpoints) {
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `Instrucción táctica: "${promptText}"` }] }],
-            systemInstruction: { parts: [{ text: systemInstruction }] },
-            generationConfig: {
-              temperature: 0.1
-            }
-          })
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error?.message || `Error HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-        rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-        const jsonMatch = rawText.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          rawText = jsonMatch[0];
-        }
-
-        const parsedObjects = JSON.parse(rawText);
-
-        if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
-          setObjects(parsedObjects);
-          recordHistory(parsedObjects);
-          setShowPromptModal(false);
-          setPromptText('');
-          success = true;
-          break;
-        }
-      } catch (err) {
-        lastError = err;
-        console.warn(`Falló intento en ${url.split('?')[0]}, probando siguiente endpoint...`, err);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
       }
-    }
 
-    setIsGeneratingPrompt(false);
+      const data = await response.json();
+      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
-    if (!success) {
-      alert("Error al consultar Gemini: " + (lastError?.message || "No se pudo conectar con ningún modelo compatible."));
+      const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) rawText = jsonMatch[0];
+
+      const parsedObjects = JSON.parse(rawText);
+
+      if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
+        setObjects(parsedObjects);
+        recordHistory(parsedObjects);
+        setShowPromptModal(false);
+        setPromptText('');
+      } else {
+        alert("La IA no devolvió objetos válidos para posicionar.");
+      }
+    } catch (err) {
+      console.error("Detalle error Gemini:", err);
+      alert("Error al consultar Gemini: " + err.message);
+    } finally {
+      setIsGeneratingPrompt(false);
     }
   };
 
