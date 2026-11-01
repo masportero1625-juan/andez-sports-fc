@@ -3843,42 +3843,42 @@ export default function App() {
     setIsGeneratingPrompt(true);
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    if (!apiKey) {
+      alert("⚠️ Falta VITE_GEMINI_API_KEY en las variables de entorno.");
+      setIsGeneratingPrompt(false);
+      return;
+    }
 
-    // Prompt estricto que mapea tanto propiedades simples como las propiedades nativas del motor de dibujo
-    const promptDirecto = `Eres el motor táctico de una pizarra de fútbol (105x68 m). Centro en (52.5, 34). Áreas X=0 a 16.5 y 88.5 a 105. Punto penal (11, 34).
-Instrucción táctica: "${promptText}"
+    const promptDirecto = `Motor táctico Andez Sports. Cancha de fútbol (105x68 m). Centro (52.5, 34). Áreas X: 0 a 16.5 y 88.5 a 105. Punto penal (11, 34).
+Instrucción: "${promptText}"
 
-Genera un array JSON con los objetos solicitados:
-1. Jugadores: {"id":"p_1","type":"player","number":"1","role":"GK","team":"blue"|"red","x":11,"y":34}
-2. Balón: {"id":"b_1","type":"ball","x":12,"y":34}
-3. Flechas / Líneas: {"id":"l_1","type":"arrow","tool":"arrow","x":11,"y":34,"x2":16.5,"y2":20,"startX":11,"startY":34,"endX":16.5,"endY":20,"points":[11,34,16.5,20],"style":"solid"|"dashed","dash":false}
-4. Textos: {"id":"t_1","type":"text","text":"ZONA DE SALIDA","content":"ZONA DE SALIDA","x":25,"y":34,"fontSize":14,"color":"#ffffff"}
-5. Conos: {"id":"c_1","type":"cone","x":20,"y":30,"color":"#ea580c"}
+Genera un array JSON con los elementos solicitados:
+- Jugador: {"id":"p1","type":"player","number":"1","role":"GK","team":"blue"|"red","x":11,"y":34}
+- Balón: {"id":"b1","type":"ball","x":12,"y":34}
+- Flecha / Línea: {"id":"l1","type":"arrow","tool":"arrow","x":11,"y":34,"x2":16.5,"y2":20,"startX":11,"startY":34,"endX":16.5,"endY":20,"points":[11,34,16.5,20],"style":"solid"|"dashed"}
+- Texto: {"id":"t1","type":"text","text":"ZONA DE SALIDA","content":"ZONA DE SALIDA","x":25,"y":34,"color":"#ffffff"}
+- Conos / Vallas / Maniquíes / Arcos: {"id":"c1","type":"cone"|"hurdle"|"dummy"|"mini_goal","x":20,"y":30,"color":"#ea580c"}
 
 Devuelve ÚNICAMENTE el array JSON iniciando con [ y terminando con ]:`;
 
     try {
-      if (!apiKey) throw new Error("Falta VITE_GEMINI_API_KEY");
-
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptDirecto }] }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 1200,
+            maxOutputTokens: 1000,
             responseMimeType: "application/json"
           }
         })
       });
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+      }
 
       const data = await response.json();
       let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
@@ -3889,7 +3889,6 @@ Devuelve ÚNICAMENTE el array JSON iniciando con [ y terminando con ]:`;
 
       let parsedObjects = JSON.parse(rawText);
 
-      // Normalizador para asegurar compatibilidad con el renderizador de líneas y textos
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
         parsedObjects = parsedObjects.map(obj => {
           if (obj.type === 'arrow' || obj.type === 'line') {
@@ -3925,8 +3924,7 @@ Devuelve ÚNICAMENTE el array JSON iniciando con [ y terminando con ]:`;
         alert("La IA no devolvió objetos válidos.");
       }
     } catch (err) {
-      clearTimeout(timeoutId);
-      console.warn("Error en procesamiento táctico:", err);
+      console.error("Error al generar jugada:", err);
       alert("Error al generar la jugada: " + err.message);
     } finally {
       setIsGeneratingPrompt(false);
