@@ -3842,101 +3842,96 @@ export default function App() {
 
     setIsGeneratingPrompt(true);
 
-    // Función normalizadora: garantiza que el canvas de la pizarra pinte líneas, textos y fichas
-    const normalizeTacticalObjects = (rawList) => {
-      if (!Array.isArray(rawList)) return [];
-      return rawList.map((obj, idx) => {
-        const itemType = (obj.type || '').toLowerCase();
+    // Repartidor que envía cada elemento a su estado real en la pizarra
+    const dispatchTacticalElements = (list) => {
+      const fieldObjects = [];
+      const newDrawings = [];
+      const newTextBlocks = [];
 
-        // Normalización de líneas y flechas (pases, desmarques, trayectorias)
-        if (itemType === 'arrow' || itemType === 'line') {
-          const x1 = Number(obj.startX ?? obj.x ?? 11);
-          const y1 = Number(obj.startY ?? obj.y ?? 34);
-          const x2 = Number(obj.endX ?? obj.x2 ?? (x1 + 10));
-          const y2 = Number(obj.endY ?? obj.y2 ?? y1);
-          const isDashed = obj.style === 'dashed' || obj.dashed === true;
-          return {
-            ...obj,
-            id: obj.id || `line_${idx}_${Date.now()}`,
-            type: 'arrow',
-            tool: 'arrow',
-            x: x1,
-            y: y1,
-            x2: x2,
-            y2: y2,
-            startX: x1,
-            startY: y1,
-            endX: x2,
-            endY: y2,
-            points: [x1, y1, x2, y2],
-            color: obj.color || (isDashed ? '#facc15' : '#ffffff'),
-            stroke: obj.stroke || (isDashed ? '#facc15' : '#ffffff'),
-            strokeWidth: obj.strokeWidth || 3,
-            dashed: isDashed,
-            style: isDashed ? 'dashed' : 'solid'
-          };
+      list.forEach((item, idx) => {
+        const itemType = (item.type || '').toLowerCase();
+
+        // 1. Líneas y flechas tácticas -> van a drawings
+        if (itemType === 'arrow' || itemType === 'line' || itemType === 'drawing') {
+          const sx = Number(item.start?.x ?? item.startX ?? item.x ?? 11);
+          const sy = Number(item.start?.y ?? item.startY ?? item.y ?? 34);
+          const ex = Number(item.end?.x ?? item.endX ?? item.x2 ?? (sx + 10));
+          const ey = Number(item.end?.y ?? item.endY ?? item.y2 ?? sy);
+          const isDashed = item.style === 'dashed' || item.dashed === true;
+
+          newDrawings.push({
+            id: item.id || `drawing_${idx}_${Date.now()}`,
+            type: isDashed ? 'dashed' : 'arrow',
+            start: { x: sx, y: sy },
+            end: { x: ex, y: ey },
+            color: item.color || (isDashed ? '#facc15' : '#ffffff'),
+            strokeW: item.strokeW || item.strokeWidth || 1.4
+          });
+          return;
         }
 
-        // Normalización de textos y carteles
+        // 2. Rótulos de texto táctico -> van a textBlocks
         if (itemType === 'text') {
-          const textValue = obj.text || obj.content || obj.label || 'ZONA TÁCTICA';
-          return {
-            ...obj,
-            id: obj.id || `text_${idx}_${Date.now()}`,
-            type: 'text',
-            text: textValue,
-            content: textValue,
-            label: textValue,
-            x: Number(obj.x ?? 52.5),
-            y: Number(obj.y ?? 34),
-            color: obj.color || '#ffffff',
-            fill: obj.fill || '#ffffff',
-            fontSize: obj.fontSize || 16
-          };
+          const val = item.text || item.content || item.label || 'ZONA DE SALIDA';
+          newTextBlocks.push({
+            id: item.id || `text_${idx}_${Date.now()}`,
+            text: val,
+            x: Number(item.x ?? 25),
+            y: Number(item.y ?? 34),
+            color: item.color || '#ffffff',
+            size: item.size || 2.8,
+            isBold: true,
+            isUnderline: false
+          });
+          return;
         }
 
-        // Normalización de jugadores, balón y accesorios
-        return {
-          ...obj,
-          id: obj.id || `obj_${idx}_${Date.now()}`,
-          x: Number(obj.x ?? 52.5),
-          y: Number(obj.y ?? 34)
-        };
+        // 3. Jugadores, balón y materiales -> van a objects
+        fieldObjects.push({
+          ...item,
+          id: item.id || `obj_${idx}_${Date.now()}`,
+          x: Number(item.x ?? 52.5),
+          y: Number(item.y ?? 34)
+        });
       });
+
+      if (fieldObjects.length > 0) {
+        setObjects(fieldObjects);
+        recordHistory(fieldObjects);
+      }
+      if (newDrawings.length > 0) {
+        setDrawings(prev => [...prev, ...newDrawings]);
+      }
+      if (newTextBlocks.length > 0) {
+        setTextBlocks(prev => [...prev, ...newTextBlocks]);
+      }
     };
 
-    // Generador táctico instantáneo local (ejecución en milisegundos si la API se demora)
+    // Motor táctico de alta velocidad
     const buildInstantTactics = (text) => {
       const t = text.toLowerCase();
       const list = [];
 
-      // 1. Arquero y balón
-      if (t.includes('arquero') || t.includes('portero') || t.includes(' 1 ') || t.includes('(1)')) {
+      // Jugadores y balón
+      if (t.includes('arquero') || t.includes('portero') || t.includes('(1)') || t.includes('1')) {
         list.push({ id: 'p_gk', type: 'player', number: '1', role: 'GK', team: 'gk', x: 11, y: 34 });
         list.push({ id: 'b_1', type: 'ball', x: 12.5, y: 34 });
       }
-
-      // 2. Centrales
       if (t.includes('central') || t.includes('defensas') || t.includes('salida')) {
         list.push({ id: 'p_cb1', type: 'player', number: '2', role: 'CB', team: 'blue', x: 16.5, y: 20 });
         list.push({ id: 'p_cb2', type: 'player', number: '3', role: 'CB', team: 'blue', x: 16.5, y: 48 });
       }
-
-      // 3. Volante / Mediocentro
-      if (t.includes('medio') || t.includes('volante') || t.includes('pivote') || t.includes('(5)') || t.includes(' 5 ')) {
+      if (t.includes('medio') || t.includes('volante') || t.includes('5')) {
         list.push({ id: 'p_mcd', type: 'player', number: '5', role: 'MCD', team: 'blue', x: 26, y: 34 });
       }
-
-      // 4. Presión rival roja
-      if (t.includes('rojo') || t.includes('presion') || t.includes('rival') || t.includes('delantero')) {
+      if (t.includes('rojo') || t.includes('presion') || t.includes('rival')) {
         list.push({ id: 'p_opp1', type: 'player', number: '9', role: 'ST', team: 'red', x: 23, y: 23 });
         list.push({ id: 'p_opp2', type: 'player', number: '11', role: 'ST', team: 'red', x: 23, y: 45 });
         list.push({ id: 'p_opp3', type: 'player', number: '10', role: 'CAM', team: 'red', x: 31, y: 34 });
       }
 
-      // 5. Flechas tácticas (pase continuo y desmarque punteado)
-      if (t.includes('linea') || t.includes('pase') || t.includes('flecha') || t.includes('desmarque')) {
-        // Pase continuo del arquero (11, 34) al central derecho (16.5, 48)
+      // Líneas
+      if (t.includes('linea') || t.includes('pase') || t.includes('desmarque')) {
         list.push({
           id: 'l_pass',
           type: 'arrow',
@@ -3947,7 +3942,6 @@ export default function App() {
           style: 'solid',
           color: '#ffffff'
         });
-        // Desmarque punteado del volante (26, 34) al medio campo (45, 34)
         list.push({
           id: 'l_run',
           type: 'arrow',
@@ -3960,7 +3954,7 @@ export default function App() {
         });
       }
 
-      // 6. Texto táctico
+      // Textos
       if (t.includes('texto') || t.includes('zona')) {
         list.push({
           id: 't_zone',
@@ -3972,7 +3966,7 @@ export default function App() {
         });
       }
 
-      // 7. Accesorios (conos, maniquíes, vallas)
+      // Accesorios
       if (t.includes('cono')) {
         list.push({ id: 'c_1', type: 'cone', x: 35, y: 25, color: '#ea580c' });
         list.push({ id: 'c_2', type: 'cone', x: 35, y: 43, color: '#ea580c' });
@@ -3990,7 +3984,7 @@ export default function App() {
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 segundos máx para no hacer esperar al usuario
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const promptDirecto = `Motor táctico Andez Sports (105x68 m). Centro (52.5, 34). Áreas X: 0-16.5 y 88.5-105. Punto penal: (11, 34).
 Instrucción: "${promptText}".
@@ -4026,19 +4020,14 @@ Devuelve solo un array JSON plano con objetos: player, ball, arrow (con startX, 
 
       const parsedObjects = JSON.parse(rawText);
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
-        const finalObjects = normalizeTacticalObjects(parsedObjects);
-        setObjects(finalObjects);
-        recordHistory(finalObjects);
+        dispatchTacticalElements(parsedObjects);
       } else {
         throw new Error("Respuesta vacía");
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      // Resuelve de inmediato: tanto si Gemini tardó más de 4s como si hubo error de red
       const instantList = buildInstantTactics(promptText);
-      const finalObjects = normalizeTacticalObjects(instantList);
-      setObjects(finalObjects);
-      recordHistory(finalObjects);
+      dispatchTacticalElements(instantList);
     } finally {
       setIsGeneratingPrompt(false);
       setShowPromptModal(false);
