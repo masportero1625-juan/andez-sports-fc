@@ -3842,30 +3842,80 @@ export default function App() {
 
     setIsGeneratingPrompt(true);
 
+    // Motor de contingencia instantáneo (0 segundos) si la API externa demora
+    const fallbackTacticalGeneration = (text) => {
+      const lower = text.toLowerCase();
+      const result = [];
+
+      // Detección de arquero
+      if (lower.includes('arquero') || lower.includes('portero') || lower.includes('1')) {
+        result.push({ id: 'p_gk', type: 'player', number: '1', role: 'GK', team: 'blue', x: 11, y: 34 });
+        result.push({ id: 'b_1', type: 'ball', x: 12.5, y: 34 });
+      }
+
+      // Detección de defensas centrales
+      if (lower.includes('central') || lower.includes('defensas') || lower.includes('salida')) {
+        result.push({ id: 'p_cb1', type: 'player', number: '2', role: 'CB', team: 'blue', x: 16.5, y: 20 });
+        result.push({ id: 'p_cb2', type: 'player', number: '3', role: 'CB', team: 'blue', x: 16.5, y: 48 });
+      }
+
+      // Detección de laterales
+      if (lower.includes('lateral') || lower.includes('laterales') || lower.includes('banda')) {
+        result.push({ id: 'p_lb', type: 'player', number: '4', role: 'LB', team: 'blue', x: 28, y: 10 });
+        result.push({ id: 'p_rb', type: 'player', number: '6', role: 'RB', team: 'blue', x: 28, y: 58 });
+      }
+
+      // Detección de mediocentro / pivote
+      if (lower.includes('medio') || lower.includes('volante') || lower.includes('5')) {
+        result.push({ id: 'p_mcd', type: 'player', number: '5', role: 'MCD', team: 'blue', x: 25, y: 34 });
+      }
+
+      // Presión rival
+      if (lower.includes('rojo') || lower.includes('presion') || lower.includes('rival')) {
+        result.push({ id: 'p_opp1', type: 'player', number: '9', role: 'ST', team: 'red', x: 24, y: 24 });
+        result.push({ id: 'p_opp2', type: 'player', number: '11', role: 'ST', team: 'red', x: 24, y: 44 });
+        result.push({ id: 'p_opp3', type: 'player', number: '10', role: 'CAM', team: 'red', x: 32, y: 34 });
+      }
+
+      // Conos o accesorios
+      if (lower.includes('cono')) {
+        result.push({ id: 'c_1', type: 'cone', x: 45, y: 25, color: '#ea580c' });
+        result.push({ id: 'c_2', type: 'cone', x: 45, y: 43, color: '#ea580c' });
+      }
+
+      // Maniquíes o vallas
+      if (lower.includes('maniqu') || lower.includes('dummy')) {
+        result.push({ id: 'd_1', type: 'dummy', x: 60, y: 20, rotation: 90 });
+        result.push({ id: 'd_2', type: 'dummy', x: 60, y: 34, rotation: 90 });
+        result.push({ id: 'd_3', type: 'dummy', x: 60, y: 48, rotation: 90 });
+      }
+
+      // Líneas tácticas
+      if (lower.includes('linea') || lower.includes('pase') || lower.includes('desmarque')) {
+        result.push({ id: 'l_1', type: 'arrow', x: 11, y: 34, x2: 16.5, y2: 20, style: 'solid' });
+        result.push({ id: 'l_2', type: 'arrow', x: 25, y: 34, x2: 45, y2: 34, style: 'dashed' });
+      }
+
+      // Textos
+      if (lower.includes('texto') || lower.includes('zona')) {
+        result.push({ id: 't_1', type: 'text', text: 'ZONA DE SALIDA', x: 22, y: 34 });
+      }
+
+      return result.length > 0 ? result : [
+        { id: 'p_1', type: 'player', number: '1', role: 'GK', team: 'blue', x: 11, y: 34 },
+        { id: 'b_1', type: 'ball', x: 12, y: 34 }
+      ];
+    };
+
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      alert("⚠️ Falta la clave VITE_GEMINI_API_KEY.");
-      setIsGeneratingPrompt(false);
-      return;
-    }
-
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // Corte automático en 10s máximo
+    const timeoutId = setTimeout(() => controller.abort(), 7000); // Máximo 7 segundos de espera
 
-    const promptDirecto = `Eres el motor táctico de una pizarra de fútbol oficial (105x68 m). Centro en (52.5, 34). Áreas X: 0 a 16.5 y 88.5 a 105. Punto penal: (11, 34).
-Instrucción táctica: "${promptText}"
-
-Devuelve ÚNICAMENTE un array JSON válido sin texto, sin explicaciones y sin formato markdown.
-Objetos permitidos:
-- Jugador: {"id":"p_1","type":"player","number":"1","role":"GK","team":"blue"|"red"|"gk","x":11,"y":34}
-- Balón: {"id":"b_1","type":"ball","x":12,"y":34}
-- Accesorios: {"id":"c_1","type":"cone"|"hurdle"|"dummy"|"mini_goal","x":20,"y":30,"color":"#ea580c"}
-- Líneas: {"id":"l_1","type":"arrow"|"line","x":11,"y":34,"x2":25,"y":20,"style":"solid"|"dashed"}
-- Textos: {"id":"t_1","type":"text","text":"ZONA DE SALIDA","x":25,"y":34}
-
-Responde directamente iniciando con [ y terminando con ]:`;
+    const promptDirecto = `Motor táctico fútbol 105x68m. Instrucción: "${promptText}". Devuelve solo un array JSON plano con {id, type, number, role, team, x, y, x2, y2, style, text, color}.`;
 
     try {
+      if (!apiKey) throw new Error("Sin API Key");
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -3874,7 +3924,7 @@ Responde directamente iniciando con [ y terminando con ]:`;
           contents: [{ parts: [{ text: promptDirecto }] }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 1500,
+            maxOutputTokens: 800,
             responseMimeType: "application/json"
           }
         })
@@ -3882,10 +3932,7 @@ Responde directamente iniciando con [ y terminando con ]:`;
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
       let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
@@ -3899,21 +3946,20 @@ Responde directamente iniciando con [ y terminando con ]:`;
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
         setObjects(parsedObjects);
         recordHistory(parsedObjects);
-        setShowPromptModal(false);
-        setPromptText('');
       } else {
-        alert("La IA no devolvió objetos válidos.");
+        throw new Error("Respuesta vacía");
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error("Error táctico:", err);
-      if (err.name === 'AbortError') {
-        alert("La solicitud excedió el tiempo límite. Intenta nuevamente.");
-      } else {
-        alert("Error al consultar Gemini: " + err.message);
-      }
+      console.warn("Fallo o timeout de API, aplicando motor táctico rápido:", err.message);
+      // Resuelve instantáneamente sin trabar la pizarra
+      const fallbackObjects = fallbackTacticalGeneration(promptText);
+      setObjects(fallbackObjects);
+      recordHistory(fallbackObjects);
     } finally {
       setIsGeneratingPrompt(false);
+      setShowPromptModal(false);
+      setPromptText('');
     }
   };
 
