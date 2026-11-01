@@ -3842,53 +3842,69 @@ export default function App() {
 
     setIsGeneratingPrompt(true);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9000); // Máximo 9 segundos de espera
-
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      alert("⚠️ Falta la clave VITE_GEMINI_API_KEY.");
+      setIsGeneratingPrompt(false);
+      return;
+    }
 
-    const systemInstruction = `Director Técnico Andez Sports Tactics Pro. Cancha de fútbol oficial (X: 0 a 105, Y: 0 a 68). Centro en (52.5, 34). Áreas: X=0 a 16.5 y X=88.5 a 105. Punto penal izq: (11, 34).
-Genera la posición de los elementos solicitados.
-Catálogo:
-- Jugador: {"id": "p_1", "type": "player", "number": "4", "role": "CB", "team": "blue"|"red"|"gk"|"gk_away", "x": 25, "y": 34}
-- Balón: {"id": "b_1", "type": "ball", "x": 26, "y": 34, "elevation": 0}
-- Cono: {"id": "c_1", "type": "cone", "color": "#ea580c"|"#2563eb"|"#eab308", "x": 20, "y": 30}
-- Valla: {"id": "h_1", "type": "hurdle", "x": 22, "y": 30}
-- Maniquí: {"id": "m_1", "type": "dummy", "x": 30, "y": 34, "rotation": 90}
-- Mini Portería: {"id": "mg_1", "type": "mini_goal", "x": 35, "y": 34}
-Devuelve estrictamente un array JSON plano con los objetos.`;
+    // Esquema estricto y completo: soporta jugadores, materiales, líneas tácticas y textos
+    const tacticalSchema = {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          id: { type: "STRING" },
+          type: { type: "STRING", enum: ["player", "ball", "cone", "hurdle", "dummy", "mini_goal", "arrow", "line", "text"] },
+          number: { type: "STRING" },
+          role: { type: "STRING" },
+          team: { type: "STRING", enum: ["blue", "red", "gk", "gk_away"] },
+          color: { type: "STRING" },
+          x: { type: "NUMBER" },
+          y: { type: "NUMBER" },
+          x2: { type: "NUMBER" },
+          y2: { type: "NUMBER" },
+          text: { type: "STRING" },
+          label: { type: "STRING" },
+          style: { type: "STRING", enum: ["solid", "dashed"] }
+        },
+        required: ["id", "type", "x", "y"]
+      }
+    };
+
+    const systemInstruction = `Director Técnico Andez Sports Tactics Pro. Cancha de fútbol oficial (105x68 m). Eje X: 0 a 105, Eje Y: 0 a 68. Centro en (52.5, 34). Áreas: X=0 a 16.5 y X=88.5 a 105. Punto penal: (11, 34).
+Tipos permitidos:
+- "player": fichas de jugadores (team: blue|red|gk).
+- "ball": balón.
+- "cone", "dummy", "hurdle", "mini_goal": materiales.
+- "arrow" o "line": líneas tácticas con x, y (inicio) y x2, y2 (fin). style: "solid" para pase o "dashed" para desmarque.
+- "text": carteles o consignas tácticas en el campo (usa propiedad text o label, y coordenadas x, y).
+Calcula las coordenadas métricas de la jugada solicitada.`;
 
     try {
-      if (!apiKey) throw new Error("Falta la API Key");
-
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `Instrucción táctica: "${promptText}"` }] }],
+          contents: [{ parts: [{ text: promptText }] }],
           systemInstruction: { parts: [{ text: systemInstruction }] },
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 1000,
-            responseMimeType: "application/json"
+            responseMimeType: "application/json",
+            responseSchema: tacticalSchema
           }
         })
       });
 
-      clearTimeout(timeoutId);
-
       if (!response.ok) {
-        throw new Error(`Error en servidor Gemini (${response.status})`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP ${response.status}`);
       }
 
       const data = await response.json();
-      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-      
-      const jsonMatch = rawText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) rawText = jsonMatch[0];
-
-      const parsedObjects = JSON.parse(rawText);
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const parsedObjects = JSON.parse(rawText || '[]');
 
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
         setObjects(parsedObjects);
@@ -3896,15 +3912,11 @@ Devuelve estrictamente un array JSON plano con los objetos.`;
         setShowPromptModal(false);
         setPromptText('');
       } else {
-        alert("La IA devolvió una estructura vacía. Intenta simplificar el texto.");
+        alert("No se pudieron generar posiciones para esa orden.");
       }
     } catch (err) {
-      clearTimeout(timeoutId);
-      console.warn("Tiempo de espera agotado o error en Gemini:", err);
-      alert(err.name === 'AbortError' 
-        ? "El servidor de Gemini tardó demasiado en responder (más de 9s). Intenta nuevamente." 
-        : `Error al consultar Gemini: ${err.message}`
-      );
+      console.error("Error en generación:", err);
+      alert("Error al consultar Gemini: " + err.message);
     } finally {
       setIsGeneratingPrompt(false);
     }
