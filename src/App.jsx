@@ -2198,130 +2198,146 @@ function TrainingObject3D({ obj, position, onClick }) {
         <mesh position={[0, 0.91, 0.068]}><boxGeometry args={[0.48, 0.125, 0.015]} /><meshStandardMaterial color="#18181b" /></mesh>
         {[-1.02, 1.02].map((x) => <mesh key={`foot-${x}`} position={[x, 0.07, 0]}><boxGeometry args={[0.42, 0.1, 0.34]} /><meshStandardMaterial color="#713f12" /></mesh>)}
       </group>}
-      {obj.type === 'dummy' && (
+      {/* --- MANIQUÍ ESTILO TACTICALPAD 3D (SILUETA SÓLIDA CON COSTILLAS Y SOPORTE POSTERIOR) --- */}
+          {obj.type === 'dummy' && (
             <group>
-              {/* Sombra de contacto en el césped */}
+              {/* Sombra de contacto suave en césped */}
               <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[0.45, 16]} />
-                <meshBasicMaterial color="#000000" transparent opacity={0.3} />
+                <ellipseCurve args={[0, 0, 0.5, 0.22, 0, 2 * Math.PI, false, 0]} />
+                <meshBasicMaterial color="#000000" transparent opacity={0.35} />
               </mesh>
 
-              {/* Dos picas verticales clavadas al suelo */}
-              {[-0.22, 0.22].map((px) => (
+              {/* Base / Picas clavadas al césped */}
+              {[-0.24, 0.24].map((px) => (
                 <group key={px}>
-                  {/* Pica de acero */}
-                  <mesh position={[px, 0.45, 0]} castShadow>
-                    <cylinderGeometry args={[0.022, 0.022, 0.9, 12]} />
-                    <meshStandardMaterial color="#eab308" roughness={0.3} metalness={0.2} />
+                  <mesh position={[px, 0.35, 0]} castShadow>
+                    <cylinderGeometry args={[0.02, 0.02, 0.7, 12]} />
+                    <meshStandardMaterial color="#ca8a04" metalness={0.4} roughness={0.3} />
                   </mesh>
-                  {/* Punta metálica inferior */}
-                  <mesh position={[px, 0.04, 0]}>
-                    <cylinderGeometry args={[0.015, 0.005, 0.08, 8]} />
-                    <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
+                  <mesh position={[px, 0.03, 0]}>
+                    <cylinderGeometry args={[0.016, 0.005, 0.07, 8]} />
+                    <meshStandardMaterial color="#1e293b" metalness={0.8} />
                   </mesh>
                 </group>
               ))}
 
-              {/* Barra transversal estabilizadora inferior */}
-              <mesh position={[0, 0.35, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-                <cylinderGeometry args={[0.02, 0.02, 0.48, 12]} />
-                <meshStandardMaterial color="#ca8a04" roughness={0.4} />
+              {/* Barra transversal estabilizadora */}
+              <mesh position={[0, 0.38, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[0.018, 0.018, 0.52, 12]} />
+                <meshStandardMaterial color="#ca8a04" roughness={0.3} />
               </mesh>
 
-              {/* Soporte diagonal trasero antivuelco (pata inclinada de entrenamiento) */}
-              <mesh position={[0, 0.42, -0.32]} rotation={[Math.PI / 5.2, 0, 0]} castShadow>
-                <cylinderGeometry args={[0.018, 0.018, 0.95, 10]} />
-                <meshStandardMaterial color="#ca8a04" roughness={0.4} />
+              {/* Soporte triangular trasero antivuelco (como en las capturas de TacticalPad) */}
+              <mesh position={[0, 0.45, -0.22]} rotation={[Math.PI / 4.8, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.016, 0.016, 0.85, 10]} />
+                <meshStandardMaterial color="#eab308" roughness={0.3} />
               </mesh>
-              <mesh position={[0, 0.03, -0.6]}>
-                <sphereGeometry args={[0.04, 12, 10]} />
-                <meshStandardMaterial color="#1e293b" />
+              <mesh position={[0, 0.03, -0.48]}>
+                <boxGeometry args={[0.18, 0.04, 0.08]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.6} />
               </mesh>
 
-              {/* Placa anatómica del torso estilizado tipo TacticalPad */}
-              {/* Pecho y costillas de varillas */}
+              {/* Cuerpo / Silueta anatómica troquelada */}
+              {/* Caderas y cintura estrecha */}
+              <mesh position={[0, 0.82, 0]} castShadow>
+                <boxGeometry args={[0.44, 0.22, 0.04]} />
+                <meshStandardMaterial color="#eab308" roughness={0.25} />
+              </mesh>
+
+              {/* Torso con ranuras anatómicas caladas */}
               <mesh position={[0, 1.22, 0]} castShadow>
-                <boxGeometry args={[0.62, 0.68, 0.045]} />
-                <meshStandardMaterial color="#eab308" roughness={0.35} />
+                <boxGeometry args={[0.56, 0.58, 0.04]} />
+                <meshStandardMaterial color="#eab308" roughness={0.25} />
               </mesh>
-              {/* Ranuras caladas en el pecho */}
-              {[-0.14, 0.14].map((ox) => (
-                <mesh key={ox} position={[ox, 1.22, 0.005]}>
-                  <boxGeometry args={[0.1, 0.52, 0.05]} />
+              {/* Costillas / Ranuras interiores oscurecidas */}
+              {[-0.14, 0, 0.14].map((rx) => (
+                <mesh key={rx} position={[rx, 1.22, 0.002]}>
+                  <boxGeometry args={[0.065, 0.44, 0.045]} />
                   <meshStandardMaterial color="#854d0e" roughness={0.8} />
                 </mesh>
               ))}
 
-              {/* Hombros caídos */}
-              <mesh position={[0, 1.6, 0]} castShadow>
-                <boxGeometry args={[0.54, 0.12, 0.045]} />
-                <meshStandardMaterial color="#eab308" roughness={0.35} />
+              {/* Hombros con silueta anatómica caída */}
+              <mesh position={[0, 1.56, 0]} castShadow>
+                <boxGeometry args={[0.52, 0.12, 0.04]} />
+                <meshStandardMaterial color="#eab308" roughness={0.25} />
               </mesh>
 
               {/* Cuello */}
-              <mesh position={[0, 1.72, 0]} castShadow>
-                <cylinderGeometry args={[0.06, 0.06, 0.14, 12]} />
-                <meshStandardMaterial color="#ca8a04" roughness={0.4} />
+              <mesh position={[0, 1.68, 0]} castShadow>
+                <cylinderGeometry args={[0.055, 0.06, 0.12, 14]} />
+                <meshStandardMaterial color="#ca8a04" roughness={0.3} />
               </mesh>
 
-              {/* Cabeza anatómica con aro hueco central */}
-              <mesh position={[0, 1.95, 0]} rotation={[0, 0, 0]} castShadow>
-                <torusGeometry args={[0.14, 0.032, 12, 24]} />
-                <meshStandardMaterial color="#eab308" roughness={0.35} />
+              {/* Cabeza anatómica con centro calado */}
+              <mesh position={[0, 1.88, 0]} castShadow>
+                <cylinderGeometry args={[0.16, 0.14, 0.26, 18]} />
+                <meshStandardMaterial color="#eab308" roughness={0.25} />
+              </mesh>
+              <mesh position={[0, 1.88, 0.002]}>
+                <cylinderGeometry args={[0.07, 0.07, 0.27, 14]} />
+                <meshStandardMaterial color="#854d0e" roughness={0.8} />
               </mesh>
             </group>
           )}
 
+          {/* --- MINI PORTERÍA ISOMÉTRICA CON RED CUADRICULADA REAL (24x12) --- */}
           {obj.type === 'mini_goal' && (
             <group>
-              {/* Sombra base */}
-              <mesh position={[0, 0.01, -0.45]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[2.5, 1.1]} />
+              {/* Sombra de la portería en el suelo */}
+              <mesh position={[0, 0.01, -0.42]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[2.5, 1.0]} />
                 <meshBasicMaterial color="#000000" transparent opacity={0.25} />
               </mesh>
 
-              {/* Postes verticales frontales tubulares blancos */}
-              {[-1.2, 1.2].map((side) => (
+              {/* Postes frontales tubulares blancos de alta reflectancia */}
+              {[-1.15, 1.15].map((side) => (
                 <group key={side}>
                   <mesh position={[side, 0.5, 0]} castShadow>
-                    <cylinderGeometry args={[0.035, 0.035, 1.0, 16]} />
-                    <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
+                    <cylinderGeometry args={[0.038, 0.038, 1.0, 16]} />
+                    <meshStandardMaterial color="#ffffff" roughness={0.15} metalness={0.15} />
                   </mesh>
-                  {/* Tirante diagonal trasero */}
-                  <mesh position={[side, 0.48, -0.42]} rotation={[Math.PI / 4, 0, 0]} castShadow>
-                    <cylinderGeometry args={[0.025, 0.025, 1.25, 12]} />
-                    <meshStandardMaterial color="#cbd5e1" roughness={0.3} />
+                  {/* Tirante diagonal hacia atrás */}
+                  <mesh position={[side, 0.5, -0.38]} rotation={[Math.PI / 4.2, 0, 0]} castShadow>
+                    <cylinderGeometry args={[0.024, 0.024, 1.15, 12]} />
+                    <meshStandardMaterial color="#e2e8f0" roughness={0.25} />
                   </mesh>
                   {/* Barra de suelo lateral */}
-                  <mesh position={[side, 0.03, -0.44]} rotation={[Math.PI / 2, 0, 0]}>
-                    <cylinderGeometry args={[0.025, 0.025, 0.9, 12]} />
+                  <mesh position={[side, 0.03, -0.38]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.024, 0.024, 0.78, 12]} />
                     <meshStandardMaterial color="#94a3b8" roughness={0.4} />
                   </mesh>
                 </group>
               ))}
 
-              {/* Travesaño frontal superior */}
+              {/* Travesaño frontal superior blanco */}
               <mesh position={[0, 1.0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-                <cylinderGeometry args={[0.035, 0.035, 2.45, 16]} />
-                <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
+                <cylinderGeometry args={[0.038, 0.038, 2.34, 16]} />
+                <meshStandardMaterial color="#ffffff" roughness={0.15} metalness={0.15} />
               </mesh>
 
-              {/* Barra de suelo trasera */}
-              <mesh position={[0, 0.03, -0.88]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.025, 0.025, 2.4, 12]} />
+              {/* Barra de suelo trasera estabilizadora */}
+              <mesh position={[0, 0.03, -0.76]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.024, 0.024, 2.32, 12]} />
                 <meshStandardMaterial color="#94a3b8" roughness={0.4} />
               </mesh>
 
-              {/* Malla/Red translúcida con caída hacia atrás */}
-              <mesh position={[0, 0.52, -0.44]} rotation={[Math.PI / 4, 0, 0]}>
-                <planeGeometry args={[2.4, 1.3]} />
-                <meshStandardMaterial color="#ffffff" wireframe={true} transparent opacity={0.5} roughness={0.9} />
+              {/* RED TRASERA: Malla con 28 divisiones horizontales y 14 verticales */}
+              <mesh position={[0, 0.52, -0.38]} rotation={[Math.PI / 4.2, 0, 0]}>
+                <planeGeometry args={[2.3, 1.15, 28, 14]} />
+                <meshStandardMaterial color="#ffffff" wireframe={true} transparent opacity={0.65} roughness={0.3} />
               </mesh>
-              {/* Redes laterales */}
-              {[-1.2, 1.2].map((side) => (
-                <mesh key={side} position={[side, 0.48, -0.42]} rotation={[0, Math.PI / 2, 0]}>
-                  <planeGeometry args={[0.88, 0.95]} />
-                  <meshStandardMaterial color="#ffffff" wireframe={true} transparent opacity={0.35} />
+              {/* Lona trasera sutil translúcida que da profundidad */}
+              <mesh position={[0, 0.52, -0.38]} rotation={[Math.PI / 4.2, 0, 0]}>
+                <planeGeometry args={[2.3, 1.15]} />
+                <meshStandardMaterial color="#f8fafc" transparent opacity={0.08} roughness={0.9} />
+              </mesh>
+
+              {/* Redes laterales cerradas con cuadrícula */}
+              {[-1.15, 1.15].map((side) => (
+                <mesh key={side} position={[side, 0.48, -0.38]} rotation={[0, Math.PI / 2, 0]}>
+                  <planeGeometry args={[0.76, 0.95, 10, 12]} />
+                  <meshStandardMaterial color="#ffffff" wireframe={true} transparent opacity={0.45} />
                 </mesh>
               ))}
             </group>
