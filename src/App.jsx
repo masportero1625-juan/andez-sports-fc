@@ -3886,12 +3886,20 @@ export default function App() {
           return;
         }
 
-        // 3. Fichas de jugadores, balones y accesorios
+        // 3. Fichas de jugadores, balones y accesorios de entrenamiento
+        let rot = item.rotation ?? 0;
+        // Si no trae rotación explícita, se orienta transversal al avance horizontal
+        if (item.rotation === undefined) {
+          if (itemType === 'ladder') rot = 90;
+          if (itemType === 'hurdle') rot = 90;
+        }
+
         fieldObjects.push({
           ...item,
           id: item.id || `obj_${idx}_${Date.now()}`,
           x: Number(item.x ?? 52.5),
-          y: Number(item.y ?? 34)
+          y: Number(item.y ?? 34),
+          rotation: rot
         });
       });
 
@@ -3907,18 +3915,18 @@ export default function App() {
       }
     };
 
-    // Motor de contingencia completo
+    // Motor de contingencia con alineación y rotación ajustadas
     const buildInstantCircuit = (text) => {
       const t = text.toLowerCase();
       const list = [];
 
-      // Circuito físico / entrenamiento
+      // Circuito físico / entrenamiento: Y centrado en 15 y rotación de 90°
       if (t.includes('escalera') || t.includes('coordinaci')) {
-        list.push({ id: 'm_ladder', type: 'ladder', x: 20, y: 15 });
-        list.push({ id: 'm_h1', type: 'hurdle', x: 28, y: 15 });
-        list.push({ id: 'm_h2', type: 'hurdle', x: 33, y: 15 });
-        list.push({ id: 'm_h3', type: 'hurdle', x: 38, y: 15 });
-        list.push({ id: 'p_8', type: 'player', number: '8', role: 'MC', team: 'blue', x: 15, y: 15 });
+        list.push({ id: 'm_ladder', type: 'ladder', x: 20, y: 15, rotation: 90 });
+        list.push({ id: 'm_h1', type: 'hurdle', x: 28, y: 15, rotation: 90 });
+        list.push({ id: 'm_h2', type: 'hurdle', x: 33, y: 15, rotation: 90 });
+        list.push({ id: 'm_h3', type: 'hurdle', x: 38, y: 15, rotation: 90 });
+        list.push({ id: 'p_8', type: 'player', number: '8', role: 'MC', team: 'blue', x: 15, y: 15, rotation: 0 });
         list.push({
           id: 'l_run_circ',
           type: 'arrow',
@@ -3941,7 +3949,7 @@ export default function App() {
       }
 
       if (t.includes('definici') || t.includes('remate') || t.includes('10')) {
-        list.push({ id: 'p_10', type: 'player', number: '10', role: 'MCO', team: 'blue', x: 42, y: 34 });
+        list.push({ id: 'p_10', type: 'player', number: '10', role: 'MCO', team: 'blue', x: 42, y: 34, rotation: 0 });
         list.push({ id: 'b_circ', type: 'ball', x: 43.5, y: 34 });
         list.push({ id: 'm_cone1', type: 'cone', x: 40, y: 25, color: '#ea580c' });
         list.push({ id: 'm_cone2', type: 'cone', x: 40, y: 43, color: '#ea580c' });
@@ -3949,7 +3957,7 @@ export default function App() {
           id: 'l_pass_circ',
           type: 'arrow',
           startX: 40,
-          startY: 16,
+          startY: 15,
           endX: 42,
           endY: 32,
           style: 'solid',
@@ -3958,7 +3966,7 @@ export default function App() {
         list.push({ id: 't_c3', type: 'text', text: 'ZONA DE DEFINICIÓN', x: 38, y: 48 });
       }
 
-      // Jugada de salida de balón si coincide
+      // Salida de balón base
       if (t.includes('arquero') || t.includes('salida')) {
         list.push({ id: 'p_gk', type: 'player', number: '1', role: 'GK', team: 'gk', x: 11, y: 34 });
         list.push({ id: 'b_1', type: 'ball', x: 12.5, y: 34 });
@@ -3980,14 +3988,13 @@ export default function App() {
     const promptDirecto = `Cancha fútbol (105x68 m). Centro (52.5, 34).
 Instrucción: "${promptText}".
 Devuelve ÚNICAMENTE un array JSON plano:
-- Jugadores: {"id":"p1","type":"player","number":"8","role":"MC","team":"blue"|"red","x":15,"y":20}
+- Jugadores: {"id":"p1","type":"player","number":"8","role":"MC","team":"blue"|"red","x":15,"y":20,"rotation":0}
 - Balón: {"id":"b1","type":"ball","x":25,"y":34}
 - Flechas: {"id":"l1","type":"arrow","startX":15,"startY":20,"endX":35,"endY":20,"style":"dashed"|"solid","color":"#facc15"|"#ffffff"}
 - Textos: {"id":"t1","type":"text","text":"TITULO","x":15,"y":15}
-- Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal","x":20,"y":20,"color":"#ea580c"}
+- Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal","x":20,"y":20,"rotation":90,"color":"#ea580c"}
 Sin explicaciones. Inicia con [ y termina con ]:`;
 
-    // Timeout de seguridad en 4.5 segundos
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4500);
 
@@ -4030,7 +4037,6 @@ Sin explicaciones. Inicia con [ y termina con ]:`;
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      // Pase lo que pase (demora de red, cuota o aborto), se despacha de inmediato
       const fallbackList = buildInstantCircuit(promptText);
       dispatchTacticalElements(fallbackList);
     } finally {
