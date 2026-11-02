@@ -260,184 +260,150 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   const renderContent = () => {
     switch (obj.type) {
 
-      // --- MINI PORTERÍA ISOMÉTRICA CON RED PROFESIONAL ---
+      // --- MINI PORTERÍA ESTILO TACTICALPAD (2D ISOMÉTRICA CON RED CAÍDA) ---
       case 'mini_goal':
         return (
           <g>
             <defs>
-              {/* Trama de red de fútbol */}
-              <pattern id="goalNetPattern" width="0.4" height="0.4" patternUnits="userSpaceOnUse">
-                <path d="M 0 0 L 0.4 0.4 M 0 0.4 L 0.4 0" fill="none" stroke="#e2e8f0" strokeWidth="0.05" opacity="0.75" />
+              <pattern id="tpMiniNet" width="0.32" height="0.32" patternUnits="userSpaceOnUse">
+                <path d="M 0 0 L 0.32 0.32 M 0 0.32 L 0.32 0" fill="none" stroke="#e2e8f0" strokeWidth="0.04" opacity="0.8" />
               </pattern>
             </defs>
 
-            {/* Sombra de la estructura en el césped */}
-            <polygon points="-2.6,0.3 2.6,0.3 3.4,-2.2 -1.8,-2.2" fill="#000000" opacity="0.25" />
+            {/* Sombra de la base en el césped */}
+            <polygon points="-2.5,0.4 2.5,0.4 3.1,-1.8 -1.9,-1.8" fill="#000000" opacity="0.22" />
 
-            {/* Malla lateral izquierda */}
-            <polygon points="-2.5,0 -2.5,-2.2 -1.8,-3.2 -1.8,-1.2" fill="url(#goalNetPattern)" stroke="#cbd5e1" strokeWidth="0.08" />
+            {/* Malla lateral izquierda y fondo */}
+            <polygon points="-2.4,0 -2.4,-1.8 -1.7,-2.7 -1.7,-0.9" fill="url(#tpMiniNet)" stroke="#94a3b8" strokeWidth="0.05" />
+            <polygon points="-1.7,-0.9 3.1,-0.9 3.1,-2.7 -1.7,-2.7" fill="url(#tpMiniNet)" stroke="#94a3b8" strokeWidth="0.05" />
+            <polygon points="-2.4,-1.8 2.4,-1.8 3.1,-2.7 -1.7,-2.7" fill="url(#tpMiniNet)" stroke="#94a3b8" strokeWidth="0.05" />
+            <polygon points="2.4,0 2.4,-1.8 3.1,-2.7 3.1,-0.9" fill="url(#tpMiniNet)" stroke="#94a3b8" strokeWidth="0.05" />
 
-            {/* Malla de fondo y techo de la portería */}
-            <polygon points="-2.5,-2.2 2.5,-2.2 3.2,-3.2 -1.8,-3.2" fill="url(#goalNetPattern)" stroke="#cbd5e1" strokeWidth="0.08" />
-            <polygon points="-1.8,-1.2 3.2,-1.2 3.2,-3.2 -1.8,-3.2" fill="url(#goalNetPattern)" stroke="#cbd5e1" strokeWidth="0.08" />
+            {/* Tubulares traseros de tensión */}
+            <line x1="-2.4" y1="-1.8" x2="-1.7" y2="-2.7" stroke="#cbd5e1" strokeWidth="0.16" />
+            <line x1="2.4" y1="-1.8" x2="3.1" y2="-2.7" stroke="#cbd5e1" strokeWidth="0.16" />
+            <line x1="-1.7" y1="-2.7" x2="3.1" y2="-2.7" stroke="#cbd5e1" strokeWidth="0.16" />
 
-            {/* Malla lateral derecha */}
-            <polygon points="2.5,0 2.5,-2.2 3.2,-3.2 3.2,-1.2" fill="url(#goalNetPattern)" stroke="#cbd5e1" strokeWidth="0.08" />
+            {/* Marco frontal blanco reflectante */}
+            <line x1="-2.4" y1="0.1" x2="-2.4" y2="-1.8" stroke="#ffffff" strokeWidth="0.28" strokeLinecap="round" />
+            <line x1="2.4" y1="0.1" x2="2.4" y2="-1.8" stroke="#ffffff" strokeWidth="0.28" strokeLinecap="round" />
+            <line x1="-2.45" y1="-1.8" x2="2.45" y2="-1.8" stroke="#ffffff" strokeWidth="0.28" strokeLinecap="round" />
 
-            {/* Estructura tubular blanca metálica frontal */}
-            {/* Poste izquierdo */}
-            <line x1="-2.5" y1="0" x2="-2.5" y2="-2.2" stroke="#ffffff" strokeWidth="0.32" strokeLinecap="round" />
-            <line x1="-2.5" y1="0" x2="-2.5" y2="-2.2" stroke="#94a3b8" strokeWidth="0.08" strokeLinecap="round" />
-            {/* Poste derecho */}
-            <line x1="2.5" y1="0" x2="2.5" y2="-2.2" stroke="#ffffff" strokeWidth="0.32" strokeLinecap="round" />
-            <line x1="2.5" y1="0" x2="2.5" y2="-2.2" stroke="#94a3b8" strokeWidth="0.08" strokeLinecap="round" />
-            {/* Travesaño frontal */}
-            <line x1="-2.55" y1="-2.2" x2="2.55" y2="-2.2" stroke="#ffffff" strokeWidth="0.32" strokeLinecap="round" />
-            <line x1="-2.55" y1="-2.2" x2="2.55" y2="-2.2" stroke="#cbd5e1" strokeWidth="0.08" strokeLinecap="round" />
-
-            {/* Tirantes traseros */}
-            <line x1="-2.5" y1="-2.2" x2="-1.8" y2="-3.2" stroke="#e2e8f0" strokeWidth="0.22" />
-            <line x1="2.5" y1="-2.2" x2="3.2" y2="-3.2" stroke="#e2e8f0" strokeWidth="0.22" />
-            <line x1="-1.8" y1="-3.2" x2="3.2" y2="-3.2" stroke="#e2e8f0" strokeWidth="0.22" />
-            {/* Barra base en el suelo */}
-            <line x1="-2.5" y1="0" x2="-1.8" y2="-1.2" stroke="#94a3b8" strokeWidth="0.18" />
-            <line x1="2.5" y1="0" x2="3.2" y2="-1.2" stroke="#94a3b8" strokeWidth="0.18" />
-            <line x1="-1.8" y1="-1.2" x2="3.2" y2="-1.2" stroke="#64748b" strokeWidth="0.18" />
+            {/* Sombra de contorno del marco */}
+            <line x1="-2.4" y1="0.1" x2="-2.4" y2="-1.8" stroke="#64748b" strokeWidth="0.06" strokeLinecap="round" />
+            <line x1="2.4" y1="0.1" x2="2.4" y2="-1.8" stroke="#64748b" strokeWidth="0.06" strokeLinecap="round" />
+            <line x1="-2.4" y1="-1.75" x2="2.4" y2="-1.75" stroke="#94a3b8" strokeWidth="0.06" />
           </g>
         );
 
-      // --- MANIQUÍ DEFENSIVO ESTILO TACTICALPAD (SILUETA ANATÓMICA Y VARILLAS) ---
+      // --- MANIQUÍ DEFENSIVO ESTILO TACTICALPAD (SILUETA DE PECHO, CUELLO Y PICAS EXACTAS) ---
       case 'dummy':
-        const dummyColor = itemColor || '#eab308';
+        const dummyFill = itemColor || '#eab308';
         return (
           <g>
-            {/* Sombra proyectada del maniquí en el césped */}
-            <ellipse cx="0.4" cy="3.6" rx="1.6" ry="0.5" fill="#000000" opacity="0.35" />
+            {/* Sombra arrojada de la base en el suelo */}
+            <ellipse cx="0" cy="2.9" rx="1.3" ry="0.45" fill="#000000" opacity="0.32" />
 
-            {/* Cabeza circular hueca */}
-            <circle cx="0" cy="-3.6" r="0.9" fill="none" stroke={dummyColor} strokeWidth="0.36" />
+            {/* Silueta completa del maniquí con calados internos */}
+            <g stroke="#854d0e" strokeWidth="0.12" fill={dummyFill}>
+              {/* Cabeza anatómica ovalada */}
+              <circle cx="0" cy="-2.8" r="0.68" />
+              <circle cx="0" cy="-2.8" r="0.4" fill="#ffffff" opacity="0.18" stroke="none" />
 
-            {/* Cuello */}
-            <line x1="0" y1="-2.7" x2="0" y2="-2.1" stroke={dummyColor} strokeWidth="0.36" />
+              {/* Cuello */}
+              <rect x="-0.22" y="-2.15" width="0.44" height="0.45" rx="0.08" />
 
-            {/* Hombros curvados */}
-            <path d="M -1.8,-2.1 C -1.0,-2.3 1.0,-2.3 1.8,-2.1" fill="none" stroke={dummyColor} strokeWidth="0.4" strokeLinecap="round" />
+              {/* Torso con hombros caídos y costillas estilizadas */}
+              <path d="M -1.35,-1.7 C -0.8,-1.85 0.8,-1.85 1.35,-1.7 L 1.15,0.7 L -1.15,0.7 Z" />
+              {/* Ranuras/rejillas interiores del maniquí */}
+              <line x1="-0.75" y1="-1.4" x2="-0.65" y2="0.45" stroke="#854d0e" strokeWidth="0.14" />
+              <line x1="0" y1="-1.55" x2="0" y2="0.45" stroke="#854d0e" strokeWidth="0.16" />
+              <line x1="0.75" y1="-1.4" x2="0.65" y2="0.45" stroke="#854d0e" strokeWidth="0.14" />
+              <line x1="-1.05" y1="-0.8" x2="1.05" y2="-0.8" stroke="#854d0e" strokeWidth="0.14" />
+              <line x1="-0.95" y1="-0.1" x2="0.95" y2="-0.1" stroke="#854d0e" strokeWidth="0.14" />
 
-            {/* Marco del torso (pecho y cintura estrecha) */}
-            <path d="M -1.8,-2.1 L -1.6,0.6 L 1.6,0.6 L 1.8,-2.1 Z" fill="none" stroke={dummyColor} strokeWidth="0.36" strokeLinejoin="round" />
+              {/* Soporte de cintura */}
+              <rect x="-1.15" y="0.7" width="2.3" height="0.32" rx="0.08" />
 
-            {/* Varillas anatómicas verticales y horizontales del torso */}
-            <line x1="-0.9" y1="-2.1" x2="-0.8" y2="0.6" stroke={dummyColor} strokeWidth="0.22" />
-            <line x1="0" y1="-2.1" x2="0" y2="0.6" stroke={dummyColor} strokeWidth="0.26" />
-            <line x1="0.9" y1="-2.1" x2="0.8" y2="0.6" stroke={dummyColor} strokeWidth="0.22" />
-            <line x1="-1.7" y1="-1.3" x2="1.7" y2="-1.3" stroke={dummyColor} strokeWidth="0.22" />
-            <line x1="-1.6" y1="-0.4" x2="1.6" y2="-0.4" stroke={dummyColor} strokeWidth="0.22" />
+              {/* Piernas / Picas verticales que bajan al césped */}
+              <line x1="-0.7" y1="1.02" x2="-0.7" y2="2.7" stroke={dummyFill} strokeWidth="0.26" strokeLinecap="round" />
+              <line x1="-0.7" y1="1.02" x2="-0.7" y2="2.7" stroke="#854d0e" strokeWidth="0.06" strokeLinecap="round" />
+              <line x1="0.7" y1="1.02" x2="0.7" y2="2.7" stroke={dummyFill} strokeWidth="0.26" strokeLinecap="round" />
+              <line x1="0.7" y1="1.02" x2="0.7" y2="2.7" stroke="#854d0e" strokeWidth="0.06" strokeLinecap="round" />
 
-            {/* Base pélvica */}
-            <line x1="-1.6" y1="0.6" x2="1.6" y2="0.6" stroke={dummyColor} strokeWidth="0.4" strokeLinecap="round" />
-
-            {/* Patas / picas clavadas al suelo */}
-            <line x1="-1.0" y1="0.6" x2="-1.0" y2="3.4" stroke={dummyColor} strokeWidth="0.32" strokeLinecap="round" />
-            <line x1="1.0" y1="0.6" x2="1.0" y2="3.4" stroke={dummyColor} strokeWidth="0.32" strokeLinecap="round" />
-            {/* Travesaño estabilizador inferior */}
-            <line x1="-1.0" y1="2.2" x2="1.0" y2="2.2" stroke={dummyColor} strokeWidth="0.25" />
-            {/* Puntas de acero clavadas */}
-            <line x1="-1.0" y1="3.4" x2="-1.0" y2="3.8" stroke="#475569" strokeWidth="0.25" strokeLinecap="round" />
-            <line x1="1.0" y1="3.4" x2="1.0" y2="3.8" stroke="#475569" strokeWidth="0.25" strokeLinecap="round" />
+              {/* Travesaño inferior estabilizador */}
+              <line x1="-0.7" y1="2.1" x2="0.7" y2="2.1" stroke="#854d0e" strokeWidth="0.18" />
+              {/* Puntas metálicas clavadas al suelo */}
+              <line x1="-0.7" y1="2.7" x2="-0.7" y2="3.1" stroke="#334155" strokeWidth="0.18" strokeLinecap="round" />
+              <line x1="0.7" y1="2.7" x2="0.7" y2="3.1" stroke="#334155" strokeWidth="0.18" strokeLinecap="round" />
+            </g>
           </g>
         );
 
-      // --- ESCALERA DE COORDINACIÓN CON PELDAÑOS FLEXIBLES ---
+      // --- ESCALERA DE COORDINACIÓN PROFESIONAL ---
       case 'ladder':
         return (
           <g>
-            {/* Sombra suave */}
-            <rect x="-1.9" y="-5.9" width="3.8" height="11.8" fill="#000000" opacity="0.18" />
-            {/* Guías laterales flexibles */}
-            <line x1="-1.8" y1="-6.0" x2="-1.8" y2="6.0" stroke="#0284c7" strokeWidth="0.26" strokeLinecap="round" />
-            <line x1="1.8" y1="-6.0" x2="1.8" y2="6.0" stroke="#0284c7" strokeWidth="0.26" strokeLinecap="round" />
-            {/* Peldaños plásticos rígidos de alta visibilidad */}
-            {[-5.0, -3.3, -1.6, 0.1, 1.8, 3.5, 5.0].map((ly) => (
+            <rect x="-1.8" y="-5.9" width="3.6" height="11.8" fill="#000000" opacity="0.15" />
+            <line x1="-1.6" y1="-6.0" x2="-1.6" y2="6.0" stroke="#0284c7" strokeWidth="0.22" strokeLinecap="round" />
+            <line x1="1.6" y1="-6.0" x2="1.6" y2="6.0" stroke="#0284c7" strokeWidth="0.22" strokeLinecap="round" />
+            {[-4.8, -3.2, -1.6, 0.0, 1.6, 3.2, 4.8].map((ly) => (
               <g key={ly}>
-                <rect x="-1.9" y={ly - 0.14} width="3.8" height="0.28" rx="0.08" fill="#facc15" stroke="#ca8a04" strokeWidth="0.06" />
-                <rect x="-1.9" y={ly - 0.14} width="0.4" height="0.28" fill="#0369a1" />
-                <rect x="1.5" y={ly - 0.14} width="0.4" height="0.28" fill="#0369a1" />
+                <rect x="-1.7" y={ly - 0.12} width="3.4" height="0.24" rx="0.06" fill="#facc15" stroke="#ca8a04" strokeWidth="0.04" />
+                <rect x="-1.7" y={ly - 0.12} width="0.3" height="0.24" fill="#0369a1" />
+                <rect x="1.4" y={ly - 0.12} width="0.3" height="0.24" fill="#0369a1" />
               </g>
             ))}
           </g>
         );
 
-      // --- VALLAS DE SALTO CON BASE ANTIVUELCO ---
+      // --- VALLAS DE SALTO ---
       case 'hurdle':
         const hurdleColor = itemColor || '#facc15';
         return (
           <g>
-            {/* Sombra de la valla en el suelo */}
-            <ellipse cx="0.2" cy="0.9" rx="2.5" ry="0.45" fill="#000000" opacity="0.28" />
-            {/* Patas base en el césped */}
-            <line x1="-2.2" y1="0.5" x2="-2.2" y2="1.3" stroke="#475569" strokeWidth="0.26" strokeLinecap="round" />
-            <line x1="2.2" y1="0.5" x2="2.2" y2="1.3" stroke="#475569" strokeWidth="0.26" strokeLinecap="round" />
-            {/* Montantes verticales */}
-            <line x1="-2.2" y1="0.8" x2="-2.2" y2="-0.8" stroke={hurdleColor} strokeWidth="0.28" strokeLinecap="round" />
-            <line x1="2.2" y1="0.8" x2="2.2" y2="-0.8" stroke={hurdleColor} strokeWidth="0.28" strokeLinecap="round" />
-            {/* Barra superior de salto */}
-            <line x1="-2.3" y1="-0.8" x2="2.3" y2="-0.8" stroke={hurdleColor} strokeWidth="0.38" strokeLinecap="round" />
-            <line x1="-2.3" y1="-0.8" x2="2.3" y2="-0.8" stroke="#ffffff" strokeWidth="0.1" opacity="0.6" strokeLinecap="round" />
+            <ellipse cx="0.2" cy="0.8" rx="2.4" ry="0.4" fill="#000000" opacity="0.26" />
+            <line x1="-2.1" y1="0.5" x2="-2.1" y2="1.2" stroke="#475569" strokeWidth="0.24" strokeLinecap="round" />
+            <line x1="2.1" y1="0.5" x2="2.1" y2="1.2" stroke="#475569" strokeWidth="0.24" strokeLinecap="round" />
+            <line x1="-2.1" y1="0.7" x2="-2.1" y2="-0.7" stroke={hurdleColor} strokeWidth="0.26" strokeLinecap="round" />
+            <line x1="2.1" y1="0.7" x2="2.1" y2="-0.7" stroke={hurdleColor} strokeWidth="0.26" strokeLinecap="round" />
+            <line x1="-2.2" y1="-0.7" x2="2.2" y2="-0.7" stroke={hurdleColor} strokeWidth="0.34" strokeLinecap="round" />
+            <line x1="-2.2" y1="-0.7" x2="2.2" y2="-0.7" stroke="#ffffff" strokeWidth="0.08" opacity="0.6" strokeLinecap="round" />
           </g>
         );
 
-      // --- ESTACAS / PICAS CON BASE DE GOMA ---
+      // --- ESTACAS CON BASE DE GOMA ---
       case 'pole':
         const poleColor = itemColor || '#facc15';
         return (
           <g>
-            {/* Sombra oblicua de la pica en el césped */}
-            <line x1="0" y1="0" x2="2.8" y2="2.8" stroke="#000000" strokeWidth="0.28" strokeLinecap="round" opacity="0.3" />
-            {/* Base circular de goma */}
-            <circle cx="0" cy="0" r="0.95" fill="#1e293b" stroke="#0f172a" strokeWidth="0.12" />
-            <circle cx="0" cy="0" r="0.6" fill="#334155" />
-            {/* Poste visto con inclinación y tope superior */}
-            <line x1="0" y1="0" x2="-0.8" y2="-3.4" stroke={poleColor} strokeWidth="0.32" strokeLinecap="round" />
-            <circle cx="-0.8" cy="-3.4" r="0.28" fill="#1e293b" />
+            <line x1="0" y1="0" x2="2.6" y2="2.6" stroke="#000000" strokeWidth="0.26" strokeLinecap="round" opacity="0.28" />
+            <circle cx="0" cy="0" r="0.9" fill="#1e293b" stroke="#0f172a" strokeWidth="0.1" />
+            <circle cx="0" cy="0" r="0.55" fill="#334155" />
+            <line x1="0" y1="0" x2="-0.8" y2="-3.2" stroke={poleColor} strokeWidth="0.3" strokeLinecap="round" />
+            <circle cx="-0.8" cy="-3.2" r="0.25" fill="#1e293b" />
           </g>
         );
 
-      // --- CONOS CON BASE CUADRADA Y ANILLO BLANCO ---
+      // --- CONOS CON BASE CUADRADA ---
       case 'cone':
         const coneCol = itemColor || '#ea580c';
         return (
           <g>
-            {/* Sombra del cono */}
-            <ellipse cx="0.3" cy="0.6" rx="1.4" ry="0.6" fill="#000000" opacity="0.3" />
-            {/* Base plana cuadrada */}
-            <rect x="-1.1" y="-0.5" width="2.2" height="1.6" rx="0.2" fill={coneCol} stroke="#9a3412" strokeWidth="0.08" />
-            {/* Cuerpo del cono */}
-            <path d="M -0.9,0.8 L 0,-1.4 L 0.9,0.8 Z" fill={coneCol} stroke="#c2410c" strokeWidth="0.08" strokeLinejoin="round" />
-            {/* Franja reflectante blanca central */}
-            <polygon points="-0.5,0.0 0.5,0.0 0.3,-0.6 -0.3,-0.6" fill="#ffffff" opacity="0.9" />
+            <ellipse cx="0.2" cy="0.5" rx="1.3" ry="0.55" fill="#000000" opacity="0.28" />
+            <rect x="-1.0" y="-0.4" width="2.0" height="1.4" rx="0.18" fill={coneCol} stroke="#9a3412" strokeWidth="0.08" />
+            <path d="M -0.85,0.7 L 0,-1.3 L 0.85,0.7 Z" fill={coneCol} stroke="#c2410c" strokeWidth="0.08" strokeLinejoin="round" />
+            <polygon points="-0.45,0.0 0.45,0.0 0.28,-0.55 -0.28,-0.55" fill="#ffffff" opacity="0.9" />
           </g>
         );
 
-      // --- AROS DE COORDINACIÓN EN EL SUELO ---
+      // --- AROS DE COORDINACIÓN ---
       case 'hoop':
         const hoopCol = itemColor || '#3b82f6';
         return (
           <g>
-            {/* Sombra del aro */}
-            <ellipse cx="0.1" cy="0.2" rx="1.65" ry="0.85" fill="none" stroke="#000000" strokeWidth="0.2" opacity="0.25" />
-            {/* Aro elíptico en perspectiva */}
-            <ellipse cx="0" cy="0" rx="1.6" ry="0.8" fill="none" stroke={hoopCol} strokeWidth="0.26" />
-          </g>
-        );
-
-      // --- PORTERÍA REGLAMENTARIA GRANDE ---
-      case 'goal':
-        return (
-          <g>
-            <polygon points="-1.5,-4.0 1.5,-4.0 2.2,-5.2 -0.8,-5.2" fill="#e2e8f0" opacity="0.5" />
-            <line x1="-1.4" y1="-4.0" x2="-1.4" y2="4.0" stroke="#ffffff" strokeWidth="0.45" strokeLinecap="round" />
-            <line x1="-1.4" y1="-4.0" x2="1.5" y2="-4.0" stroke="#ffffff" strokeWidth="0.35" />
-            <line x1="-1.4" y1="4.0" x2="1.5" y2="4.0" stroke="#ffffff" strokeWidth="0.35" />
+            <ellipse cx="0.1" cy="0.2" rx="1.5" ry="0.75" fill="none" stroke="#000000" strokeWidth="0.18" opacity="0.22" />
+            <ellipse cx="0" cy="0" rx="1.5" ry="0.75" fill="none" stroke={hoopCol} strokeWidth="0.24" />
           </g>
         );
 
@@ -2232,17 +2198,134 @@ function TrainingObject3D({ obj, position, onClick }) {
         <mesh position={[0, 0.91, 0.068]}><boxGeometry args={[0.48, 0.125, 0.015]} /><meshStandardMaterial color="#18181b" /></mesh>
         {[-1.02, 1.02].map((x) => <mesh key={`foot-${x}`} position={[x, 0.07, 0]}><boxGeometry args={[0.42, 0.1, 0.34]} /><meshStandardMaterial color="#713f12" /></mesh>)}
       </group>}
-      {obj.type === 'dummy' && <group>
-        <mesh position={[0, 0.16, 0]} castShadow><cylinderGeometry args={[0.34, 0.44, 0.24, 16]} /><meshStandardMaterial color="#374151" /></mesh>
-        <mesh position={[0, 1.15, 0]} castShadow><capsuleGeometry args={[0.35, 1.15, 6, 12]} /><meshStandardMaterial color="#eab308" roughness={0.68} /></mesh>
-        <mesh position={[0, 2.0, 0]} castShadow><sphereGeometry args={[0.26, 16, 14]} /><meshStandardMaterial color="#f8d1b0" roughness={0.9} /></mesh>
-        <mesh position={[0, 1.5, 0.345]}><boxGeometry args={[0.42, 0.38, 0.02]} /><meshStandardMaterial color="#fef3c7" /></mesh>
-      </group>}
-      {obj.type === 'mini_goal' && <group>
-        {[-1, 1].map(side => <mesh key={side} position={[0, 0.55, side * 1.2]} castShadow><cylinderGeometry args={[0.045, 0.045, 1.1, 10]} /><meshStandardMaterial color="#f8fafc" metalness={0.25} /></mesh>)}
-        <mesh position={[0, 1.08, 0]} castShadow><boxGeometry args={[0.08, 0.08, 2.45]} /><meshStandardMaterial color="#f8fafc" metalness={0.25} /></mesh>
-        <mesh position={[-0.62, 0.54, 0]}><boxGeometry args={[1.25, 1.0, 2.35]} /><meshBasicMaterial color="#e2e8f0" transparent opacity={0.18} wireframe /></mesh>
-      </group>}
+      {obj.type === 'dummy' && (
+            <group>
+              {/* Sombra de contacto en el césped */}
+              <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <circleGeometry args={[0.45, 16]} />
+                <meshBasicMaterial color="#000000" transparent opacity={0.3} />
+              </mesh>
+
+              {/* Dos picas verticales clavadas al suelo */}
+              {[-0.22, 0.22].map((px) => (
+                <group key={px}>
+                  {/* Pica de acero */}
+                  <mesh position={[px, 0.45, 0]} castShadow>
+                    <cylinderGeometry args={[0.022, 0.022, 0.9, 12]} />
+                    <meshStandardMaterial color="#eab308" roughness={0.3} metalness={0.2} />
+                  </mesh>
+                  {/* Punta metálica inferior */}
+                  <mesh position={[px, 0.04, 0]}>
+                    <cylinderGeometry args={[0.015, 0.005, 0.08, 8]} />
+                    <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
+                  </mesh>
+                </group>
+              ))}
+
+              {/* Barra transversal estabilizadora inferior */}
+              <mesh position={[0, 0.35, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[0.02, 0.02, 0.48, 12]} />
+                <meshStandardMaterial color="#ca8a04" roughness={0.4} />
+              </mesh>
+
+              {/* Soporte diagonal trasero antivuelco (pata inclinada de entrenamiento) */}
+              <mesh position={[0, 0.42, -0.32]} rotation={[Math.PI / 5.2, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.018, 0.018, 0.95, 10]} />
+                <meshStandardMaterial color="#ca8a04" roughness={0.4} />
+              </mesh>
+              <mesh position={[0, 0.03, -0.6]}>
+                <sphereGeometry args={[0.04, 12, 10]} />
+                <meshStandardMaterial color="#1e293b" />
+              </mesh>
+
+              {/* Placa anatómica del torso estilizado tipo TacticalPad */}
+              {/* Pecho y costillas de varillas */}
+              <mesh position={[0, 1.22, 0]} castShadow>
+                <boxGeometry args={[0.62, 0.68, 0.045]} />
+                <meshStandardMaterial color="#eab308" roughness={0.35} />
+              </mesh>
+              {/* Ranuras caladas en el pecho */}
+              {[-0.14, 0.14].map((ox) => (
+                <mesh key={ox} position={[ox, 1.22, 0.005]}>
+                  <boxGeometry args={[0.1, 0.52, 0.05]} />
+                  <meshStandardMaterial color="#854d0e" roughness={0.8} />
+                </mesh>
+              ))}
+
+              {/* Hombros caídos */}
+              <mesh position={[0, 1.6, 0]} castShadow>
+                <boxGeometry args={[0.54, 0.12, 0.045]} />
+                <meshStandardMaterial color="#eab308" roughness={0.35} />
+              </mesh>
+
+              {/* Cuello */}
+              <mesh position={[0, 1.72, 0]} castShadow>
+                <cylinderGeometry args={[0.06, 0.06, 0.14, 12]} />
+                <meshStandardMaterial color="#ca8a04" roughness={0.4} />
+              </mesh>
+
+              {/* Cabeza anatómica con aro hueco central */}
+              <mesh position={[0, 1.95, 0]} rotation={[0, 0, 0]} castShadow>
+                <torusGeometry args={[0.14, 0.032, 12, 24]} />
+                <meshStandardMaterial color="#eab308" roughness={0.35} />
+              </mesh>
+            </group>
+          )}
+
+          {obj.type === 'mini_goal' && (
+            <group>
+              {/* Sombra base */}
+              <mesh position={[0, 0.01, -0.45]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[2.5, 1.1]} />
+                <meshBasicMaterial color="#000000" transparent opacity={0.25} />
+              </mesh>
+
+              {/* Postes verticales frontales tubulares blancos */}
+              {[-1.2, 1.2].map((side) => (
+                <group key={side}>
+                  <mesh position={[side, 0.5, 0]} castShadow>
+                    <cylinderGeometry args={[0.035, 0.035, 1.0, 16]} />
+                    <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
+                  </mesh>
+                  {/* Tirante diagonal trasero */}
+                  <mesh position={[side, 0.48, -0.42]} rotation={[Math.PI / 4, 0, 0]} castShadow>
+                    <cylinderGeometry args={[0.025, 0.025, 1.25, 12]} />
+                    <meshStandardMaterial color="#cbd5e1" roughness={0.3} />
+                  </mesh>
+                  {/* Barra de suelo lateral */}
+                  <mesh position={[side, 0.03, -0.44]} rotation={[Math.PI / 2, 0, 0]}>
+                    <cylinderGeometry args={[0.025, 0.025, 0.9, 12]} />
+                    <meshStandardMaterial color="#94a3b8" roughness={0.4} />
+                  </mesh>
+                </group>
+              ))}
+
+              {/* Travesaño frontal superior */}
+              <mesh position={[0, 1.0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[0.035, 0.035, 2.45, 16]} />
+                <meshStandardMaterial color="#ffffff" roughness={0.2} metalness={0.1} />
+              </mesh>
+
+              {/* Barra de suelo trasera */}
+              <mesh position={[0, 0.03, -0.88]} rotation={[0, 0, Math.PI / 2]}>
+                <cylinderGeometry args={[0.025, 0.025, 2.4, 12]} />
+                <meshStandardMaterial color="#94a3b8" roughness={0.4} />
+              </mesh>
+
+              {/* Malla/Red translúcida con caída hacia atrás */}
+              <mesh position={[0, 0.52, -0.44]} rotation={[Math.PI / 4, 0, 0]}>
+                <planeGeometry args={[2.4, 1.3]} />
+                <meshStandardMaterial color="#ffffff" wireframe={true} transparent opacity={0.5} roughness={0.9} />
+              </mesh>
+              {/* Redes laterales */}
+              {[-1.2, 1.2].map((side) => (
+                <mesh key={side} position={[side, 0.48, -0.42]} rotation={[0, Math.PI / 2, 0]}>
+                  <planeGeometry args={[0.88, 0.95]} />
+                  <meshStandardMaterial color="#ffffff" wireframe={true} transparent opacity={0.35} />
+                </mesh>
+              ))}
+            </group>
+          )}
       {obj.type === 'ladder' && <group rotation={[0, 0, 0]}>
         {[-0.65, 0.65].map(x => <mesh key={x} position={[x, 0.045, 0]}><boxGeometry args={[0.06, 0.08, 3.3]} /><meshStandardMaterial color="#f8fafc" /></mesh>)}
         {[-1.35, -0.81, -0.27, 0.27, 0.81, 1.35].map(z => <mesh key={z} position={[0, 0.09, z]}><boxGeometry args={[1.35, 0.07, 0.055]} /><meshStandardMaterial color="#facc15" /></mesh>)}
