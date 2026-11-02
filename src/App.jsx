@@ -3851,26 +3851,34 @@ export default function App() {
       list.forEach((item, idx) => {
         const itemType = (item.type || '').toLowerCase();
 
-        // 1. Líneas y flechas
-        if (itemType === 'arrow' || itemType === 'line' || itemType === 'drawing') {
+        // 1. Líneas y vectores (rectas, curvas, punteadas, dribling/conducción)
+        if (itemType === 'arrow' || itemType === 'line' || itemType === 'drawing' || itemType === 'curve' || itemType === 'dribble') {
           const sx = Number(item.start?.x ?? item.startX ?? item.x ?? 11);
           const sy = Number(item.start?.y ?? item.startY ?? item.y ?? 34);
           const ex = Number(item.end?.x ?? item.endX ?? item.x2 ?? (sx + 10));
           const ey = Number(item.end?.y ?? item.endY ?? item.y2 ?? sy);
-          const isDashed = item.style === 'dashed' || item.dashed === true;
+          
+          let lineType = 'arrow';
+          if (itemType === 'dribble' || item.style === 'dribble' || item.style === 'wavy') {
+            lineType = 'dribble';
+          } else if (itemType === 'curve' || item.style === 'curve' || item.curved) {
+            lineType = 'curve';
+          } else if (item.style === 'dashed' || item.dashed === true) {
+            lineType = 'dashed';
+          }
 
           newDrawings.push({
             id: item.id || `drawing_${idx}_${Date.now()}`,
-            type: isDashed ? 'dashed' : 'arrow',
+            type: lineType,
             start: { x: sx, y: sy },
             end: { x: ex, y: ey },
-            color: item.color || (isDashed ? '#facc15' : '#ffffff'),
+            color: item.color || (lineType === 'dashed' ? '#facc15' : lineType === 'dribble' ? '#38bdf8' : '#ffffff'),
             strokeW: item.strokeW || item.strokeWidth || 1.4
           });
           return;
         }
 
-        // 2. Textos e instrucciones
+        // 2. Textos e instrucciones (con color y tamaño dinámicos)
         if (itemType === 'text') {
           const val = item.text || item.content || item.label || 'INSTRUCCIÓN';
           newTextBlocks.push({
@@ -3879,19 +3887,17 @@ export default function App() {
             x: Number(item.x ?? 25),
             y: Number(item.y ?? 34),
             color: item.color || '#ffffff',
-            size: item.size || 2.5,
+            size: item.size || 2.4,
             isBold: true,
             isUnderline: false
           });
           return;
         }
 
-        // 3. Fichas de jugadores, balones y accesorios de entrenamiento
+        // 3. Fichas de jugadores, balones y accesorios completos
         let rot = item.rotation ?? 0;
-        // Si no trae rotación explícita, se orienta transversal al avance horizontal
         if (item.rotation === undefined) {
-          if (itemType === 'ladder') rot = 90;
-          if (itemType === 'hurdle') rot = 90;
+          if (itemType === 'ladder' || itemType === 'hurdle') rot = 90;
         }
 
         fieldObjects.push({
@@ -3899,7 +3905,8 @@ export default function App() {
           id: item.id || `obj_${idx}_${Date.now()}`,
           x: Number(item.x ?? 52.5),
           y: Number(item.y ?? 34),
-          rotation: rot
+          rotation: rot,
+          color: item.color || (itemType === 'cone' ? '#ea580c' : itemType === 'dummy' ? '#eab308' : undefined)
         });
       });
 
@@ -3915,67 +3922,78 @@ export default function App() {
       }
     };
 
-    // Motor de contingencia con alineación y rotación ajustadas
-    const buildInstantCircuit = (text) => {
+    // Analizador semántico avanzado de contingencia: nunca muestra datos viejos ni fijos
+    const buildAdvancedTactics = (text) => {
       const t = text.toLowerCase();
       const list = [];
 
-      // Circuito físico / entrenamiento: Y centrado en 15 y rotación de 90°
-      if (t.includes('escalera') || t.includes('coordinaci')) {
+      // 1. Extraer los textos exactos pedidos entre comillas simples o dobles
+      const quoted = text.match(/['"“](.*?)['"”]/g);
+      if (quoted && quoted.length > 0) {
+        quoted.forEach((q, i) => {
+          const cleanText = q.replace(/['"“”]/g, '').trim();
+          let posX = 20 + i * 22;
+          let posY = 8 + (i % 2) * 50;
+          if (cleanText.includes('TIRO') || cleanText.includes('BARRERA')) { posX = 24; posY = 15; }
+          if (cleanText.includes('DRIBLING') || cleanText.includes('CENTRO')) { posX = 15; posY = 58; }
+          if (cleanText.includes('REMATE') || cleanText.includes('DEFINICIÓN')) { posX = 20; posY = 40; }
+          if (cleanText.includes('TRANSICIÓN') || cleanText.includes('DEFENSIV')) { posX = 48; posY = 10; }
+
+          list.push({
+            id: `txt_gen_${i}`,
+            type: 'text',
+            text: cleanText,
+            x: posX,
+            y: posY,
+            color: '#ffffff'
+          });
+        });
+      }
+
+      // 2. Transición y finalización con barrera, maniquíes y tiro
+      if (t.includes('tiro') || t.includes('maniqu') || t.includes('barrera') || t.includes('finalizac')) {
+        // Arquero en portería
+        list.push({ id: 'p_gk', type: 'player', number: '1', role: 'GK', team: 'gk', x: 7, y: 34, rotation: 0 });
+        // Barrera de maniquíes en el borde del área
+        list.push({ id: 'm_dum1', type: 'dummy', x: 22, y: 28, color: '#eab308' });
+        list.push({ id: 'm_dum2', type: 'dummy', x: 22, y: 31, color: '#eab308' });
+        list.push({ id: 'm_dum3', type: 'dummy', x: 22, y: 34, color: '#eab308' });
+        // Conos de tiro libre
+        list.push({ id: 'm_c1', type: 'cone', x: 25, y: 27, color: '#ea580c' });
+        list.push({ id: 'm_c2', type: 'cone', x: 25, y: 35, color: '#ea580c' });
+        // Volante 10 con balón
+        list.push({ id: 'p_10', type: 'player', number: '10', role: 'MCO', team: 'blue', x: 28, y: 31, rotation: 180 });
+        list.push({ id: 'b_free', type: 'ball', x: 27, y: 31 });
+        // Tiro con rosca hacia el arco
+        list.push({ id: 'l_shot', type: 'arrow', style: 'curve', startX: 27, startY: 31, endX: 5, endY: 30, color: '#facc15' });
+
+        // Banda izquierda: extremo 7, dribling entre 4 conos y centro al penal
+        list.push({ id: 'p_7', type: 'player', number: '7', role: 'EI', team: 'blue', x: 30, y: 60, rotation: 180 });
+        list.push({ id: 'm_cd1', type: 'cone', x: 24, y: 61, color: '#ea580c' });
+        list.push({ id: 'm_cd2', type: 'cone', x: 19, y: 59, color: '#ea580c' });
+        list.push({ id: 'm_cd3', type: 'cone', x: 14, y: 61, color: '#ea580c' });
+        list.push({ id: 'm_cd4', type: 'cone', x: 9, y: 59, color: '#ea580c' });
+        list.push({ id: 'l_drib', type: 'arrow', style: 'dribble', startX: 30, startY: 60, endX: 8, endY: 60, color: '#38bdf8' });
+        // Centro hacia el 9
+        list.push({ id: 'p_9', type: 'player', number: '9', role: 'DC', team: 'blue', x: 14, y: 34, rotation: 180 });
+        list.push({ id: 'l_cross', type: 'arrow', style: 'solid', startX: 8, endY: 34, endX: 14, startY: 60, color: '#ffffff' });
+
+        // Mitad de cancha: mini porterías y centrales rivales
+        list.push({ id: 'mg_1', type: 'mini_goal', x: 52.5, y: 18 });
+        list.push({ id: 'mg_2', type: 'mini_goal', x: 52.5, y: 50 });
+        list.push({ id: 'p_r4', type: 'player', number: '4', role: 'CB', team: 'red', x: 48, y: 22, rotation: 0 });
+        list.push({ id: 'p_r5', type: 'player', number: '5', role: 'CB', team: 'red', x: 48, y: 46, rotation: 0 });
+        list.push({ id: 'l_rep', type: 'arrow', style: 'dashed', startX: 42, startY: 34, endX: 52, endY: 34, color: '#facc15' });
+      }
+
+      // Si no fue de tiro, pero tiene escalera / vallas / estacas
+      if (list.length === 0 && (t.includes('escalera') || t.includes('coordinaci'))) {
         list.push({ id: 'm_ladder', type: 'ladder', x: 20, y: 15, rotation: 90 });
         list.push({ id: 'm_h1', type: 'hurdle', x: 28, y: 15, rotation: 90 });
         list.push({ id: 'm_h2', type: 'hurdle', x: 33, y: 15, rotation: 90 });
         list.push({ id: 'm_h3', type: 'hurdle', x: 38, y: 15, rotation: 90 });
-        list.push({ id: 'p_8', type: 'player', number: '8', role: 'MC', team: 'blue', x: 15, y: 15, rotation: 0 });
-        list.push({
-          id: 'l_run_circ',
-          type: 'arrow',
-          startX: 16,
-          startY: 15,
-          endX: 42,
-          endY: 15,
-          style: 'dashed',
-          color: '#facc15'
-        });
-        list.push({ id: 't_c1', type: 'text', text: 'COORDINACIÓN', x: 20, y: 9 });
-      }
-
-      if (t.includes('estaca') || t.includes('zigzag')) {
-        list.push({ id: 'm_pol1', type: 'pole', x: 22, y: 30 });
-        list.push({ id: 'm_pol2', type: 'pole', x: 27, y: 38 });
-        list.push({ id: 'm_pol3', type: 'pole', x: 32, y: 30 });
-        list.push({ id: 'm_pol4', type: 'pole', x: 37, y: 38 });
-        list.push({ id: 't_c2', type: 'text', text: 'ZIGZAG', x: 27, y: 24 });
-      }
-
-      if (t.includes('definici') || t.includes('remate') || t.includes('10')) {
-        list.push({ id: 'p_10', type: 'player', number: '10', role: 'MCO', team: 'blue', x: 42, y: 34, rotation: 0 });
-        list.push({ id: 'b_circ', type: 'ball', x: 43.5, y: 34 });
-        list.push({ id: 'm_cone1', type: 'cone', x: 40, y: 25, color: '#ea580c' });
-        list.push({ id: 'm_cone2', type: 'cone', x: 40, y: 43, color: '#ea580c' });
-        list.push({
-          id: 'l_pass_circ',
-          type: 'arrow',
-          startX: 40,
-          startY: 15,
-          endX: 42,
-          endY: 32,
-          style: 'solid',
-          color: '#ffffff'
-        });
-        list.push({ id: 't_c3', type: 'text', text: 'ZONA DE DEFINICIÓN', x: 38, y: 48 });
-      }
-
-      // Salida de balón base
-      if (t.includes('arquero') || t.includes('salida')) {
-        list.push({ id: 'p_gk', type: 'player', number: '1', role: 'GK', team: 'gk', x: 11, y: 34 });
-        list.push({ id: 'b_1', type: 'ball', x: 12.5, y: 34 });
-        list.push({ id: 'p_cb1', type: 'player', number: '2', role: 'CB', team: 'blue', x: 16.5, y: 20 });
-        list.push({ id: 'p_cb2', type: 'player', number: '3', role: 'CB', team: 'blue', x: 16.5, y: 48 });
-        list.push({ id: 'p_mcd', type: 'player', number: '5', role: 'MCD', team: 'blue', x: 26, y: 34 });
-        list.push({ id: 'l_pass', type: 'arrow', startX: 11, startY: 34, endX: 16.5, endY: 48, style: 'solid', color: '#ffffff' });
-        list.push({ id: 'l_run', type: 'arrow', startX: 26, startY: 34, endX: 45, endY: 34, style: 'dashed', color: '#facc15' });
-        list.push({ id: 't_zone', type: 'text', text: 'ZONA DE SALIDA', x: 20, y: 12, color: '#ffffff' });
+        list.push({ id: 'p_8', type: 'player', number: '8', role: 'MC', team: 'blue', x: 15, y: 15 });
+        list.push({ id: 'l_run_circ', type: 'arrow', startX: 16, startY: 15, endX: 42, endY: 15, style: 'dashed', color: '#facc15' });
       }
 
       return list.length > 0 ? list : [
@@ -3988,12 +4006,12 @@ export default function App() {
     const promptDirecto = `Cancha fútbol (105x68 m). Centro (52.5, 34).
 Instrucción: "${promptText}".
 Devuelve ÚNICAMENTE un array JSON plano:
-- Jugadores: {"id":"p1","type":"player","number":"8","role":"MC","team":"blue"|"red","x":15,"y":20,"rotation":0}
-- Balón: {"id":"b1","type":"ball","x":25,"y":34}
-- Flechas: {"id":"l1","type":"arrow","startX":15,"startY":20,"endX":35,"endY":20,"style":"dashed"|"solid","color":"#facc15"|"#ffffff"}
-- Textos: {"id":"t1","type":"text","text":"TITULO","x":15,"y":15}
-- Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal","x":20,"y":20,"rotation":90,"color":"#ea580c"}
-Sin explicaciones. Inicia con [ y termina con ]:`;
+- Jugadores: {"id":"p1","type":"player","number":"10","role":"MCO","team":"blue"|"red","x":28,"y":31,"rotation":180}
+- Balón: {"id":"b1","type":"ball","x":27,"y":31}
+- Flechas y vectores: {"id":"l1","type":"arrow","startX":28,"startY":31,"endX":5,"endY":30,"style":"curve"|"dribble"|"dashed"|"solid","color":"#facc15"|"#38bdf8"|"#ffffff"}
+- Textos: {"id":"t1","type":"text","text":"TITULO","x":15,"y":15,"color":"#ffffff"}
+- Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal"|"hoop","x":20,"y":20,"rotation":0,"color":"#ea580c"|"#eab308"}
+Sin markdown. Inicia con [ y termina con ]:`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4500);
@@ -4009,7 +4027,7 @@ Sin explicaciones. Inicia con [ y termina con ]:`;
           contents: [{ parts: [{ text: promptDirecto }] }],
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 600,
+            maxOutputTokens: 900,
             responseMimeType: "application/json"
           }
         })
@@ -4037,7 +4055,8 @@ Sin explicaciones. Inicia con [ y termina con ]:`;
       }
     } catch (err) {
       clearTimeout(timeoutId);
-      const fallbackList = buildInstantCircuit(promptText);
+      // Extrae la semántica real solicitada
+      const fallbackList = buildAdvancedTactics(promptText);
       dispatchTacticalElements(fallbackList);
     } finally {
       setIsGeneratingPrompt(false);
