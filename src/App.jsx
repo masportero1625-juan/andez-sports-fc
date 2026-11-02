@@ -197,15 +197,57 @@ const GET_TACTICAL_SYSTEMS = (isLand) => {
   };
 };
 
+// --- COMPONENTES GRÁFICOS ESTILO TACTICALPAD ---
+
 function SoccerBall({ x, y, onPointerDown }) {
   return (
-    <g transform={`translate(${x}, ${y})`} onPointerDown={onPointerDown} className="cursor-grab active:cursor-grabbing touch-none select-none">
-      <circle r="2.9" fill="rgba(0,0,0,0.3)" transform="translate(0.3, 0.4)" />
-      <circle r="2.6" fill="#f8fafc" stroke="#0f172a" strokeWidth="0.4" />
-      <polygon points="0,-0.9 0.85,-0.28 0.53,0.73 -0.53,0.73 -0.85,-0.28" fill="#0f172a" />
-      {[0, 72, 144, 216, 288].map((ang, i) => (
-        <line key={i} x1="0" y1="0" x2={Math.cos((ang * Math.PI)/180) * 1.8} y2={Math.sin((ang * Math.PI)/180) * 1.8} stroke="#0f172a" strokeWidth="0.25" />
-      ))}
+    <g
+      transform={`translate(${x}, ${y})`}
+      onPointerDown={onPointerDown}
+      className="cursor-pointer select-none"
+    >
+      <defs>
+        {/* Sombra de caída suave en el césped */}
+        <radialGradient id="ballGroundShadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+        </radialGradient>
+        {/* Volumen 3D del balón con punto de luz */}
+        <radialGradient id="ballShading" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="65%" stopColor="#e2e8f0" />
+          <stop offset="100%" stopColor="#64748b" />
+        </radialGradient>
+      </defs>
+
+      {/* Sombra arrojada */}
+      <ellipse cx="0.4" cy="1.3" rx="1.6" ry="0.65" fill="url(#ballGroundShadow)" />
+
+      {/* Esfera base con degradado */}
+      <circle cx="0" cy="0" r="1.45" fill="url(#ballShading)" stroke="#334155" strokeWidth="0.08" />
+
+      {/* Costuras y gajos clásicos pentagonales */}
+      {/* Pentágono central */}
+      <polygon
+        points="0,-0.45 0.42,-0.15 0.26,0.36 -0.26,0.36 -0.42,-0.15"
+        fill="#1e293b"
+      />
+      {/* Costuras radiales hacia los bordes */}
+      <line x1="0" y1="-0.45" x2="0" y2="-1.0" stroke="#334155" strokeWidth="0.09" strokeLinecap="round" />
+      <line x1="0.42" y1="-0.15" x2="0.95" y2="-0.35" stroke="#334155" strokeWidth="0.09" strokeLinecap="round" />
+      <line x1="0.26" y1="0.36" x2="0.65" y2="0.85" stroke="#334155" strokeWidth="0.09" strokeLinecap="round" />
+      <line x1="-0.26" y1="0.36" x2="-0.65" y2="0.85" stroke="#334155" strokeWidth="0.09" strokeLinecap="round" />
+      <line x1="-0.42" y1="-0.15" x2="-0.95" y2="-0.35" stroke="#334155" strokeWidth="0.09" strokeLinecap="round" />
+
+      {/* Parches periféricos curvados */}
+      <path d="M -0.35,-1.3 A 1.4 1.4 0 0 1 0.35,-1.3 L 0,-1.0 Z" fill="#1e293b" />
+      <path d="M 1.25,-0.6 A 1.4 1.4 0 0 1 1.4,0.1 L 0.95,-0.35 Z" fill="#1e293b" />
+      <path d="M 0.9,1.0 A 1.4 1.4 0 0 1 0.2,1.4 L 0.65,0.85 Z" fill="#1e293b" />
+      <path d="M -0.9,1.0 A 1.4 1.4 0 0 0 -0.2,1.4 L -0.65,0.85 Z" fill="#1e293b" />
+      <path d="M -1.25,-0.6 A 1.4 1.4 0 0 0 -1.4,0.1 L -0.95,-0.35 Z" fill="#1e293b" />
+
+      {/* Reflejo de brillo especular superior */}
+      <ellipse cx="-0.4" cy="-0.45" rx="0.45" ry="0.25" fill="#ffffff" opacity="0.45" transform="rotate(-25 -0.4 -0.45)" />
     </g>
   );
 }
@@ -213,132 +255,196 @@ function SoccerBall({ x, y, onPointerDown }) {
 function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
   const rot = obj.rotation || 0;
   const s = obj.scale || 1.0;
+  const itemColor = obj.color;
 
   const renderContent = () => {
     switch (obj.type) {
+
+      // --- MINI PORTERÍA ISOMÉTRICA CON RED PROFESIONAL ---
       case 'mini_goal':
         return (
           <g>
-            <rect x="-2.6" y="-1.6" width="5.2" height="1.8" rx="0.2" fill="rgba(0,0,0,0.25)" />
-            <rect x="-2.5" y="-1.5" width="5.0" height="1.5" fill="rgba(255,255,255,0.4)" stroke="#94a3b8" strokeWidth="0.12" strokeDasharray="0.3,0.3" />
-            <line x1="-2.5" y1="-1.5" x2="2.5" y2="-1.5" stroke="#cbd5e1" strokeWidth="0.2" />
-            <line x1="-2.5" y1="-1.5" x2="-2.5" y2="0" stroke="#cbd5e1" strokeWidth="0.2" />
-            <line x1="2.5" y1="-1.5" x2="2.5" y2="0" stroke="#cbd5e1" strokeWidth="0.2" />
-            <line x1="-2.5" y1="0" x2="2.5" y2="0" stroke="#ffffff" strokeWidth="0.4" strokeLinecap="round" />
+            <defs>
+              {/* Trama de red de fútbol */}
+              <pattern id="goalNetPattern" width="0.4" height="0.4" patternUnits="userSpaceOnUse">
+                <path d="M 0 0 L 0.4 0.4 M 0 0.4 L 0.4 0" fill="none" stroke="#e2e8f0" strokeWidth="0.05" opacity="0.75" />
+              </pattern>
+            </defs>
+
+            {/* Sombra de la estructura en el césped */}
+            <polygon points="-2.6,0.3 2.6,0.3 3.4,-2.2 -1.8,-2.2" fill="#000000" opacity="0.25" />
+
+            {/* Malla lateral izquierda */}
+            <polygon points="-2.5,0 -2.5,-2.2 -1.8,-3.2 -1.8,-1.2" fill="url(#goalNetPattern)" stroke="#cbd5e1" strokeWidth="0.08" />
+
+            {/* Malla de fondo y techo de la portería */}
+            <polygon points="-2.5,-2.2 2.5,-2.2 3.2,-3.2 -1.8,-3.2" fill="url(#goalNetPattern)" stroke="#cbd5e1" strokeWidth="0.08" />
+            <polygon points="-1.8,-1.2 3.2,-1.2 3.2,-3.2 -1.8,-3.2" fill="url(#goalNetPattern)" stroke="#cbd5e1" strokeWidth="0.08" />
+
+            {/* Malla lateral derecha */}
+            <polygon points="2.5,0 2.5,-2.2 3.2,-3.2 3.2,-1.2" fill="url(#goalNetPattern)" stroke="#cbd5e1" strokeWidth="0.08" />
+
+            {/* Estructura tubular blanca metálica frontal */}
+            {/* Poste izquierdo */}
+            <line x1="-2.5" y1="0" x2="-2.5" y2="-2.2" stroke="#ffffff" strokeWidth="0.32" strokeLinecap="round" />
+            <line x1="-2.5" y1="0" x2="-2.5" y2="-2.2" stroke="#94a3b8" strokeWidth="0.08" strokeLinecap="round" />
+            {/* Poste derecho */}
+            <line x1="2.5" y1="0" x2="2.5" y2="-2.2" stroke="#ffffff" strokeWidth="0.32" strokeLinecap="round" />
+            <line x1="2.5" y1="0" x2="2.5" y2="-2.2" stroke="#94a3b8" strokeWidth="0.08" strokeLinecap="round" />
+            {/* Travesaño frontal */}
+            <line x1="-2.55" y1="-2.2" x2="2.55" y2="-2.2" stroke="#ffffff" strokeWidth="0.32" strokeLinecap="round" />
+            <line x1="-2.55" y1="-2.2" x2="2.55" y2="-2.2" stroke="#cbd5e1" strokeWidth="0.08" strokeLinecap="round" />
+
+            {/* Tirantes traseros */}
+            <line x1="-2.5" y1="-2.2" x2="-1.8" y2="-3.2" stroke="#e2e8f0" strokeWidth="0.22" />
+            <line x1="2.5" y1="-2.2" x2="3.2" y2="-3.2" stroke="#e2e8f0" strokeWidth="0.22" />
+            <line x1="-1.8" y1="-3.2" x2="3.2" y2="-3.2" stroke="#e2e8f0" strokeWidth="0.22" />
+            {/* Barra base en el suelo */}
+            <line x1="-2.5" y1="0" x2="-1.8" y2="-1.2" stroke="#94a3b8" strokeWidth="0.18" />
+            <line x1="2.5" y1="0" x2="3.2" y2="-1.2" stroke="#94a3b8" strokeWidth="0.18" />
+            <line x1="-1.8" y1="-1.2" x2="3.2" y2="-1.2" stroke="#64748b" strokeWidth="0.18" />
           </g>
         );
+
+      // --- MANIQUÍ DEFENSIVO ESTILO TACTICALPAD (SILUETA ANATÓMICA Y VARILLAS) ---
+      case 'dummy':
+        const dummyColor = itemColor || '#eab308';
+        return (
+          <g>
+            {/* Sombra proyectada del maniquí en el césped */}
+            <ellipse cx="0.4" cy="3.6" rx="1.6" ry="0.5" fill="#000000" opacity="0.35" />
+
+            {/* Cabeza circular hueca */}
+            <circle cx="0" cy="-3.6" r="0.9" fill="none" stroke={dummyColor} strokeWidth="0.36" />
+
+            {/* Cuello */}
+            <line x1="0" y1="-2.7" x2="0" y2="-2.1" stroke={dummyColor} strokeWidth="0.36" />
+
+            {/* Hombros curvados */}
+            <path d="M -1.8,-2.1 C -1.0,-2.3 1.0,-2.3 1.8,-2.1" fill="none" stroke={dummyColor} strokeWidth="0.4" strokeLinecap="round" />
+
+            {/* Marco del torso (pecho y cintura estrecha) */}
+            <path d="M -1.8,-2.1 L -1.6,0.6 L 1.6,0.6 L 1.8,-2.1 Z" fill="none" stroke={dummyColor} strokeWidth="0.36" strokeLinejoin="round" />
+
+            {/* Varillas anatómicas verticales y horizontales del torso */}
+            <line x1="-0.9" y1="-2.1" x2="-0.8" y2="0.6" stroke={dummyColor} strokeWidth="0.22" />
+            <line x1="0" y1="-2.1" x2="0" y2="0.6" stroke={dummyColor} strokeWidth="0.26" />
+            <line x1="0.9" y1="-2.1" x2="0.8" y2="0.6" stroke={dummyColor} strokeWidth="0.22" />
+            <line x1="-1.7" y1="-1.3" x2="1.7" y2="-1.3" stroke={dummyColor} strokeWidth="0.22" />
+            <line x1="-1.6" y1="-0.4" x2="1.6" y2="-0.4" stroke={dummyColor} strokeWidth="0.22" />
+
+            {/* Base pélvica */}
+            <line x1="-1.6" y1="0.6" x2="1.6" y2="0.6" stroke={dummyColor} strokeWidth="0.4" strokeLinecap="round" />
+
+            {/* Patas / picas clavadas al suelo */}
+            <line x1="-1.0" y1="0.6" x2="-1.0" y2="3.4" stroke={dummyColor} strokeWidth="0.32" strokeLinecap="round" />
+            <line x1="1.0" y1="0.6" x2="1.0" y2="3.4" stroke={dummyColor} strokeWidth="0.32" strokeLinecap="round" />
+            {/* Travesaño estabilizador inferior */}
+            <line x1="-1.0" y1="2.2" x2="1.0" y2="2.2" stroke={dummyColor} strokeWidth="0.25" />
+            {/* Puntas de acero clavadas */}
+            <line x1="-1.0" y1="3.4" x2="-1.0" y2="3.8" stroke="#475569" strokeWidth="0.25" strokeLinecap="round" />
+            <line x1="1.0" y1="3.4" x2="1.0" y2="3.8" stroke="#475569" strokeWidth="0.25" strokeLinecap="round" />
+          </g>
+        );
+
+      // --- ESCALERA DE COORDINACIÓN CON PELDAÑOS FLEXIBLES ---
       case 'ladder':
         return (
           <g>
-            <rect x="-2" y="-6" width="4" height="12" fill="none" stroke="#ffffff" strokeWidth="0.4" />
-            {[-4, -2, 0, 2, 4].map((ly) => (
-              <line key={ly} x1="-2" y1={ly} x2="2" y2={ly} stroke="#facc15" strokeWidth="0.5" />
+            {/* Sombra suave */}
+            <rect x="-1.9" y="-5.9" width="3.8" height="11.8" fill="#000000" opacity="0.18" />
+            {/* Guías laterales flexibles */}
+            <line x1="-1.8" y1="-6.0" x2="-1.8" y2="6.0" stroke="#0284c7" strokeWidth="0.26" strokeLinecap="round" />
+            <line x1="1.8" y1="-6.0" x2="1.8" y2="6.0" stroke="#0284c7" strokeWidth="0.26" strokeLinecap="round" />
+            {/* Peldaños plásticos rígidos de alta visibilidad */}
+            {[-5.0, -3.3, -1.6, 0.1, 1.8, 3.5, 5.0].map((ly) => (
+              <g key={ly}>
+                <rect x="-1.9" y={ly - 0.14} width="3.8" height="0.28" rx="0.08" fill="#facc15" stroke="#ca8a04" strokeWidth="0.06" />
+                <rect x="-1.9" y={ly - 0.14} width="0.4" height="0.28" fill="#0369a1" />
+                <rect x="1.5" y={ly - 0.14} width="0.4" height="0.28" fill="#0369a1" />
+              </g>
             ))}
           </g>
         );
-      case 'dummy':
-        return (
-          <g>
-            <ellipse cx="1.2" cy="1.2" rx="2.2" ry="0.9" fill="rgba(0,0,0,0.35)" transform="rotate(-15, 1.2, 1.2)" />
-            <line x1="-1.4" y1="0" x2="1.4" y2="0" stroke="#0f172a" strokeWidth="0.35" strokeLinecap="round" />
-            <line x1="0" y1="-1.0" x2="0" y2="1.0" stroke="#0f172a" strokeWidth="0.35" strokeLinecap="round" />
-            <circle cx="-1.4" cy="0" r="0.2" fill="#0f172a" />
-            <circle cx="1.4" cy="0" r="0.2" fill="#0f172a" />
-            <circle cx="0" cy="-1.0" r="0.2" fill="#0f172a" />
-            <circle cx="0" cy="1.0" r="0.2" fill="#0f172a" />
-            <ellipse cx="0" cy="0" rx="1.6" ry="0.75" fill="#eab308" stroke="#ca8a04" strokeWidth="0.25" />
-            <ellipse cx="0" cy="-0.1" rx="1.3" ry="0.5" fill="#facc15" />
-            <line x1="-1.1" y1="0" x2="1.1" y2="0" stroke="#ca8a04" strokeWidth="0.25" strokeLinecap="round" />
-            <circle cx="0" cy="0" r="0.48" fill="#fef08a" stroke="#ca8a04" strokeWidth="0.2" />
-            <circle cx="0" cy="-0.08" r="0.25" fill="#ffffff" opacity="0.6" />
-          </g>
-        );
+
+      // --- VALLAS DE SALTO CON BASE ANTIVUELCO ---
       case 'hurdle':
+        const hurdleColor = itemColor || '#facc15';
         return (
           <g>
-            <ellipse cx="-2.6" cy="0.6" rx="1.0" ry="0.4" fill="rgba(0,0,0,0.28)" />
-            <ellipse cx="2.6" cy="0.6" rx="1.0" ry="0.4" fill="rgba(0,0,0,0.28)" />
-            <line x1="-2.6" y1="-0.9" x2="-2.6" y2="0.9" stroke="#713f12" strokeWidth="0.45" strokeLinecap="round" />
-            <line x1="2.6" y1="-0.9" x2="2.6" y2="0.9" stroke="#713f12" strokeWidth="0.45" strokeLinecap="round" />
-            <line x1="-2.6" y1="0" x2="2.6" y2="0" stroke="#ca8a04" strokeWidth="0.65" strokeLinecap="round" />
-            <line x1="-2.6" y1="-0.1" x2="2.6" y2="-0.1" stroke="#facc15" strokeWidth="0.4" strokeLinecap="round" />
-            <line x1="-1.0" y1="0" x2="1.0" y2="0" stroke="#000000" strokeWidth="0.3" strokeDasharray="0.6,0.6" />
+            {/* Sombra de la valla en el suelo */}
+            <ellipse cx="0.2" cy="0.9" rx="2.5" ry="0.45" fill="#000000" opacity="0.28" />
+            {/* Patas base en el césped */}
+            <line x1="-2.2" y1="0.5" x2="-2.2" y2="1.3" stroke="#475569" strokeWidth="0.26" strokeLinecap="round" />
+            <line x1="2.2" y1="0.5" x2="2.2" y2="1.3" stroke="#475569" strokeWidth="0.26" strokeLinecap="round" />
+            {/* Montantes verticales */}
+            <line x1="-2.2" y1="0.8" x2="-2.2" y2="-0.8" stroke={hurdleColor} strokeWidth="0.28" strokeLinecap="round" />
+            <line x1="2.2" y1="0.8" x2="2.2" y2="-0.8" stroke={hurdleColor} strokeWidth="0.28" strokeLinecap="round" />
+            {/* Barra superior de salto */}
+            <line x1="-2.3" y1="-0.8" x2="2.3" y2="-0.8" stroke={hurdleColor} strokeWidth="0.38" strokeLinecap="round" />
+            <line x1="-2.3" y1="-0.8" x2="2.3" y2="-0.8" stroke="#ffffff" strokeWidth="0.1" opacity="0.6" strokeLinecap="round" />
           </g>
         );
-      case 'cone': {
-        const cFill = obj.color && obj.color !== '#ea580c' ? obj.color : '#f97316';
+
+      // --- ESTACAS / PICAS CON BASE DE GOMA ---
+      case 'pole':
+        const poleColor = itemColor || '#facc15';
         return (
           <g>
-            <ellipse cx="0.5" cy="0.6" rx="1.8" ry="1.0" fill="rgba(0,0,0,0.35)" />
-            <rect x="-1.5" y="-1.5" width="3.0" height="3.0" rx="0.3" fill="#7c2d12" stroke="#000000" strokeWidth="0.2" />
-            <rect x="-1.3" y="-1.3" width="2.6" height="2.6" rx="0.2" fill={cFill} />
-            <circle cx="0" cy="0" r="1.1" fill="#ea580c" stroke="#000000" strokeWidth="0.15" />
-            <circle cx="0" cy="0" r="0.75" fill="#ffffff" stroke="#000000" strokeWidth="0.1" />
-            <circle cx="0" cy="0" r="0.35" fill={cFill} />
+            {/* Sombra oblicua de la pica en el césped */}
+            <line x1="0" y1="0" x2="2.8" y2="2.8" stroke="#000000" strokeWidth="0.28" strokeLinecap="round" opacity="0.3" />
+            {/* Base circular de goma */}
+            <circle cx="0" cy="0" r="0.95" fill="#1e293b" stroke="#0f172a" strokeWidth="0.12" />
+            <circle cx="0" cy="0" r="0.6" fill="#334155" />
+            {/* Poste visto con inclinación y tope superior */}
+            <line x1="0" y1="0" x2="-0.8" y2="-3.4" stroke={poleColor} strokeWidth="0.32" strokeLinecap="round" />
+            <circle cx="-0.8" cy="-3.4" r="0.28" fill="#1e293b" />
           </g>
         );
-      }
-      case 'saucer': {
-        const c = obj.color || '#facc15';
+
+      // --- CONOS CON BASE CUADRADA Y ANILLO BLANCO ---
+      case 'cone':
+        const coneCol = itemColor || '#ea580c';
         return (
           <g>
-            <ellipse cx="0.4" cy="0.4" rx="1.7" ry="1.0" fill="rgba(0,0,0,0.3)" />
-            <circle cx="0" cy="0" r="1.5" fill={c} stroke="#000000" strokeWidth="0.25" />
-            <circle cx="0" cy="-0.1" r="1.0" fill="#ffffff" opacity="0.35" />
-            <circle cx="0" cy="0" r="0.4" fill="#0f172a" stroke="#000000" strokeWidth="0.1" />
+            {/* Sombra del cono */}
+            <ellipse cx="0.3" cy="0.6" rx="1.4" ry="0.6" fill="#000000" opacity="0.3" />
+            {/* Base plana cuadrada */}
+            <rect x="-1.1" y="-0.5" width="2.2" height="1.6" rx="0.2" fill={coneCol} stroke="#9a3412" strokeWidth="0.08" />
+            {/* Cuerpo del cono */}
+            <path d="M -0.9,0.8 L 0,-1.4 L 0.9,0.8 Z" fill={coneCol} stroke="#c2410c" strokeWidth="0.08" strokeLinejoin="round" />
+            {/* Franja reflectante blanca central */}
+            <polygon points="-0.5,0.0 0.5,0.0 0.3,-0.6 -0.3,-0.6" fill="#ffffff" opacity="0.9" />
           </g>
         );
-      }
-      case 'ring': {
-        const c = obj.color || '#38bdf8';
+
+      // --- AROS DE COORDINACIÓN EN EL SUELO ---
+      case 'hoop':
+        const hoopCol = itemColor || '#3b82f6';
         return (
           <g>
-            <circle cx="0" cy="0" r="2.8" fill="none" stroke={c} strokeWidth="0.6" />
+            {/* Sombra del aro */}
+            <ellipse cx="0.1" cy="0.2" rx="1.65" ry="0.85" fill="none" stroke="#000000" strokeWidth="0.2" opacity="0.25" />
+            {/* Aro elíptico en perspectiva */}
+            <ellipse cx="0" cy="0" rx="1.6" ry="0.8" fill="none" stroke={hoopCol} strokeWidth="0.26" />
           </g>
         );
-      }
-      case 'pole': {
-        const c = obj.color || '#facc15';
+
+      // --- PORTERÍA REGLAMENTARIA GRANDE ---
+      case 'goal':
         return (
           <g>
-            <line x1="0" y1="0" x2="3.2" y2="3.2" stroke="rgba(0,0,0,0.35)" strokeWidth="0.6" strokeLinecap="round" />
-            <circle cx="0" cy="0" r="1.3" fill="#09090b" stroke="#000000" strokeWidth="0.2" />
-            <circle cx="0" cy="0" r="0.8" fill="#27272a" />
-            <circle cx="0" cy="0" r="0.45" fill={c} stroke="#000000" strokeWidth="0.15" />
-            <circle cx="0" cy="0" r="0.15" fill="#ffffff" />
+            <polygon points="-1.5,-4.0 1.5,-4.0 2.2,-5.2 -0.8,-5.2" fill="#e2e8f0" opacity="0.5" />
+            <line x1="-1.4" y1="-4.0" x2="-1.4" y2="4.0" stroke="#ffffff" strokeWidth="0.45" strokeLinecap="round" />
+            <line x1="-1.4" y1="-4.0" x2="1.5" y2="-4.0" stroke="#ffffff" strokeWidth="0.35" />
+            <line x1="-1.4" y1="4.0" x2="1.5" y2="4.0" stroke="#ffffff" strokeWidth="0.35" />
           </g>
         );
-      }
-      case 'rebounder':
-        return (
-          <g>
-            <rect x="-3.7" y="-0.7" width="7.4" height="2.0" rx="0.3" fill="rgba(0,0,0,0.28)" />
-            <rect x="-3.5" y="-0.5" width="7.0" height="1.0" rx="0.25" fill="#78350f" stroke="#451a03" strokeWidth="0.2" />
-            <rect x="-3.3" y="-0.4" width="6.6" height="0.6" rx="0.15" fill="#d97706" />
-            <line x1="-3.0" y1="-0.1" x2="3.0" y2="-0.1" stroke="#fef3c7" strokeWidth="0.15" opacity="0.6" />
-          </g>
-        );
-      case 'trampoline':
-        return (
-          <g>
-            <ellipse cx="0.4" cy="0.4" rx="2.7" ry="2.7" fill="rgba(0,0,0,0.28)" />
-            <circle cx="0" cy="0" r="2.6" fill="#1e293b" stroke="#0f172a" strokeWidth="0.2" />
-            <circle cx="0" cy="0" r="2.35" fill="#0284c7" />
-            <circle cx="0" cy="0" r="1.85" fill="#0f172a" stroke="#38bdf8" strokeWidth="0.25" />
-            <circle cx="0" cy="0" r="1.7" fill="#0369a1" stroke="#bae6fd" strokeWidth="0.15" strokeDasharray="0.5,0.5" />
-          </g>
-        );
-      case 'mat':
-        return (
-          <g>
-            <rect x="-3.7" y="-1.9" width="7.4" height="3.8" rx="0.35" fill="rgba(0,0,0,0.22)" />
-            <rect x="-3.5" y="-1.7" width="7.0" height="3.4" rx="0.25" fill="#1e3a8a" stroke="#172554" strokeWidth="0.2" />
-            <rect x="-3.3" y="-1.5" width="6.6" height="3.0" rx="0.2" fill="#2563eb" />
-            <rect x="-3.1" y="-1.3" width="6.2" height="2.6" fill="none" stroke="#60a5fa" strokeWidth="0.15" strokeDasharray="0.8,0.8" opacity="0.7" />
-          </g>
-        );
+
       default:
-        return null;
+        return (
+          <circle cx="0" cy="0" r="1.0" fill={itemColor || '#facc15'} stroke="#ffffff" strokeWidth="0.15" />
+        );
     }
   };
 
@@ -347,7 +453,7 @@ function TrainingMaterial({ obj, onPointerDown, onDoubleClick }) {
       transform={`translate(${obj.x}, ${obj.y}) rotate(${rot}) scale(${s})`}
       onPointerDown={onPointerDown}
       onDoubleClick={onDoubleClick}
-      className="cursor-grab active:cursor-grabbing touch-none select-none"
+      className="cursor-pointer select-none"
     >
       {renderContent()}
     </g>
