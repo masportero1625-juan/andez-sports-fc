@@ -1939,7 +1939,8 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     const st = playState.current;
 
     const play = (reqKey, fade) => {
-      const key = cat[reqKey] ? reqKey : 'idle';
+      const targetKey = (!reqKey || reqKey === 'defensive') ? 'idle' : reqKey;
+const key = cat[targetKey] ? targetKey : 'idle';
       const url = cat[key];
       if (!url) return;
       const token = ++st.token;
@@ -1967,7 +1968,7 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
 
     const onFinished = (e) => {
       if (e.action === st.action && !FBX_LOOPING.has(st.key)) {
-        play(isGK ? 'idle' : 'defensive', 0.3);
+        play('idle', 0.3);
       }
     };
     mixer.addEventListener('finished', onFinished);
@@ -3116,8 +3117,9 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
 
   // En móvil usamos una perspectiva diagonal para conservar el volumen 3D y
   // encuadrar la cancha con sus dos porterías. Se mantiene el eje vertical natural de Three.js.
-  const camPos = isPC ? [0, 26, 46] : [0, 38, 52];
-const camFov = isPC ? 45 : 55;
+  // Cámara cercana de ángulo bajo estilo TacticalPad
+  const camPos = isPC ? [-12, 14, 28] : [-10, 18, 32];
+  const camFov = isPC ? 38 : 46;
 
   return (
     <>
