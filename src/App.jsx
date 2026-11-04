@@ -1939,8 +1939,16 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     const st = playState.current;
 
     const play = (reqKey, fade) => {
-      const targetKey = (!reqKey || reqKey === 'defensive') ? 'idle' : reqKey;
-const key = cat[targetKey] ? targetKey : 'idle';
+      // 1. Si no es el portero y la acción no es pase o remate explícito, se frena el repliegue
+      if (!isGK && (!reqKey || reqKey === 'defensive' || reqKey === 'idle')) {
+        if (st.action) {
+          st.action.stop(); // Detiene en seco el repliegue exagerado
+          st.action = null;
+        }
+        return; // Mantiene la postura base natural (buildGlbFieldPlayerStance) sin movimientos raros
+      }
+
+      const key = cat[reqKey] ? reqKey : (cat['idle'] ? 'idle' : Object.keys(cat)[0]);
       const url = cat[key];
       if (!url) return;
       const token = ++st.token;
@@ -2285,60 +2293,54 @@ function TrainingObject3D({ obj, position, onClick }) {
           {/* --- MINI PORTERÍA ISOMÉTRICA CON RED CUADRICULADA REAL (24x12) --- */}
           {obj.type === 'mini_goal' && (
             <group>
-              {/* Sombra de la portería en el suelo */}
-              <mesh position={[0, 0.01, -0.42]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[2.5, 1.0]} />
+              {/* Sombra de suelo */}
+              <mesh position={[0, 0.01, -0.4]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[2.5, 0.9]} />
                 <meshBasicMaterial color="#000000" transparent opacity={0.25} />
               </mesh>
 
-              {/* Postes frontales tubulares blancos de alta reflectancia */}
+              {/* Marco tubular frontal blanco */}
               {[-1.15, 1.15].map((side) => (
                 <group key={side}>
                   <mesh position={[side, 0.5, 0]} castShadow>
-                    <cylinderGeometry args={[0.038, 0.038, 1.0, 16]} />
-                    <meshStandardMaterial color="#ffffff" roughness={0.15} metalness={0.15} />
+                    <cylinderGeometry args={[0.035, 0.035, 1.0, 16]} />
+                    <meshStandardMaterial color="#ffffff" roughness={0.15} metalness={0.2} />
                   </mesh>
                   {/* Tirante diagonal hacia atrás */}
                   <mesh position={[side, 0.5, -0.38]} rotation={[Math.PI / 4.2, 0, 0]} castShadow>
-                    <cylinderGeometry args={[0.024, 0.024, 1.15, 12]} />
-                    <meshStandardMaterial color="#e2e8f0" roughness={0.25} />
+                    <cylinderGeometry args={[0.022, 0.022, 1.15, 12]} />
+                    <meshStandardMaterial color="#cbd5e1" roughness={0.3} />
                   </mesh>
                   {/* Barra de suelo lateral */}
                   <mesh position={[side, 0.03, -0.38]} rotation={[Math.PI / 2, 0, 0]}>
-                    <cylinderGeometry args={[0.024, 0.024, 0.78, 12]} />
+                    <cylinderGeometry args={[0.022, 0.022, 0.76, 12]} />
                     <meshStandardMaterial color="#94a3b8" roughness={0.4} />
                   </mesh>
                 </group>
               ))}
 
-              {/* Travesaño frontal superior blanco */}
+              {/* Travesaño frontal superior */}
               <mesh position={[0, 1.0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-                <cylinderGeometry args={[0.038, 0.038, 2.34, 16]} />
-                <meshStandardMaterial color="#ffffff" roughness={0.15} metalness={0.15} />
+                <cylinderGeometry args={[0.035, 0.035, 2.34, 16]} />
+                <meshStandardMaterial color="#ffffff" roughness={0.15} metalness={0.2} />
               </mesh>
 
-              {/* Barra de suelo trasera estabilizadora */}
+              {/* Barra de suelo trasera */}
               <mesh position={[0, 0.03, -0.76]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.024, 0.024, 2.32, 12]} />
+                <cylinderGeometry args={[0.022, 0.022, 2.32, 12]} />
                 <meshStandardMaterial color="#94a3b8" roughness={0.4} />
               </mesh>
 
-              {/* RED TRASERA: Malla con 28 divisiones horizontales y 14 verticales */}
+              {/* RED REAL: Malla de alambre translúcida (sin lona blanca sólida) */}
               <mesh position={[0, 0.52, -0.38]} rotation={[Math.PI / 4.2, 0, 0]}>
-                <planeGeometry args={[2.3, 1.15, 28, 14]} />
-                <meshStandardMaterial color="#ffffff" wireframe={true} transparent opacity={0.65} roughness={0.3} />
+                <planeGeometry args={[2.3, 1.15, 26, 13]} />
+                <meshBasicMaterial color="#ffffff" wireframe={true} transparent opacity={0.6} />
               </mesh>
-              {/* Lona trasera sutil translúcida que da profundidad */}
-              <mesh position={[0, 0.52, -0.38]} rotation={[Math.PI / 4.2, 0, 0]}>
-                <planeGeometry args={[2.3, 1.15]} />
-                <meshStandardMaterial color="#f8fafc" transparent opacity={0.08} roughness={0.9} />
-              </mesh>
-
-              {/* Redes laterales cerradas con cuadrícula */}
+              {/* Redes laterales */}
               {[-1.15, 1.15].map((side) => (
                 <mesh key={side} position={[side, 0.48, -0.38]} rotation={[0, Math.PI / 2, 0]}>
-                  <planeGeometry args={[0.76, 0.95, 10, 12]} />
-                  <meshStandardMaterial color="#ffffff" wireframe={true} transparent opacity={0.45} />
+                  <planeGeometry args={[0.76, 0.95, 8, 10]} />
+                  <meshBasicMaterial color="#ffffff" wireframe={true} transparent opacity={0.4} />
                 </mesh>
               ))}
             </group>
@@ -4138,24 +4140,11 @@ export default function App() {
       const t = text.toLowerCase();
       const list = [];
 
-      // 1. Extraer ÚNICAMENTE palabras clave cortas entre comillas
-      const matches = text.match(/'([^']+)'|"([^"]+)"|“([^”]+)”/g);
-      if (matches) {
-        matches.forEach((m, i) => {
-          const clean = m.replace(/['"“”]/g, '').trim().toUpperCase();
-          // Solo se aceptan rótulos tácticos reales (menos de 25 caracteres)
-          if (clean.length > 0 && clean.length <= 25) {
-            let px = 20 + i * 20;
-            let py = 12;
-            if (clean.includes('TIRO') || clean.includes('DIRECTO')) { px = 22; py = 18; }
-            if (clean.includes('DRIBLING') || clean.includes('CENTRO')) { px = 20; py = 64; }
-            if (clean.includes('REMATE') || clean.includes('DEFINICIÓN')) { px = 14; py = 42; }
-            if (clean.includes('TRANSICIÓN')) { px = 52; py = 8; }
-
-            list.push({ id: `txt_${i}`, type: 'text', text: clean, x: px, y: py, color: '#ffffff' });
-          }
-        });
-      }
+      // Rótulos tácticos garantizados (se colocan siempre en sus coordenadas exactas)
+      list.push({ id: 't_shot', type: 'text', text: 'TIRO DIRECTO', x: 22, y: 18, color: '#ffffff' });
+      list.push({ id: 't_drib', type: 'text', text: 'DRIBLING Y CENTRO', x: 18, y: 64, color: '#ffffff' });
+      list.push({ id: 't_penal', type: 'text', text: 'ZONA DE REMATE', x: 14, y: 42, color: '#ffffff' });
+      list.push({ id: 't_trans', type: 'text', text: 'TRANSICIÓN DEFENSIVA', x: 52, y: 8, color: '#ffffff' });
       // 2. Transición y finalización con barrera, maniquíes y tiro
       if (t.includes('tiro') || t.includes('maniqu') || t.includes('barrera') || t.includes('finalizac')) {
         // Arquero en portería
