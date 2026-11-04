@@ -4083,16 +4083,20 @@ export default function App() {
           return;
         }
 
-        // 2. Textos e instrucciones (con color y tamaño dinámicos)
+        // 2. Textos e instrucciones (Bloqueo estricto anti-desbordes)
         if (itemType === 'text') {
-          const val = item.text || item.content || item.label || 'INSTRUCCIÓN';
+          let val = (item.text || item.content || item.label || '').trim();
+          
+          // Si el texto es una frase larga, la orden completa o supera 25 letras, SE IGNORA POR COMPLETO
+          if (!val || val.length > 25) return;
+
           newTextBlocks.push({
             id: item.id || `text_${idx}_${Date.now()}`,
-            text: val,
-            x: Number(item.x ?? 25),
-            y: Number(item.y ?? 34),
+            text: val.toUpperCase(),
+            x: Math.max(8, Math.min(95, Number(item.x ?? 25))),
+            y: Math.max(8, Math.min(60, Number(item.y ?? 34))),
             color: item.color || '#ffffff',
-            size: item.size || 2.4,
+            size: item.size || 2.2,
             isBold: true,
             isUnderline: false
           });
@@ -4132,29 +4136,24 @@ export default function App() {
       const t = text.toLowerCase();
       const list = [];
 
-      // 1. Extraer los textos exactos pedidos entre comillas simples o dobles
-      const quoted = text.match(/['"“](.*?)['"”]/g);
-      if (quoted && quoted.length > 0) {
-        quoted.forEach((q, i) => {
-          const cleanText = q.replace(/['"“”]/g, '').trim();
-          let posX = 20 + i * 22;
-          let posY = 8 + (i % 2) * 50;
-          if (cleanText.includes('TIRO') || cleanText.includes('BARRERA')) { posX = 24; posY = 15; }
-          if (cleanText.includes('DRIBLING') || cleanText.includes('CENTRO')) { posX = 15; posY = 58; }
-          if (cleanText.includes('REMATE') || cleanText.includes('DEFINICIÓN')) { posX = 20; posY = 40; }
-          if (cleanText.includes('TRANSICIÓN') || cleanText.includes('DEFENSIV')) { posX = 48; posY = 10; }
+      // 1. Extraer ÚNICAMENTE palabras clave cortas entre comillas
+      const matches = text.match(/'([^']+)'|"([^"]+)"|“([^”]+)”/g);
+      if (matches) {
+        matches.forEach((m, i) => {
+          const clean = m.replace(/['"“”]/g, '').trim().toUpperCase();
+          // Solo se aceptan rótulos tácticos reales (menos de 25 caracteres)
+          if (clean.length > 0 && clean.length <= 25) {
+            let px = 20 + i * 20;
+            let py = 12;
+            if (clean.includes('TIRO') || clean.includes('DIRECTO')) { px = 22; py = 18; }
+            if (clean.includes('DRIBLING') || clean.includes('CENTRO')) { px = 20; py = 64; }
+            if (clean.includes('REMATE') || clean.includes('DEFINICIÓN')) { px = 14; py = 42; }
+            if (clean.includes('TRANSICIÓN')) { px = 52; py = 8; }
 
-          list.push({
-            id: `txt_gen_${i}`,
-            type: 'text',
-            text: cleanText,
-            x: posX,
-            y: posY,
-            color: '#ffffff'
-          });
+            list.push({ id: `txt_${i}`, type: 'text', text: clean, x: px, y: py, color: '#ffffff' });
+          }
         });
       }
-
       // 2. Transición y finalización con barrera, maniquíes y tiro
       if (t.includes('tiro') || t.includes('maniqu') || t.includes('barrera') || t.includes('finalizac')) {
         // Arquero en portería
