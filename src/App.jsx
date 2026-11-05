@@ -3271,37 +3271,39 @@ function PlayerActionBar({ player, onAction, onClose }) {
 
   return (
     <div
-      className="no-print fixed left-1/2 -translate-x-1/2 bottom-[72px] z-50 w-[calc(100vw-1rem)] max-w-4xl rounded-2xl border border-zinc-700 bg-zinc-950/95 px-2 pt-1.5 pb-2 shadow-2xl backdrop-blur-md"
-      onPointerDown={(e) => e.stopPropagation()}
+      className="pointer-events-none no-print fixed left-1/2 -translate-x-1/2 bottom-[72px] z-50 w-[calc(100vw-1rem)] max-w-4xl"
     >
-      <div className="flex items-center justify-between px-1 pb-1">
+      <div className="pointer-events-auto flex items-center justify-between px-1 pb-1">
         <span className="text-[11px] font-bold uppercase tracking-wide text-amber-400">
           {gk ? 'Arquero' : 'Jugador'} #{player.number} · Acciones
         </span>
-        <button type="button" onClick={onClose} className="p-1 text-zinc-400 hover:text-white" aria-label="Cerrar menú de acciones">
+        <button type="button" onClick={onClose} className="p-1 text-zinc-400 hover:text-white" aria-label="Cerrar">
           <X className="w-4 h-4" />
         </button>
       </div>
       <div
-        className="flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible"
+        className="pointer-events-auto flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible"
         style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         {list.map((a) => (
           <button
             key={a.key}
             type="button"
-            onClick={() => onAction(a.key)}
-            className={`shrink-0 min-h-[44px] px-3 rounded-xl text-xs font-bold border whitespace-nowrap transition active:scale-95 ${
+            onClick={() => onAction && onAction(a.key)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition shadow-sm ${
               active === a.key
-                ? 'bg-amber-500 text-black border-amber-300 shadow-lg'
-                : 'bg-zinc-900 text-zinc-200 border-zinc-700 hover:bg-zinc-800'
+                ? 'bg-amber-500 text-black'
+                : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white'
             }`}
           >
-            <span className="mr-1">{a.icon}</span>{a.label}
+            <span>{a.label}</span>
           </button>
         ))}
       </div>
     </div>
+  
+  
   );
 }
 
