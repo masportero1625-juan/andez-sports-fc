@@ -1972,13 +1972,14 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
 
     const onFinished = (e) => {
       if (e.action === st.action && !FBX_LOOPING.has(st.key)) {
-        if (isGK) play('idle', 0.3);
+        if (isGK) play(cat['base'] ? 'base' : 'idle', 0.3);
       }
     };
     mixer.addEventListener('finished', onFinished);
 
-    const wanted = (animation && cat[animation]) ? animation : 'idle';
-    play(wanted, 0.25);
+    const defaultStance = cat['base'] ? 'base' : (cat['idle'] ? 'idle' : Object.keys(cat)[0]);
+const wanted = (animation && cat[animation]) ? animation : defaultStance;
+play(wanted, 0.25);
 
     return () => {
       alive = false;
