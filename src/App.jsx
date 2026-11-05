@@ -1939,13 +1939,9 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     const st = playState.current;
 
     const play = (reqKey, fade) => {
-      // 1. Si no es el portero y la acción no es pase o remate explícito, se frena el repliegue
+      // Si es jugador de campo y no tiene acción explícita, no ejecutamos animación defensiva
       if (!isGK && (!reqKey || reqKey === 'defensive' || reqKey === 'idle')) {
-        if (st.action) {
-          st.action.stop(); // Detiene en seco el repliegue exagerado
-          st.action = null;
-        }
-        return; // Mantiene la postura base natural (buildGlbFieldPlayerStance) sin movimientos raros
+        return;
       }
 
       const key = cat[reqKey] ? reqKey : (cat['idle'] ? 'idle' : Object.keys(cat)[0]);
@@ -1976,7 +1972,7 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
 
     const onFinished = (e) => {
       if (e.action === st.action && !FBX_LOOPING.has(st.key)) {
-        play('idle', 0.3);
+        if (isGK) play('idle', 0.3);
       }
     };
     mixer.addEventListener('finished', onFinished);
@@ -2334,13 +2330,13 @@ function TrainingObject3D({ obj, position, onClick }) {
               {/* RED REAL: Malla de alambre translúcida (sin lona blanca sólida) */}
               <mesh position={[0, 0.52, -0.38]} rotation={[Math.PI / 4.2, 0, 0]}>
                 <planeGeometry args={[2.3, 1.15, 26, 13]} />
-                <meshBasicMaterial color="#ffffff" wireframe={true} transparent opacity={0.6} />
+                <meshBasicMaterial color="#ffffff" wireframe={true} transparent opacity={0.6}fog={false} />
               </mesh>
               {/* Redes laterales */}
               {[-1.15, 1.15].map((side) => (
                 <mesh key={side} position={[side, 0.48, -0.38]} rotation={[0, Math.PI / 2, 0]}>
                   <planeGeometry args={[0.76, 0.95, 8, 10]} />
-                  <meshBasicMaterial color="#ffffff" wireframe={true} transparent opacity={0.4} />
+                  <meshBasicMaterial color="#ffffff" wireframe={true} transparent opacity={0.4}fog={false} />
                 </mesh>
               ))}
             </group>
@@ -4142,7 +4138,7 @@ export default function App() {
 
       // Rótulos tácticos garantizados (se colocan siempre en sus coordenadas exactas)
       list.push({ id: 't_shot', type: 'text', text: 'TIRO DIRECTO', x: 22, y: 18, color: '#ffffff' });
-      list.push({ id: 't_drib', type: 'text', text: 'DRIBLING Y CENTRO', x: 18, y: 64, color: '#ffffff' });
+      list.push({ id: 't_drib', type: 'text', text: 'DRIBLING Y CENTRO', x: 18, y: 52, color: '#ffffff' });
       list.push({ id: 't_penal', type: 'text', text: 'ZONA DE REMATE', x: 14, y: 42, color: '#ffffff' });
       list.push({ id: 't_trans', type: 'text', text: 'TRANSICIÓN DEFENSIVA', x: 52, y: 8, color: '#ffffff' });
       // 2. Transición y finalización con barrera, maniquíes y tiro
