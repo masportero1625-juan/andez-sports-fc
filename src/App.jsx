@@ -1627,13 +1627,11 @@ function buildGlbFieldPlayerStance(root, fwd = 1) {
     targets.push({ bone, q: targetQ });
   };
 
-  // Brazos pegados al torso
-  addMod(bones.leftarm, new THREE.Euler(0, 0, -0.32));
-  addMod(bones.rightarm, new THREE.Euler(0, 0, 0.32));
-
-  // Codos flexionados hacia adelante
-  addMod(bones.leftforearm, new THREE.Euler(0.45 * fwd, 0, -0.2));
-  addMod(bones.rightforearm, new THREE.Euler(0.45 * fwd, 0, 0.2));
+  // Brazos relajados hacia abajo al torso
+    addMod(bones.leftarm, new THREE.Euler(0, 0, -1.35));
+    addMod(bones.rightarm, new THREE.Euler(0, 0, 1.35));
+    addMod(bones.leftforearm, new THREE.Euler(0.2, 0, 0));
+    addMod(bones.rightforearm, new THREE.Euler(0.2, 0, 0));
 
   // Semiflexion de rodillas atletica
   addMod(bones.leftleg, new THREE.Euler(0.12 * fwd, 0, 0));
@@ -1939,19 +1937,27 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     const st = playState.current;
 
     const play = (reqKey, fade) => {
-      // Si es jugador de campo y no tiene acción explícita, no ejecutamos animación defensiva
-      if (!isGK && (!reqKey || reqKey === 'defensive' || reqKey === 'idle')) {
-        return;
-      }
-
-      const key = cat[reqKey] ? reqKey : (cat['idle'] ? 'idle' : Object.keys(cat)[0]);
-      const url = cat[key];
+          // Si es jugador de campo y está en postura base, no reproducir el loop de repliegue
+          if (!isGK && (!reqKey || reqKey === 'defensive' || reqKey === 'idle')) {
+            if (st.action) {
+              st.action.fadeOut(fade ? 0.2 : 0);
+              st.action = null;
+            }
+            return;
+          }
+          const key = cat[reqKey] ? reqKey : Object.keys(cat)[0];
+          const url = cat[key];
       if (!url) return;
       const token = ++st.token;
       loadFbxClip(url).then((raw) => {
         if (!alive || token !== st.token || !raw) return;
         const clip = getPlayableFbxClip(raw, url, clone);
-        if (!clip) return;
+          if (!clip) return;
+
+          // Si es la postura base de campo, neutralizamos los tracks de posición para que no se desplace lateralmente
+          if (!isGK && key === 'defensive') {
+            clip.tracks = clip.tracks.filter(t => !t.name.endsWith('.position'));
+          }
         const looping = FBX_LOOPING.has(key);
         const next = mixer.clipAction(clip, clone);
         const prev = st.action;
@@ -3261,49 +3267,56 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
 }
 
 // ---------- Menú contextual flotante de acciones del jugador 3D (PC y móvil) ----------
+// ---------- Menú contextual flotante de acciones del jugador 3D (Dock lateral derecho) ----------
 function PlayerActionBar({ player, onAction, onClose }) {
   const gk = playerIsGoalkeeper(player);
   const list = gk ? GK_ACTION_LIST : FIELD_ACTION_LIST;
   const active = player.animation && player.animation !== 'idle' ? player.animation : (gk ? 'idle' : 'defensive');
 
-  // Se descargan en segundo plano (de a un clip) las animaciones de este rol, para que cada botón responda de inmediato
-  useEffect(() => { prefetchFbxCategory(gk ? 'arquero' : 'campo'); }, [gk]);
+  useEffect(() => { 
+    prefetchFbxCategory(gk ? 'arquero' : 'campo'); 
+  }, [gk]);
 
   return (
     <div
-      className="pointer-events-none no-print fixed left-1/2 -translate-x-1/2 bottom-[72px] z-50 w-[calc(100vw-1rem)] max-w-4xl"
+      className="pointer-events-none no-print fixed right-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 bg-zinc-900/90 backdrop-blur-md p-3 rounded-2xl border border-zinc-700/60 shadow-2xl max-h-[85vh] overflow-y-auto"
+      style={{ width: '160px' }}
     >
-      <div className="pointer-events-auto flex items-center justify-between px-1 pb-1">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-amber-400">
-          {gk ? 'Arquero' : 'Jugador'} #{player.number} · Acciones
+      <div className="pointer-events-auto flex items-center justify-between pb-2 border-b border-zinc-800">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+          {gk ? 'Arquero' : 'Jugador'} #{player.number}
         </span>
-        <button type="button" onClick={onClose} className="p-1 text-zinc-400 hover:text-white" aria-label="Cerrar">
+        <button 
+          type="button" 
+          onClick={onClose} 
+          className="p-1 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition"
+          aria-label="Cerrar menú"
+        >
           <X className="w-4 h-4" />
         </button>
       </div>
-      <div
-        className="pointer-events-auto flex gap-1.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible"
-        style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        {list.map((a) => (
-          <button
-            key={a.key}
-            type="button"
-            onClick={() => onAction && onAction(a.key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition shadow-sm ${
-              active === a.key
-                ? 'bg-amber-500 text-black'
-                : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white'
-            }`}
-          >
-            <span>{a.label}</span>
-          </button>
-        ))}
+
+      <div className="pointer-events-auto flex flex-col gap-1.5 pt-1">
+        {list.map((act) => {
+          const isSelected = active === act.key;
+          return (
+            <button
+              key={act.key}
+              type="button"
+              onClick={() => onAction(act.key)}
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-all ${
+                isSelected
+                  ? 'bg-amber-500 text-black font-bold shadow-md'
+                  : 'bg-zinc-800/80 text-zinc-200 hover:bg-zinc-700 active:scale-95'
+              }`}
+            >
+              <span>{act.icon}</span>
+              <span className="truncate">{act.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
-  
-  
   );
 }
 
