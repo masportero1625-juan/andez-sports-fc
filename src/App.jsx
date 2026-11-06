@@ -1817,57 +1817,58 @@ function prefetchFbxCategory(cat) {
 //    conservando la rotación y la altura natural en Y
 const _fbxPlayableCache = new Map();
 function getPlayableFbxClip(raw, url, clone) {
-  const rig = getCloneRig(clone);
-  const hips = rig.bones.hips;
-  if (!hips) return raw;
-  const sig = `v2_${url}|${hips.name}|${rig.restHips.x.toFixed(3)},${rig.restHips.y.toFixed(3)},${rig.restHips.z.toFixed(3)}`;
-  if (_fbxPlayableCache.has(sig)) return _fbxPlayableCache.get(sig);
+  if (!raw || !raw.tracks || !clone) return null;
 
-  const isHipsPos = (t) => t.name.toLowerCase().includes('hips.position');
-  let posScale = 1;
-  if (raw.__legLen > 1e-6 && rig.legLen > 1e-6) {
-    posScale = rig.legLen / raw.__legLen;
-  } else {
-    const ht = raw.tracks.find(isHipsPos);
-    if (ht && Math.abs(ht.values[1]) > 1e-4 && rig.restHips.y > 1e-6) {
-      const r = rig.restHips.y / Math.abs(ht.values[1]);
-      posScale = (r > 0.3 && r < 3) ? 1 : Math.pow(10, Math.round(Math.log10(r)));
+  // Busca las caderas y mapa de huesos directamente en el modelo
+  let hips = null;
+  const boneMap = new Map();
+  clone.traverse((o) => {
+    if (o.isBone) {
+      const lower = o.name.toLowerCase();
+      boneMap.set(lower, o);
+      boneMap.set(lower.replace(/^mixamorig:?/, ''), o);
+      if (!hips && lower.includes('hips')) {
+        hips = o;
+      }
     }
-  }
-  if (!(posScale > 0.001 && posScale < 1000)) posScale = 1;
+  });
+
+  if (!hips) return null;
+
+  const sig = `v_perfect_ground_${url}|${hips.name}`;
+  if (_fbxPlayableCache.has(sig)) return _fbxPlayableCache.get(sig);
 
   const out = [];
   raw.tracks.forEach((t) => {
-    const dot = t.name.lastIndexOf('.');
-    if (dot < 0) return;
-    const nodeKey = glbBoneKey(t.name.slice(0, dot));
-    const prop = t.name.slice(dot + 1);
-    const bone = rig.bones[nodeKey];
-    if (!bone) return;
-    const trackName = `${bone.name}.${prop}`;
-    if (prop === 'quaternion') {
-      out.push(new THREE.QuaternionKeyframeTrack(trackName, t.times.slice(), t.values.slice()));
-    } else if (prop === 'position') {
-          // Si no es el hueso de la cadera, descarta la traslación completa
-          const isHips = nodeKey === 'hips' || isHipsPos(t) || t.name.toLowerCase().includes('hips');
-          if (!isHips) return;
+    const parts = t.name.split('.');
+    const prop = parts.pop();
+    const rawBone = parts.join('.');
+    const clean = rawBone.toLowerCase().replace(/^mixamorig:?/, '');
+    const bone = boneMap.get(clean) || boneMap.get(rawBone.toLowerCase()) || (clean.includes('hips') ? hips : null);
 
-          const v = t.values.slice();
-          const firstX = v[0];
-          const firstZ = v[2];
-          for (let i = 0; i < v.length; i += 3) {
-            v[i + 1] *= posScale;
-            // Resta el avance acumulado: clava al jugador exactamente donde inicia
-            v[i] = 0;
-            v[i + 2] = 0;
-          }
-      out.push(new THREE.VectorKeyframeTrack(trackName, t.times.slice(), v));
+    if (!bone) return;
+
+    if (prop === 'quaternion') {
+      out.push(new THREE.QuaternionKeyframeTrack(`${bone.name}.${prop}`, t.times.slice(), t.values.slice()));
+    } else if (prop === 'position') {
+      const isHipsTrack = clean.includes('hips') || t.name.toLowerCase().includes('hips');
+      if (isHipsTrack) {
+        const v = t.values.slice();
+        for (let i = 0; i < v.length; i += 3) {
+          v[i] = 0;     // Sin deriva lateral (X = 0)
+          // Mantiene v[i + 1] intacto para que las piernas no se entierren
+          v[i + 2] = 0; // Sin avance frontal (Z = 0)
+        }
+        out.push(new THREE.VectorKeyframeTrack(`${bone.name}.${prop}`, t.times.slice(), v));
+      }
     }
   });
+
   if (out.length === 0) {
     _fbxPlayableCache.set(sig, null);
     return null;
   }
+
   const clip = new THREE.AnimationClip(`andez-${url.split('/').pop()}`, -1, out);
   _fbxPlayableCache.set(sig, clip);
   return clip;
@@ -3055,73 +3056,81 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     isDragging.current = true;
     setActiveDragId(obj.id);
 
-    // Ajustar el plano a la altura del objeto antes de calcular el impacto
-    const objAlt = obj?.elevation || obj?.altitude || obj?.z || 0;
-    mathPlane.constant = -objAlt;
+    mathPlane.set(new THREE.Vector3(0, 1, 0), 0);
 
-    // Fijar el anclaje exacto del puntero
+    const currentWorld = toWorld(obj);
+    const cX = currentWorld?.x ?? 0;
+    const cZ = currentWorld?.z ?? 0;
+
     if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
       dragOffset.current.set(
-        planeIntersect.x - (isPC ? obj.x - 52.5 : obj.y - 52.5),
+        planeIntersect.x - cX,
         0,
-        planeIntersect.z - (isPC ? obj.y - 34 : 34 - obj.x)
+        planeIntersect.z - cZ
       );
     } else {
       dragOffset.current.set(0, 0, 0);
     }
+
+    if (e.target && e.target.setPointerCapture && e.pointerId !== undefined) {
+      try {
+        e.target.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    }
   };
+
   const handlePointerMove = (e) => {
-    if (!isDragging.current || !dragId.current || !cameraLocked) return;
+    if (!isDragging.current || !dragId.current) return;
     e.stopPropagation();
 
-    // 1. Obtener la altura del objeto que se esta arrastrando (0 si es jugador o balon en piso)
-    const activeObj = objects.find((o) => o.id === dragId.current);
-    const objAlt = activeObj?.elevation || activeObj?.altitude || activeObj?.z || 0;
-
-    // 2. Ajustar el plano matematico a la altura real del objeto para que el zoom no desvie el puntero
-    mathPlane.constant = -objAlt;
-
     if (e.ray && e.ray.intersectPlane(mathPlane, planeIntersect)) {
-      const targetWorldX = planeIntersect.x - dragOffset.current.x;
-      const targetWorldZ = planeIntersect.z - dragOffset.current.z;
+      const targetX = planeIntersect.x - dragOffset.current.x;
+      const targetZ = planeIntersect.z - dragOffset.current.z;
 
-      let clampedX, clampedY;
+      let newFieldX, newFieldY;
       if (isPC) {
-        clampedX = Math.max(1, Math.min(104, targetWorldX + 52.5));
-        clampedY = Math.max(1, Math.min(67, targetWorldZ + 34));
+        newFieldX = targetX + 52.5;
+        newFieldY = targetZ + 34;
       } else {
-        // En celular: inversión simétrica exacta 1:1 con la huella táctil
-        clampedX = Math.max(1, Math.min(67, 34 - targetWorldZ));
-        clampedY = Math.max(1, Math.min(104, targetWorldX + 52.5));
+        newFieldY = targetX + 52.5;
+        newFieldX = 34 - targetZ;
       }
 
       setObjects((prev) =>
-                prev.map((o) => {
-                  if (o.id !== dragId.current) return o;
-                  let newRotY = o.rotationY || 0;
-                  if (o.type === 'player') {
-                    const dx = clampedX - o.x;
-                    const dy = clampedY - o.y;
-                    if (Math.hypot(dx, dy) > 0.05) {
-                      // Cálculo de orientación vectorial según la proyección activa
-                      newRotY = isPC
-                        ? Math.atan2(dx, dy)
-                        : Math.atan2(dy, -dx);
-                    }
-                  }
-                  return { ...o, x: clampedX, y: clampedY, rotationY: newRotY };
-                })
-              );
+        prev.map((item) => {
+          if (item.id !== dragId.current) return item;
+
+          const currentW = toWorld(item);
+          const dx = targetX - (currentW?.x ?? 0);
+          const dz = targetZ - (currentW?.z ?? 0);
+
+          let newRotY = item.rotationY || 0;
+          if (dx * dx + dz * dz > 0.005) {
+            newRotY = Math.atan2(-dz, dx);
+          }
+
+          return {
+            ...item,
+            x: newFieldX,
+            y: newFieldY,
+            rotationY: newRotY
+          };
+        })
+      );
     }
   };
 
   const handlePointerUp = (e) => {
     if (isDragging.current) {
-      if (e && e.stopPropagation) e.stopPropagation();
       isDragging.current = false;
       dragId.current = null;
       setActiveDragId(null);
       if (recordHistory) recordHistory(objects);
+      if (e?.target?.releasePointerCapture && e?.pointerId !== undefined) {
+        try {
+          e.target.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+      }
     }
   };
 
@@ -3203,7 +3212,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
           return (
             <group
               key={obj.id}
-              position={[pos.x, 0, pos.z]}
+              position={[pos?.x ?? pos?.[0] ?? 0, 0, pos?.z ?? pos?.[2] ?? 0]}
             rotation={[0, obj.rotationY || 0, 0]}
               onPointerDown={onDown}
               onPointerMove={handlePointerMove}
@@ -3231,7 +3240,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
           return (
             <group
               key={obj.id}
-              position={[pos.x, 0, pos.z]}
+              
               onPointerDown={onDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
