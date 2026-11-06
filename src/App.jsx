@@ -1665,14 +1665,14 @@ const FBX_ANIMATIONS = {
     underhand_throw: '/animations/arquero/gk_underhand_throw.fbx'
   },
   campo: {
-    idle: '/campo/field_defensive_stance.fbx',
+    idle: '/campo/field_idle.fbx',
     jog: '/campo/field_jog_forward.fbx',
     sprint: '/campo/field_sprint.fbx',
     kick_pass: '/campo/field_kick_pass.fbx',
     shot_power: '/campo/field_shot_power.fbx',
     strike_motion: '/campo/field_strike_in_motion.fbx',
     header: '/campo/field_header_jump.fbx',
-    defensive: '/campo/field_defensive_stance.fbx',
+    defensive: '/campo/field_idle.fbx',
     throw_in: '/campo/field_throw_in.fbx'
   }
 };
@@ -1722,12 +1722,12 @@ const BALL_ACTIONS = {
 };
 
 // Misma regla que usa GLBPlayer para decidir si un jugador es arquero
-function playerIsGoalkeeper(o) {
+function playerGoalkeeper(o) {
   if (!o) return false;
   const r = String(o.role || '').toUpperCase();
   return r === 'GK' || r === 'POR' || o.team === 'gk' || o.team === 'gk_away' || parseInt(o.number, 10) === 1;
 }
-
+const playerIsGoalkeeper = playerGoalkeeper;
 // Medidas del esqueleto del clon en reposo (se calculan antes de aplicar cualquier postura o clip)
 const _cloneRigCache = new WeakMap();
 function fbxLegLength(root) {
@@ -1820,7 +1820,7 @@ function getPlayableFbxClip(raw, url, clone) {
   const rig = getCloneRig(clone);
   const hips = rig.bones.hips;
   if (!hips) return raw;
-  const sig = `${url}|${hips.name}|${rig.restHips.x.toFixed(3)},${rig.restHips.y.toFixed(3)},${rig.restHips.z.toFixed(3)}|${rig.legLen.toFixed(3)}`;
+  const sig = `v2_${url}|${hips.name}|${rig.restHips.x.toFixed(3)},${rig.restHips.y.toFixed(3)},${rig.restHips.z.toFixed(3)}`;
   if (_fbxPlayableCache.has(sig)) return _fbxPlayableCache.get(sig);
 
   const isHipsPos = (t) => t.name.toLowerCase().includes('hips.position');
@@ -1847,13 +1847,20 @@ function getPlayableFbxClip(raw, url, clone) {
     const trackName = `${bone.name}.${prop}`;
     if (prop === 'quaternion') {
       out.push(new THREE.QuaternionKeyframeTrack(trackName, t.times.slice(), t.values.slice()));
-    } else if (prop === 'position' && (nodeKey === 'hips' || isHipsPos(t))) {
-      const v = t.values.slice();
-      for (let i = 0; i + 2 < v.length; i += 3) {
-        v[i + 1] *= posScale;          // altura natural de la cadera
-        v[i] = rig.restHips.x;         // sin traslación horizontal (X)
-        v[i + 2] = rig.restHips.z;     // sin traslación horizontal (Z)
-      }
+    } else if (prop === 'position') {
+          // Si no es el hueso de la cadera, descarta la traslación completa
+          const isHips = nodeKey === 'hips' || isHipsPos(t) || t.name.toLowerCase().includes('hips');
+          if (!isHips) return;
+
+          const v = t.values.slice();
+          const firstX = v[0];
+          const firstZ = v[2];
+          for (let i = 0; i < v.length; i += 3) {
+            v[i + 1] *= posScale;
+            // Resta el avance acumulado: clava al jugador exactamente donde inicia
+            v[i] = 0;
+            v[i + 2] = 0;
+          }
       out.push(new THREE.VectorKeyframeTrack(trackName, t.times.slice(), v));
     }
   });
@@ -1913,40 +1920,26 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
   // Contextura física según rol táctico
   const customScale = useMemo(() => {
     const p = glbBodyProfile(role, n, seed);
-    const base = norm.scale;
+    const base = norm.scale * 3.8;
     return [base * p.w, base * p.h, base * p.w];
   }, [norm.scale, role, n, seed]);
 
   // Postura atlética de respaldo: el jugador nunca se ve en T-pose mientras llegan los FBX (o si alguno no existe)
   useLayoutEffect(() => {
-    let st = null;
-    try {
-      st = isGK ? buildGlbGoalkeeperStance(clone, kit.fwd) : buildGlbFieldPlayerStance(clone, kit.fwd);
-    } catch (e) {
-      st = null;
-    }
-    if (st && st.apply) st.apply();
-    return () => { if (st && st.restore) st.restore(); };
-  }, [clone, isGK, kit]);
+    return () => {};
+  }, []);
 
   // Enlace y transición cruzada: obj.animation -> clip FBX (fadeIn 0.25 / fadeOut 0.2). Las acciones puntuales vuelven solas a la postura base
   const playState = useRef({ action: null, key: null, token: 0 });
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     let alive = true;
     const cat = isGK ? FBX_ANIMATIONS.arquero : FBX_ANIMATIONS.campo;
     const st = playState.current;
 
     const play = (reqKey, fade) => {
-          // Si es jugador de campo y está en postura base, no reproducir el loop de repliegue
-          if (!isGK && (!reqKey || reqKey === 'defensive' || reqKey === 'idle')) {
-            if (st.action) {
-              st.action.fadeOut(fade ? 0.2 : 0);
-              st.action = null;
-            }
-            return;
-          }
-          const key = cat[reqKey] ? reqKey : Object.keys(cat)[0];
-          const url = cat[key];
+          const key = cat[reqKey] ? reqKey : 'idle';
+        const url = cat[key] || cat[Object.keys(cat)[0]];
       if (!url) return;
       const token = ++st.token;
       loadFbxClip(url).then((raw) => {
@@ -1958,29 +1951,39 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
           if (!isGK && key === 'defensive') {
             clip.tracks = clip.tracks.filter(t => !t.name.endsWith('.position'));
           }
-        const looping = FBX_LOOPING.has(key);
+        const looping = false;
         const next = mixer.clipAction(clip, clone);
         const prev = st.action;
         next.reset();
         next.setLoop(looping ? THREE.LoopRepeat : THREE.LoopOnce, looping ? Infinity : 1);
-        next.clampWhenFinished = !looping;
+        next.clampWhenFinished = true;
         next.enabled = true;
         next.setEffectiveTimeScale(1);
         next.setEffectiveWeight(1);
         // Desfase en las poses en bucle para que los 22 jugadores no respiren al unísono
         if (looping && !prev) next.time = ((seed % 997) / 997) * clip.duration;
         if (prev && prev !== next) prev.fadeOut(0.2);
-        next.fadeIn(prev === next ? 0.05 : fade).play();
+        if (!prev) next.play(); else next.fadeIn(prev === next ? 0.05 : fade).play();
+        if (key === 'sprint' || key === 'trote' || key === 'jog') {
+          next.time = 0.25;
+          next.paused = true;
+        }
+        setReady(true);
         st.action = next;
         st.key = key;
       });
     };
 
     const onFinished = (e) => {
-      if (e.action === st.action && !FBX_LOOPING.has(st.key)) {
-        if (isGK) play(cat['base'] ? 'base' : 'idle', 0.3);
+      // Si es trote o sprint, no vuelve a base: se queda congelado en la pose
+      if (st.key === 'jog' || st.key === 'sprint' || st.key === 'trote') {
+        return;
+      }
+      if (e.action === st.action) {
+        play(cat['base'] ? 'base' : (cat['idle'] ? 'idle' : Object.keys(cat)[0]), 0.3);
       }
     };
+
     mixer.addEventListener('finished', onFinished);
 
     const defaultStance = cat['base'] ? 'base' : (cat['idle'] ? 'idle' : Object.keys(cat)[0]);
@@ -2119,12 +2122,14 @@ play(wanted, 0.25);
   return (
     <group dispose={null} onClick={(e) => { e.stopPropagation(); onClick?.(); }}>
       <PlayerGroundMarks isSelected={isSelected} />
-      <group rotation={[0, facing, 0]}>
+      <group rotation={[0, facing + Math.PI / 2, 0]}>
         <primitive
-          object={clone}
+          object={clone}visible={ready}
           position={[0, footY, 0]}
           scale={customScale}
+          
         />
+        
       </group>
     </group>
   );
@@ -3123,15 +3128,15 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
   // En móvil usamos una perspectiva diagonal para conservar el volumen 3D y
   // encuadrar la cancha con sus dos porterías. Se mantiene el eje vertical natural de Three.js.
   // Cámara cercana de ángulo bajo estilo TacticalPad
-  const camPos = isPC ? [-12, 14, 28] : [-10, 18, 32];
-  const camFov = isPC ? 38 : 46;
+  const camPos = isPC ? [0, 23, 64] : [0, 26, 72];
+  const camFov = isPC ? 47 : 52;
 
   return (
     <>
       <PerspectiveCamera makeDefault position={camPos} fov={camFov} up={[0, 1, 0]} />
       <OrbitControls
         enabled={!cameraLocked}
-        target={[0, 0, 0]}
+        target={[0, 4, 0]}
         maxPolarAngle={Math.PI / 2.05}
         minPolarAngle={0.2}
         minDistance={15}
