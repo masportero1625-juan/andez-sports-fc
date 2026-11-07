@@ -3613,6 +3613,9 @@ export default function App() {
   const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   const [drillTitle, setDrillTitle] = useState('Salida y Progresión');
+  const [clubLogo, setClubLogo] = useState(() => localStorage.getItem('andez_club_logo') || null);
+
+
   const [drillCategory, setDrillCategory] = useState(categories[0]?.id || 'sub14');
   const [drillNotes, setDrillNotes] = useState('Transición rápida a 2 toques.');
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -4432,74 +4435,117 @@ Sin markdown. Inicia con [ y termina con ]:`;
   return (
     <div
       className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black"
-    >
-      {/* HEADER */}
-      <header className="bg-black px-3 py-1.5 flex items-center justify-between shrink-0 z-30 border-b border-zinc-900 no-print overflow-x-auto max-w-full">
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {isPC ? (
-            <label htmlFor="logo-up" className="cursor-pointer" title="Cambiar Logo Club">
-              <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
-              <input id="logo-up" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-            </label>
+    > {/* MEMBRETE INSTITUCIONAL EXCLUSIVO PARA IMPRESIÓN (PDF / HOJA FÍSICA) */}
+      <div className="hidden print:flex items-center justify-between border-b-2 border-black pb-4 mb-4 w-full px-6 pt-2 bg-white">
+        <div className="flex items-center gap-4">
+          {clubLogo ? (
+            <img src={clubLogo} alt="Logo Institución" className="h-16 w-16 object-contain" />
           ) : (
-            <img src={currentDisplayLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-amber-400 object-cover" />
-          )}
-
-          <button onClick={() => setShowLibraryModal(true)} className="text-zinc-300 hover:text-amber-400" title="Biblioteca y Gestión"><Folder className="w-5 h-5" /></button>
-          <button
-  type="button"
-  onClick={toggleLoopSequence}
-  className={`transition p-1 rounded ${isLoopPlaying ? 'text-amber-400 animate-pulse bg-amber-500/20' : 'text-zinc-300 hover:text-amber-400'}`}
-  title={isLoopPlaying ? "Pausar Secuencia Cíclica" : "Reproducir Secuencia Cíclica en Bucle"}
->
-  <Play className={`w-5 h-5 ${isLoopPlaying ? 'fill-amber-400' : ''}`} />
-</button>
-          <button onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} title={`Vista: ${pitchMode === 'full' ? 'Media Cancha' : 'Cancha Entera'}`} className={`p-1 rounded transition ${pitchMode === 'half' ? 'bg-red-600 text-white px-1.5' : 'text-zinc-300 hover:text-amber-400'}`}><RotateCcw className="w-5 h-5" />{pitchMode === 'half' && <span className="text-xs font-bold ml-0.5">1/2</span>}</button>
-          
-          <button
-            onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')}
-            className="flex items-center gap-1 bg-blue-600/20 border border-blue-400 text-blue-300 px-2.5 py-1 rounded-full text-[11px] font-bold shadow active:scale-95"
-          >
-            <Shield className="w-3.5 h-3.5" /> {viewMode === '2d' ? '3D' : '2D'}
-          </button>
-
-          <button onClick={() => setShowTrainingMenu(!showTrainingMenu)} className={`p-1 rounded ${showTrainingMenu ? 'bg-amber-500 text-black' : 'text-amber-400'}`}><span className="font-bold">▲</span></button>
-
-          <button onClick={() => setShowPromptModal(true)} className="flex items-center gap-1 bg-amber-500/20 border border-amber-400 text-amber-300 px-2 py-1 rounded-full text-[11px] font-bold shadow active:scale-95">
-            <Sparkles className="w-3.5 h-3.5" /> Prompt IA
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {selectedMaterial && (
-            <button onClick={() => rotateObject(selectedMaterial.id)} className="flex items-center gap-1 bg-amber-500 text-black px-2 py-1 rounded-full text-[10px] font-black"><RotateCw className="w-3.5 h-3.5" /> 45°</button>
-          )}
-
-          {isRecording ? (
-            <button onClick={stopRecording} className="flex items-center gap-1.5 bg-red-600 text-white px-2.5 py-1 rounded-full text-[10px] font-black animate-pulse shadow">
-              <Square className="w-3.5 h-3.5" /> Detener
-            </button>
-          ) : (
-            <button onClick={startRecording} className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-700 text-zinc-300 hover:text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow">
-              <Video className="w-3.5 h-3.5 text-red-500" /> Grabar
-            </button>
-          )}
-
-          <button onClick={exportBoardAsImage} className="text-zinc-300 hover:text-amber-400" title="Descargar PNG"><Download className="w-5 h-5" /></button>
-          <button onClick={() => window.print()} className="text-zinc-300 hover:text-amber-400"><Printer className="w-5 h-5" /></button>
-          <button onClick={() => setShowSaveModal(true)} className="text-zinc-300 hover:text-red-400"><Save className="w-5 h-5" /></button>
-
-          {authenticatedUser.role === 'owner' ? (
-            <button onClick={() => setShowAdminDashboard(true)} className="flex items-center gap-1 bg-zinc-900 border border-zinc-700 px-2.5 py-1 rounded-full text-[10px] font-black text-amber-400 uppercase tracking-wider">
-              <span>Super Admin</span> <Lock className="w-3 h-3 text-zinc-400" />
-            </button>
-          ) : (
-            <div className="bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full text-[10px] font-bold text-zinc-300 max-w-[120px] truncate">
-              {authenticatedUser.role === 'director' ? `Director: ${authenticatedUser.club}` : `Prof: ${authenticatedUser.name}`}
+            <div className="h-16 w-16 border-2 border-black flex items-center justify-center font-black text-sm text-black">
+              ANDEZ
             </div>
           )}
+          <div>
+            <h1 className="text-xl font-black uppercase tracking-wide text-black">
+              {drillTitle || 'Sesión de Entrenamiento'}
+            </h1>
+            <p className="text-xs text-zinc-700 font-semibold mt-0.5">
+              Categoría: {drillCategory || 'Plantel Principal'} | Fecha: {new Date().toLocaleDateString('es-CL')}
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-xs font-black tracking-widest text-black block">ANDEZ SPORTS FC</span>
+          <span className="text-[10px] text-zinc-600 block">Sistema Táctico Profesional</span>
+        </div>
+      </div>
+      {/* HEADER DE GESTIÓN Y ADMINISTRACIÓN */}
+      <header className="bg-[#121214] border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between z-30 select-none shadow-md">
+        {/* Lado Izquierdo: Marca Institucional y Gestión */}
+        <div className="flex items-center gap-3">
+          <label className="relative cursor-pointer group flex items-center justify-center" title="Cambiar Logo Institucional">
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => setClubLogo(ev.target?.result);
+                  reader.readAsDataURL(file);
+                }
+              }} 
+            />
+            {clubLogo ? (
+              <img src={clubLogo} alt="Logo Club" className="w-9 h-9 object-contain rounded-full border border-zinc-700 group-hover:ring-2 ring-amber-400 transition" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center font-black text-[10px] text-amber-400 group-hover:scale-105 transition">
+                ANDEZ
+              </div>
+            )}
+          </label>
 
-          <button onClick={handleLogout} className="text-zinc-400 hover:text-red-400"><LogOut className="w-4 h-4" /></button>
+          <button 
+            onClick={() => setShowLibraryModal(true)} 
+            className="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700/60 transition flex items-center justify-center"
+            title="Biblioteca de Sesiones"
+          >
+            <Folder className="w-4 h-4" />
+          </button>
+
+          
+        </div>
+
+        {/* Lado Derecho: Controles Administrativos */}
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={startRecording} 
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-xs font-semibold border border-zinc-700/60 transition"
+            title="Grabar Video / Sesión"
+          >
+            <Video className="w-3.5 h-3.5 text-red-500" />
+            <span className="hidden sm:inline">Grabar</span>
+          </button>
+
+          <button 
+  onClick={() => { if (typeof handleExportImage === 'function') handleExportImage(); else alert('Exportando imagen...'); }} 
+  className="p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
+  title="Descargar Imagen PNG"
+>
+  <Download className="w-4 h-4" />
+</button>
+
+          <button 
+  onClick={() => window.print()} 
+  className="p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
+  title="Imprimir Pizarra"
+>
+  <Printer className="w-4 h-4" />
+</button>
+
+          <button 
+            onClick={() => setShowSaveModal(true)} 
+            className="p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
+            title="Guardar Sesión"
+          >
+            <Save className="w-4 h-4" />
+          </button>
+
+          <div className="w-px h-6 bg-zinc-800 mx-1"></div>
+
+          <div className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-[11px] tracking-wider flex items-center gap-1.5">
+            <span>SUPER ADMIN</span>
+            <Lock className="w-3 h-3" />
+          </div>
+
+          <button 
+            onClick={() => { if (confirm('¿Cerrar sesión?')) window.location.reload(); }} 
+            className="p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition"
+            title="Cerrar Sesión"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -4512,77 +4558,90 @@ Sin markdown. Inicia con [ y termina con ]:`;
           style={{ visibility: viewMode === '2d' ? 'visible' : 'hidden' }}
         >
           {/* PANELES FLOTANTES LATERALES IDÉNTICOS A TACTICALPAD */}
+        {/* PANELES LATERALES FLOTANTES (ESTILO TACTICALPAD DEFINITIVO) */}
+        
         {/* LADO IZQUIERDO: EQUIPO LOCAL Y MENÚ */}
-        <div className="absolute top-20 left-4 z-40 flex flex-col items-center gap-3 select-none pointer-events-auto">
-          <div className="flex flex-col items-center bg-zinc-900/90 border border-zinc-700/80 rounded-2xl p-1.5 shadow-2xl backdrop-blur-md">
+        <div className="absolute top-16 bottom-20 left-[7%] sm:left-[8%] lg:left-[9%] z-40 flex flex-col justify-between items-center select-none pointer-events-none">
+          {/* Cápsula Superior Local */}
+          <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
-              onClick={() => { setRosterTeam('blue'); setBottomBarMode(bottomBarMode === 'roster' ? 'menu' : 'roster'); }}
-              className="text-zinc-400 hover:text-white px-2 py-0.5 text-xs font-black hover:bg-zinc-800 rounded transition"
-              title="Abrir Plantilla"
-            >
-              &gt;&gt;
-            </button>
-            <div
-              className="w-12 h-14 rounded-xl flex items-center justify-center font-black text-white text-base shadow-inner my-1 border border-white/20"
+              onClick={() => { setRosterTeam('blue'); setBottomBarMode(bottomBarMode === 'roster' && rosterTeam === 'blue' ? 'menu' : 'roster'); }}
+              className="w-11 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-inner mb-2 border border-white/20 transition-transform hover:scale-105 active:scale-95"
               style={{ backgroundColor: teamColors.blue }}
+              title="Plantilla Local"
             >
               LOC
-            </div>
+            </button>
             <button
               onClick={() => setShowSystemsModal(showSystemsModal === 'home' ? null : 'home')}
-              className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm border border-zinc-600 text-zinc-200 transition"
-              title="10 Sistemas Tácticos"
+              className="p-1.5 hover:bg-white/10 rounded-lg transition flex flex-col items-center justify-center"
+              title="Formaciones Tácticas"
             >
-              📋
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-6 h-6 text-zinc-200">
+                <rect x="2" y="3" width="20" height="18" rx="2"></rect>
+                <line x1="12" y1="3" x2="12" y2="21"></line>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M2 9h3v6H2"></path>
+                <path d="M22 9h-3v6h3"></path>
+              </svg>
             </button>
           </div>
 
+          {/* Botón Menú Casa */}
           <button
             onClick={() => setBottomBarMode('menu')}
-            className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all duration-200 ${
-              bottomBarMode === 'menu' ? 'bg-blue-600 text-white border-blue-400 scale-105 shadow-blue-500/30' : 'bg-zinc-900/90 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
+            className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all duration-200 pointer-events-auto ${
+              bottomBarMode === 'menu' ? 'bg-blue-600 border-blue-400 scale-105 shadow-blue-500/40 ring-2 ring-blue-400/50' : 'bg-[#252528] border-zinc-600/70 hover:bg-[#303035]'
             }`}
             title="Menú Principal"
           >
-            <span className="text-xl">🏠</span>
-            <span className="text-[10px] font-bold mt-0.5">Menú</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-white mb-1">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span className="text-[10px] font-medium text-white">Menu</span>
           </button>
         </div>
 
         {/* LADO DERECHO: EQUIPO VISITANTE Y HERRAMIENTAS */}
-        <div className="absolute top-20 right-4 z-40 flex flex-col items-center gap-3 select-none pointer-events-auto">
-          <div className="flex flex-col items-center bg-zinc-900/90 border border-zinc-700/80 rounded-2xl p-1.5 shadow-2xl backdrop-blur-md">
+        <div className="absolute top-16 bottom-20 right-[7%] sm:right-[8%] lg:right-[9%] z-40 flex flex-col justify-between items-center select-none pointer-events-none">
+          {/* Cápsula Superior Visitante */}
+          <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
-              onClick={() => { setRosterTeam('red'); setBottomBarMode(bottomBarMode === 'roster' ? 'menu' : 'roster'); }}
-              className="text-zinc-400 hover:text-white px-2 py-0.5 text-xs font-black hover:bg-zinc-800 rounded transition"
-              title="Abrir Plantilla"
-            >
-              &lt;&lt;
-            </button>
-            <div
-              className="w-12 h-14 rounded-xl flex items-center justify-center font-black text-white text-base shadow-inner my-1 border border-white/20"
+              onClick={() => { setRosterTeam('red'); setBottomBarMode(bottomBarMode === 'roster' && rosterTeam === 'red' ? 'menu' : 'roster'); }}
+              className="w-11 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-inner mb-2 border border-white/20 transition-transform hover:scale-105 active:scale-95"
               style={{ backgroundColor: teamColors.red }}
+              title="Plantilla Visitante"
             >
               VIS
-            </div>
+            </button>
             <button
               onClick={() => setShowSystemsModal(showSystemsModal === 'away' ? null : 'away')}
-              className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm border border-zinc-600 text-zinc-200 transition"
-              title="10 Sistemas Tácticos"
+              className="p-1.5 hover:bg-white/10 rounded-lg transition flex flex-col items-center justify-center"
+              title="Formaciones Tácticas"
             >
-              📋
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-6 h-6 text-zinc-200">
+                <rect x="2" y="3" width="20" height="18" rx="2"></rect>
+                <line x1="12" y1="3" x2="12" y2="21"></line>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M2 9h3v6H2"></path>
+                <path d="M22 9h-3v6h3"></path>
+              </svg>
             </button>
           </div>
 
+          {/* Botón Herramientas Lápiz */}
           <button
-            onClick={() => setBottomBarMode(bottomBarMode === 'tools' || bottomBarMode === 'timeline' ? 'menu' : 'tools')}
-            className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all duration-200 ${
-              bottomBarMode === 'tools' || bottomBarMode === 'timeline' ? 'bg-amber-500 text-black border-amber-400 scale-105 shadow-amber-500/30' : 'bg-zinc-900/90 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
+            onClick={() => setBottomBarMode('tools')}
+            className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all duration-200 pointer-events-auto ${
+              bottomBarMode === 'tools' ? 'bg-blue-600 border-blue-400 scale-105 shadow-blue-500/40 ring-2 ring-blue-400/50' : 'bg-[#252528] border-zinc-600/70 hover:bg-[#303035]'
             }`}
             title="Herramientas y Trazados"
           >
-            <span className="text-xl">✏️</span>
-            <span className="text-[10px] font-bold mt-0.5">Herram.</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-white mb-1">
+              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+            </svg>
+            <span className="text-[9px] font-medium text-white">Herram.</span>
           </button>
         </div>
 
@@ -5829,166 +5888,397 @@ Sin markdown. Inicia con [ y termina con ]:`;
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-black px-4 py-2 flex items-center justify-between shrink-0 z-30 border-t border-zinc-900 no-print overflow-x-auto max-w-full">
-        {/* BARRA INFERIOR MODULAR TACTICALPAD COMPLETA */}
-        <div className="w-full flex flex-col items-center select-none">
-          {/* LÍNEA DE TIEMPO / FOTOGRAMAS */}
-          {bottomBarMode === 'timeline' && (
-            <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-4 flex items-center justify-between shadow-2xl backdrop-blur-md">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-amber-400">🎬 Marcos:</span>
-                <div className="flex items-center gap-1.5 overflow-x-auto max-w-xl py-0.5">
-                  {frames.map((f, idx) => (
-                    <button
-                      key={f.id || idx}
-                      onClick={() => {
-                        setActiveFrameIndex(idx);
-                        if (frames[idx]?.objects) setObjects(frames[idx].objects);
-                        if (frames[idx]?.drawings) setDrawings(frames[idx].drawings);
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                        activeFrameIndex === idx
-                          ? 'bg-amber-500 text-black shadow-lg scale-105'
-                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                      }`}
-                    >
-                      {idx + 1}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={handleAddFrame}
-                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow flex items-center gap-1 transition"
-                  title="Nuevo Marco (Duplicar Jugada)"
-                >
-                  <span>+</span> Añadir
-                </button>
-                <button
-                  onClick={() => handleDeleteFrame(activeFrameIndex)}
-                  className="p-1 bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white rounded-lg text-xs transition"
-                  title="Eliminar Marco Actual"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+      <footer className="bg-[#1a1a1a] flex flex-col shrink-0 z-30 border-t border-zinc-800 no-print max-w-full select-none">
+        
+        {/* LÍNEA DE TIEMPO / FOTOGRAMAS */}
+        {bottomBarMode === 'timeline' && (
+          <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-4 flex items-center justify-between shadow-2xl backdrop-blur-md overflow-x-auto [&::-webkit-scrollbar]:hidden">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-amber-400">🎬 Marcos:</span>
+              <div className="flex items-center gap-1.5 overflow-x-auto max-w-xl py-0.5 [&::-webkit-scrollbar]:hidden">
+                {frames.map((f, idx) => (
+                  <button
+                    key={f.id || idx}
+                    onClick={() => {
+                      setActiveFrameIndex(idx);
+                      if (frames[idx]?.objects) setObjects(frames[idx].objects);
+                      if (frames[idx]?.drawings) setDrawings(frames[idx].drawings);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                      activeFrameIndex === idx
+                        ? 'bg-amber-500 text-black shadow-lg scale-105'
+                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handleAddFrame}
+                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow flex items-center gap-1 transition"
+                title="Nuevo Marco (Duplicar Jugada)"
+              >
+                <span>+</span> Añadir
+              </button>
+              <button
+                onClick={() => handleDeleteFrame(activeFrameIndex)}
+                className="p-1 bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white rounded-lg text-xs transition"
+                title="Eliminar Marco Actual"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleLoopSequence}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
-                    isLoopPlaying ? 'bg-amber-500 text-black animate-pulse' : 'bg-blue-600 text-white hover:bg-blue-500'
-                  }`}
-                >
-                  <Play className={`w-3.5 h-3.5 ${isLoopPlaying ? 'fill-black' : 'fill-white'}`} />
-                  <span>{isLoopPlaying ? 'Pausar' : 'Reproducir'}</span>
-                </button>
-              </div>
-            </div>
-          )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleLoopSequence}
+                className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                  isLoopPlaying ? 'bg-amber-500 text-black animate-pulse' : 'bg-blue-600 text-white hover:bg-blue-500'
+                }`}
+              >
+                <Play className={`w-3.5 h-3.5 ${isLoopPlaying ? 'fill-black' : 'fill-white'}`} />
+                <span>{isLoopPlaying ? 'Pausar' : 'Reproducir'}</span>
+              </button>
+            </div>
+          </div>
+        )}
 
-          {/* PALETA DE CAMISETAS EXPANDIBLE */}
-          {showKitPalette && (
-            <div className="w-full bg-zinc-950 border-b border-zinc-800 py-1.5 px-3 flex items-center justify-between gap-2 overflow-x-auto">
-              <div className="flex items-center gap-1 shrink-0">
-                <span className="text-zinc-400 text-xs font-bold mr-1">Camisetas:</span>
-                {[
-                  { id: 'blue', label: 'Local' },
-                  { id: 'red', label: 'Visita' },
-                  { id: 'gk', label: 'Arq. Loc' },
-                  { id: 'gk_away', label: 'Arq. Vis' }
-                ].map(target => (
-                  <button
-                    key={target.id}
-                    onClick={() => setKitTarget(target.id)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold transition ${
-                      kitTarget === target.id ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    }`}
-                  >
-                    {target.label}
-                  </button>
-                ))}
-              </div>
+        {/* PALETA DE CAMISETAS EXPANDIBLE */}
+        {showKitPalette && (
+          <div className="w-full bg-zinc-950 border-b border-zinc-800 py-1.5 px-3 flex items-center justify-between gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-zinc-400 text-xs font-bold mr-1">Camisetas:</span>
+              {[
+                { id: 'blue', label: 'Local' },
+                { id: 'red', label: 'Visita' },
+                { id: 'gk', label: 'Arq. Loc' },
+                { id: 'gk_away', label: 'Arq. Vis' }
+              ].map(target => (
+                <button
+                  key={target.id}
+                  onClick={() => setKitTarget(target.id)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-bold transition ${
+                    kitTarget === target.id ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  }`}
+                >
+                  {target.label}
+                </button>
+              ))}
+            </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
-                {officialKitColors.map(c => (
-                  <button
-                    key={c.hex}
-                    title={c.name}
-                    onClick={() => handleUpdateKitColor(c.hex)}
-                    style={{ backgroundColor: c.hex }}
-                    className={`w-5 h-5 rounded-full border border-black/30 transition-transform ${
-                      teamColors[kitTarget] === c.hex ? 'scale-125 ring-2 ring-amber-400' : 'hover:scale-110'
-                    }`}
-                  />
-                ))}
-              </div>
-              <button onClick={() => setShowKitPalette(false)} className="text-zinc-400 hover:text-white text-xs px-2">✕</button>
-            </div>
-          )}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {officialKitColors.map(c => (
+                <button
+                  key={c.hex}
+                  title={c.name}
+                  onClick={() => handleUpdateKitColor(c.hex)}
+                  style={{ backgroundColor: c.hex }}
+                  className={`w-5 h-5 rounded-full border border-black/30 transition-transform ${
+                    teamColors[kitTarget] === c.hex ? 'scale-125 ring-2 ring-amber-400' : 'hover:scale-110'
+                  }`}
+                />
+              ))}
+            </div>
+            <button onClick={() => setShowKitPalette(false)} className="text-zinc-400 hover:text-white text-xs px-2">✕</button>
+          </div>
+        )}
 
-          {/* CUERPO PRINCIPAL DE LA BARRA INFERIOR */}
-          <div className="w-full flex items-center justify-between px-3 py-1.5">
-            {/* LADO IZQUIERDO: ACCESOS A MENÚ Y PLANTILLA */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setBottomBarMode(bottomBarMode === 'menu' ? 'tools' : 'menu')}
-                className={`px-3 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
-                  bottomBarMode === 'menu' ? 'bg-blue-600 text-white border-blue-400 shadow' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
-                }`}
+        {/* CONTENEDOR PRINCIPAL DE LA BARRA INFERIOR */}
+        <div className="w-full px-2 py-2 flex items-center justify-start sm:justify-center overflow-x-auto [&::-webkit-scrollbar]:hidden">
+          
+          {/* MODO: MENÚ PRINCIPAL */}
+          {/* MODO: MENÚ PRINCIPAL (ESTILO TACTICALPAD VECTORIAL) */}
+          {/* MODO: MENÚ PRINCIPAL (CALIBRADO EXACTO TACTICALPAD) */}
+          {/* MODO: MENÚ PRINCIPAL (RÉPLICA EXACTA TACTICALPAD) */}
+          {/* MODO: MENÚ PRINCIPAL (CALIBRACIÓN CLON EXACTO TACTICALPAD) */}
+          {/* MODO: MENÚ PRINCIPAL (TACTICALPAD 1:1 VECTOR OFICIAL) */}
+          {/* MODO: MENÚ PRINCIPAL (ESCALA REAL TACTICALPAD) */}
+          {bottomBarMode === 'menu' && (
+            <div className="w-full flex items-center justify-center gap-2 sm:gap-5 px-4 py-3 bg-[#111113]">
+              
+              {/* 1. Nuevo Proyecto */}
+              <button 
+                onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
               >
-                <span>🏠</span> Menú
+                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 4h11l7 7v16a1.5 1.5 0 01-1.5 1.5H7A1.5 1.5 0 015.5 27V5.5A1.5 1.5 0 017 4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 4v7h7M16 15v8M12 19h8" />
+                </svg>
+                <span className="text-xs text-white font-medium tracking-tight">Nuevo Proyecto</span>
               </button>
 
-              <button
-                onClick={() => setShowKitPalette(prev => !prev)}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition ${
-                  showKitPalette ? 'bg-amber-500 text-black border-amber-400 shadow' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
-                }`}
-                title="Personalizar Colores de Camisetas"
+              {/* 2. Abrir Proyecto */}
+              <button 
+                onClick={() => setShowLibraryModal(true)} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
               >
-                🎨 Camisetas
+                <svg className="w-10 h-10 text-white fill-current" viewBox="0 0 32 32">
+                  <path d="M4 8.5A1.5 1.5 0 015.5 7h7.1l2.4 2.5H26A1.5 1.5 0 0127.5 11v1.5H6.8a2 2 0 00-1.95 1.6L3 25V8.5z" opacity="0.85" />
+                  <path d="M6.5 13h22.2a1.2 1.2 0 011.18 1.53l-2.6 11a1.2 1.2 0 01-1.18.87H4.8a1.2 1.2 0 01-1.18-1.53l2.6-11a1.2 1.2 0 011.18-.87z" />
+                </svg>
+                <span className="text-xs text-white font-medium tracking-tight">Abrir Proyecto</span>
               </button>
 
-              <button
-                onClick={() => setBottomBarMode(bottomBarMode === 'timeline' ? 'tools' : 'timeline')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1 ${
-                  bottomBarMode === 'timeline' ? 'bg-amber-500 text-black border-amber-400 shadow' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'
-                }`}
-                title="Línea de Tiempo y Animación de Marcos"
-              >
-                <span>🎬</span> Animación
-              </button>
-            </div>
-
-            {/* CENTRO: FICHAS RÁPIDAS DE JUGADORES Y BALÓN */}
-            <div className="flex items-center gap-2">
-              <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk', customColor: teamColors.gk })} style={{ backgroundColor: teamColors.gk }} className="w-8 h-8 rounded-full border border-white text-white font-black text-xs shadow hover:scale-110 transition-transform" title="Arquero Local">1</button>
-              <button onClick={() => addElement('player', { role: 'GK', number: '1', team: 'gk_away', customColor: teamColors.gk_away })} style={{ backgroundColor: teamColors.gk_away }} className="w-8 h-8 rounded-full border border-white text-white font-black text-xs shadow hover:scale-110 transition-transform" title="Arquero Visitante">1</button>
-              <button onClick={() => addElement('player', { team: 'blue', customColor: teamColors.blue })} style={{ backgroundColor: teamColors.blue }} className="w-8 h-8 rounded-full border border-white text-white font-bold text-xs shadow hover:scale-110 transition-transform" title="Jugador Local">11</button>
-              <button onClick={() => addElement('player', { team: 'red', customColor: teamColors.red })} style={{ backgroundColor: teamColors.red }} className="w-8 h-8 rounded-full border border-white text-white font-bold text-xs shadow hover:scale-110 transition-transform" title="Jugador Visitante">11</button>
-              <button
-                type="button"
+              {/* 3. Guardar */}
+              <button 
                 onClick={() => {
-                  const newBall = { id: `ball-${Date.now()}`, type: 'ball', x: isPC ? 52.5 : 34, y: isPC ? 34 : 52.5, elevation: 0 };
-                  setObjects(prev => [...prev, newBall]);
-                }}
-                className="w-8 h-8 rounded-full bg-white text-sm shadow hover:scale-110 active:scale-95 transition flex items-center justify-center"
-                title="Añadir Balón"
+                  const n = { id: 'd-' + Date.now(), title: drillTitle, notes: drillNotes, category: drillCategory, date: new Date().toISOString().split('T')[0], objects, drawings };
+                  setSavedDrills([n, ...savedDrills]); alert('¡Sesión guardada!');
+                }} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
               >
-                ⚽
+                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
+                  <rect x="5.5" y="4" width="21" height="24" rx="2.5" />
+                  <path strokeLinecap="round" d="M9 4v7h14V4" />
+                  <rect x="10" y="17" width="12" height="11" rx="1.5" />
+                </svg>
+                <span className="text-xs text-white font-medium tracking-tight">Guardar</span>
               </button>
-            </div>
 
-            {/* LADO DERECHO: HERRAMIENTAS DE EDICIÓN Y TRAZADO */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button onClick={() => setShowLinePalette(true)} className={`p-1.5 rounded-lg border transition ${tool === 'draw' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:bg-zinc-800'}`} title="Trazados, Líneas y Flechas"><PenTool className="w-4 h-4" /></button>
-              <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`p-1.5 rounded-lg border transition ${tool === 'text' ? 'bg-amber-500 text-black border-amber-400' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800'}`} title="Texto Explicativo"><Type className="w-4 h-4" /></button>
-              <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`p-1.5 rounded-lg border transition ${tool === 'eraser' ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800'}`} title="Goma de Borrar"><Eraser className="w-4 h-4" /></button>
-              <button onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} className="p-1.5 rounded-lg bg-zinc-900 text-red-400 hover:text-red-300 border border-zinc-700 hover:bg-zinc-800 transition" title="Vaciar Cancha"><Trash2 className="w-4 h-4" /></button>
+              {/* 4. Guardar como */}
+              <button 
+                onClick={() => setShowSaveModal(true)} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
+              >
+                <div className="relative">
+                  <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
+                    <rect x="5.5" y="4" width="21" height="24" rx="2.5" />
+                    <path strokeLinecap="round" d="M9 4v7h14V4" />
+                    <rect x="10" y="17" width="12" height="11" rx="1.5" />
+                  </svg>
+                  <div className="absolute -bottom-1 -right-1 bg-black border-2 border-white rounded-full w-5 h-5 flex items-center justify-center shadow">
+                    <span className="text-white text-xs font-black leading-none mb-0.5">+</span>
+                  </div>
+                </div>
+                <span className="text-xs text-white font-medium tracking-tight">Guardar como</span>
+              </button>
+
+              {/* Separador fino */}
+              <div className="w-px h-12 bg-zinc-700/60 mx-1"></div>
+
+              {/* 5. Ajustes */}
+              <button 
+                onClick={() => setShowKitPalette(prev => !prev)} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
+              >
+                <div className="relative w-10 h-10 flex items-center justify-center">
+                  <svg className="w-9 h-9 text-white fill-current" viewBox="0 0 24 24">
+                    <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.32.07-.65.07-.98 0-.33-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 13.5 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65z" />
+                  </svg>
+                  <div className="absolute -top-1 -right-1 bg-black rounded-full border-2 border-white w-5 h-5 flex items-center justify-center">
+                    <span className="text-[10px] font-black text-white leading-none">?</span>
+                  </div>
+                </div>
+                <span className="text-xs text-white font-medium tracking-tight">Ajustes</span>
+              </button>
+
+              {/* 6. Compartir */}
+              <button 
+                onClick={startRecording} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
+              >
+                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 21v5a1.5 1.5 0 001.5 1.5h17A1.5 1.5 0 0026 26v-5M16 5v16M10 11l6-6 6 6" />
+                </svg>
+                <span className="text-xs text-white font-medium tracking-tight">Compartir</span>
+              </button>
+
+              {/* 7. Pizarras */}
+              <button 
+                onClick={() => setBottomBarMode(bottomBarMode === 'timeline' ? 'menu' : 'timeline')} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
+              >
+                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 32 32">
+                  <rect x="6" y="5" width="20" height="24" rx="2" strokeWidth="2.4" />
+                  <path d="M12 5V3a1 1 0 011-1h6a1 1 0 011 1v2" strokeWidth="2.4" strokeLinecap="round" />
+                  <circle cx="16" cy="17" r="3.5" strokeWidth="2" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 13l4.5 3 6-3m-6 8l3-2" />
+                  <circle cx="10" cy="13" r="1.5" fill="currentColor" stroke="none" />
+                  <circle cx="20.5" cy="13" r="1.5" fill="currentColor" stroke="none" />
+                </svg>
+                <span className="text-xs text-white font-medium tracking-tight">Pizarras</span>
+              </button>
+
+              {/* 8. Campo */}
+              <button 
+                onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
+              >
+                <svg className="w-11 h-9 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 38 28">
+                  <rect x="4" y="3" width="30" height="22" rx="1.5" strokeWidth="2.4" />
+                  <line x1="19" y1="3" x2="19" y2="25" strokeWidth="2" />
+                  <circle cx="19" cy="14" r="4.5" strokeWidth="2" />
+                  <rect x="4" y="8" width="5.5" height="12" strokeWidth="2" />
+                  <rect x="28.5" y="8" width="5.5" height="12" strokeWidth="2" />
+                  <path d="M1.5 10v8M36.5 10v8" strokeWidth="2.4" strokeLinecap="round" />
+                </svg>
+                <span className="text-xs text-white font-medium tracking-tight">Campo</span>
+              </button>
+
+              {/* 9. 3D */}
+              <button 
+                onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} 
+                className={`flex flex-col items-center justify-center w-24 sm:w-28 h-20 rounded-xl transition select-none group ${
+                  viewMode === '3d' ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400' : 'hover:bg-white/10 text-white'
+                }`}
+              >
+                <div className="flex flex-col items-center justify-center w-14 h-10">
+                  <span className="text-base font-black italic tracking-wider text-white leading-none">3D</span>
+                  <svg className="w-12 h-6 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 44 18">
+                    <polygon points="11,2 33,2 41,16 3,16" strokeLinejoin="round" />
+                    <line x1="22" y1="2" x2="22" y2="16" strokeWidth="2" />
+                    <ellipse cx="22" cy="9" rx="4.5" ry="2.2" strokeWidth="1.8" />
+                  </svg>
+                </div>
+                <span className="text-xs text-white font-medium tracking-tight">3D</span>
+              </button>
+
+              {/* 10. Repositorios */}
+              <button 
+                onClick={() => setShowTrainingMenu(!showTrainingMenu)} 
+                className={`flex flex-col items-center justify-center w-24 sm:w-28 h-20 rounded-xl transition gap-2 select-none group ${
+                  showTrainingMenu ? 'bg-amber-500 text-black shadow-lg' : 'hover:bg-white/10 text-white'
+                }`}
+              >
+                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 32 32">
+                  <circle cx="23" cy="7" r="3" fill="currentColor" stroke="none" />
+                  <path d="M10 9l2.5-6h3l2.5 6" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M5 13l11-4.5 11 4.5v10l-11 5-11-5V13z" strokeWidth="2.6" strokeLinejoin="round" />
+                  <path d="M5 13l11 4.5 11-4.5M16 17.5v10" strokeWidth="2.6" />
+                </svg>
+                <span className="text-xs text-white font-medium tracking-tight">Repositorios</span>
+              </button>
+
+              {/* Separador fino */}
+              <div className="w-px h-12 bg-zinc-700/60 mx-1"></div>
+
+              {/* 11. IA Táctica */}
+              <button 
+                onClick={() => setShowPromptModal(true)} 
+                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-amber-500/20 rounded-xl transition gap-2 group select-none"
+              >
+                <svg className="w-10 h-10 text-amber-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L14.39 8.26L21 9.27L16.5 14.14L17.77 21L12 17.77L6.23 21L7.5 14.14L3 9.27L9.61 8.26L12 2Z" />
+                </svg>
+                <span className="text-xs text-amber-400 font-bold tracking-tight">IA Táctica</span>
+              </button>
+
             </div>
-          </div>
-        </div>
-      </footer>
+          )}
+
+          {/* MODO: HERRAMIENTAS DE DIBUJO Y MATERIALES */}
+          {bottomBarMode === 'tools' && (
+            <div className="flex items-center gap-2 sm:gap-4 min-w-max px-4 w-full justify-start sm:justify-center overflow-x-auto [&::-webkit-scrollbar]:hidden">
+              
+              {/* Herramientas de Dibujo */}
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                <button onClick={() => setShowLinePalette(true)} className={`flex flex-col items-center justify-center w-14 sm:w-16 h-14 rounded-lg transition gap-1 ${tool === 'draw' ? 'bg-amber-500 text-black' : 'hover:bg-white/10 text-white'}`}>
+                  <PenTool className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium">Trazos</span>
+                </button>
+                <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`flex flex-col items-center justify-center w-14 sm:w-16 h-14 rounded-lg transition gap-1 ${tool === 'text' ? 'bg-amber-500 text-black' : 'hover:bg-white/10 text-white'}`}>
+                  <Type className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium">Texto</span>
+                </button>
+                <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`flex flex-col items-center justify-center w-14 sm:w-16 h-14 rounded-lg transition gap-1 ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'hover:bg-white/10 text-white'}`}>
+                  <Eraser className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium">Borrar</span>
+                </button>
+                <button onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-red-500/20 rounded-lg transition gap-1 text-red-400">
+                  <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium">Limpiar</span>
+                </button>
+              </div>
+
+              <div className="w-px h-10 bg-zinc-700 mx-1 shrink-0"></div>
+
+              {/* Materiales de Entrenamiento */}
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                <button onClick={() => addElement('mini_goal')} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
+                  <span className="text-lg sm:text-xl">🥅</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium">Portería</span>
+                </button>
+                <button onClick={() => addElement('ladder')} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
+                  <span className="text-lg sm:text-xl">🪜</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium">Escalera</span>
+                </button>
+                <button onClick={() => addElement('dummy')} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
+                  <span className="text-lg sm:text-xl">🧍</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium">Maniquí</span>
+                </button>
+                <button onClick={() => addElement('hurdle')} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
+                  <span className="text-lg sm:text-xl">🚧</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium">Valla</span>
+                </button>
+                <button onClick={() => addElement('cone', { color: '#ea580c' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-orange-500">
+                  <span className="text-lg sm:text-xl">▲</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium text-white">Cono N.</span>
+                </button>
+                <button onClick={() => addElement('cone', { color: '#2563eb' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-blue-500">
+                  <span className="text-lg sm:text-xl">▲</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium text-white">Cono A.</span>
+                </button>
+                <button onClick={() => addElement('cone', { color: '#eab308' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-yellow-400">
+                  <span className="text-lg sm:text-xl">▲</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium text-white">Cono Am.</span>
+                </button>
+                <button onClick={() => addElement('saucer', { color: '#facc15' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
+                  <span className="text-lg sm:text-xl">🟡</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium">Plato</span>
+                </button>
+                <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
+                  <span className="text-lg sm:text-xl">⭕</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium">Aro</span>
+                </button>
+                <button onClick={() => addElement('pole', { color: '#facc15' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
+                  <span className="text-lg sm:text-xl">🥢</span>
+                  <span className="text-[9px] sm:text-[10px] font-medium">Estaca</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MODO: PLANTILLA (JUGADORES Y BALÓN) */}
+          {bottomBarMode === 'roster' && (
+            <div className="flex items-center gap-4 min-w-max px-4 w-full justify-center">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider mr-2">
+                Plantilla {rosterTeam === 'blue' ? 'Local' : 'Visitante'}
+              </span>
+              <button 
+                onClick={() => addElement('player', { role: 'GK', number: '1', team: rosterTeam === 'blue' ? 'gk' : 'gk_away', customColor: teamColors[rosterTeam === 'blue' ? 'gk' : 'gk_away'] })} 
+                style={{ backgroundColor: teamColors[rosterTeam === 'blue' ? 'gk' : 'gk_away'] }} 
+                className="w-12 h-12 rounded-full border-2 border-white text-white font-black text-base shadow-lg hover:scale-110 transition-transform flex items-center justify-center" 
+                title="Añadir Arquero"
+              >
+                1
+              </button>
+              <button 
+                onClick={() => addElement('player', { team: rosterTeam, customColor: teamColors[rosterTeam] })} 
+                style={{ backgroundColor: teamColors[rosterTeam] }} 
+                className="w-12 h-12 rounded-full border-2 border-white text-white font-bold text-base shadow-lg hover:scale-110 transition-transform flex items-center justify-center" 
+                title="Añadir Jugador"
+              >
+                11
+              </button>
+              <div className="w-px h-10 bg-zinc-700 mx-2"></div>
+              <button
+                type="button"
+                onClick={() => {
+                  const newBall = { id: `ball-${Date.now()}`, type: 'ball', x: isPC ? 52.5 : 34, y: isPC ? 34 : 52.5, elevation: 0 };
+                  setObjects(prev => [...prev, newBall]);
+                }}
+                className="w-12 h-12 rounded-full bg-white text-2xl shadow-lg hover:scale-110 active:scale-95 transition flex items-center justify-center"
+                title="Añadir Balón"
+              >
+                ⚽
+              </button>
+            </div>
+          )}
+
+        </div>
+      </footer>
     </div>
   )}
