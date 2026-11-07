@@ -3237,24 +3237,38 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
           );
         }
         if (obj.type === 'ball') {
-          return (
-            <group
-              key={obj.id}
-              
-              onPointerDown={onDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-            >
-              {/* Hitbox vertical integral: permite arrastrar el balón tanto en el piso como en el aire */}
-    <mesh position={[0, 2.0, 0]}>
-      <cylinderGeometry args={[1.6, 1.6, 4.2, 12]} />
-      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-    </mesh>
-              <Ball3D position={obj} isSelected={selectedObj?.id === obj.id} onClick={() => setSelectedObj(obj)} />
-            </group>
-          );
-        }
+        const bx = pos?.x ?? pos?.[0] ?? 0;
+        const bz = pos?.z ?? pos?.[2] ?? 0;
+        const by = Math.max(0.24, Number(obj?.elevation || obj?.altitude || 0.24));
+
+        return (
+          <group
+            key={obj.id}
+            position={[bx, by, bz]}
+            onPointerDown={onDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          >
+            {/* Hitbox para arrastrar */}
+            <mesh position={[0, 0.5, 0]}>
+              <cylinderGeometry args={[1.2, 1.2, 1.8, 12]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
+
+            {/* Balón 3D visible garantizado */}
+            <mesh castShadow receiveShadow>
+              <sphereGeometry args={[0.35, 24, 24]} />
+              <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
+            </mesh>
+            <mesh position={[0, 0, 0.22]}>
+              <sphereGeometry args={[0.15, 12, 12]} />
+              <meshStandardMaterial color="#111111" roughness={0.5} />
+            </mesh>
+          </group>
+        );
+      
+    }
         if (['cone', 'saucer', 'ring', 'pole', 'hurdle', 'dummy', 'mini_goal', 'ladder', 'rebounder', 'trampoline', 'mat'].includes(obj.type)) {
           return (
             <group
