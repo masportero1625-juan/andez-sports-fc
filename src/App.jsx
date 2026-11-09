@@ -4094,7 +4094,6 @@ export default function App() {
 
     setIsGeneratingPrompt(true);
 
-    // Despachador universal: distribuye a objects, drawings y textBlocks
     const dispatchTacticalElements = (list) => {
       const fieldObjects = [];
       const newDrawings = [];
@@ -4102,63 +4101,43 @@ export default function App() {
 
       list.forEach((item, idx) => {
         const itemType = (item.type || '').toLowerCase();
+        const baseId = item.id || `${itemType}_${idx}_${Date.now()}`;
 
-        // 1. Líneas y vectores (rectas, curvas, punteadas, dribling/conducción)
-        if (itemType === 'arrow' || itemType === 'line' || itemType === 'drawing' || itemType === 'curve' || itemType === 'dribble') {
-          const sx = Number(item.start?.x ?? item.startX ?? item.x ?? 11);
-          const sy = Number(item.start?.y ?? item.startY ?? item.y ?? 34);
-          const ex = Number(item.end?.x ?? item.endX ?? item.x2 ?? (sx + 10));
-          const ey = Number(item.end?.y ?? item.endY ?? item.y2 ?? sy);
-          
-          let lineType = 'arrow';
-          if (itemType === 'dribble' || item.style === 'dribble' || item.style === 'wavy') {
-            lineType = 'dribble';
-          } else if (itemType === 'curve' || item.style === 'curve' || item.curved) {
-            lineType = 'curve';
-          } else if (item.style === 'dashed' || item.dashed === true) {
-            lineType = 'dashed';
-          }
-
+        if (itemType === 'arrow' || itemType === 'line' || itemType === 'curve' || itemType === 'dribble') {
           newDrawings.push({
-            id: item.id || `drawing_${idx}_${Date.now()}`,
-            type: lineType,
-            start: { x: sx, y: sy },
-            end: { x: ex, y: ey },
-            color: item.color || (lineType === 'dashed' ? '#facc15' : lineType === 'dribble' ? '#38bdf8' : '#ffffff'),
-            strokeW: item.strokeW || item.strokeWidth || 1.4
+            id: baseId,
+            type: item.style || (itemType === 'arrow' ? 'arrow' : itemType),
+            start: { x: Number(item.startX ?? item.start?.x ?? 11), y: Number(item.startY ?? item.start?.y ?? 34) },
+            end: { x: Number(item.endX ?? item.end?.x ?? 20), y: Number(item.endY ?? item.end?.y ?? 34) },
+            color: item.color || '#ffffff',
+            width: item.strokeW || item.width || 1.4
           });
           return;
         }
 
-        // 2. Textos e instrucciones (Bloqueo estricto anti-desbordes)
         if (itemType === 'text') {
-          let val = (item.text || item.content || item.label || '').trim();
-          
-          // Si el texto es una frase larga, la orden completa o supera 25 letras, SE IGNORA POR COMPLETO
+          const val = (item.text || '').trim();
           if (!val || val.length > 25) return;
-
           newTextBlocks.push({
-            id: item.id || `text_${idx}_${Date.now()}`,
+            id: baseId,
             text: val.toUpperCase(),
             x: Math.max(8, Math.min(95, Number(item.x ?? 25))),
             y: Math.max(8, Math.min(60, Number(item.y ?? 34))),
             color: item.color || '#ffffff',
-            size: item.size || 2.2,
+            size: item.size || 2.8,
             isBold: true,
             isUnderline: false
           });
           return;
         }
 
-        // 3. Fichas de jugadores, balones y accesorios completos
         let rot = item.rotation ?? 0;
-        if (item.rotation === undefined) {
-          if (itemType === 'ladder' || itemType === 'hurdle') rot = 90;
-        }
+        if (item.rotation === undefined && (itemType === 'ladder' || itemType === 'hurdle')) rot = 90;
 
         fieldObjects.push({
           ...item,
-          id: item.id || `obj_${idx}_${Date.now()}`,
+          id: baseId,
+          type: itemType,
           x: Number(item.x ?? 52.5),
           y: Number(item.y ?? 34),
           rotation: rot,
@@ -4168,7 +4147,9 @@ export default function App() {
 
       if (fieldObjects.length > 0) {
         setObjects(fieldObjects);
-        recordHistory(fieldObjects);
+        if (typeof recordHistory === 'function') {
+          recordHistory(fieldObjects);
+        }
       }
       if (newDrawings.length > 0) {
         setDrawings(prev => [...prev, ...newDrawings]);
@@ -4178,69 +4159,15 @@ export default function App() {
       }
     };
 
-    // Analizador semántico avanzado de contingencia: nunca muestra datos viejos ni fijos
-    const buildAdvancedTactics = (text) => {
-      const t = text.toLowerCase();
-      const list = [];
+    const rawKey = import.meta.env.VITE_GEMINI_API_KEY || "AQ.Ab8RN6KxpkZkpf_2B6GmHER07VzWZkrXBESDXRn9Xi-AcfZnXg";
+    const apiKey = String(rawKey).replace(/[^a-zA-Z0-9_.-]/g, '');
 
-      // Rótulos tácticos garantizados (se colocan siempre en sus coordenadas exactas)
-      list.push({ id: 't_shot', type: 'text', text: 'TIRO DIRECTO', x: 22, y: 18, color: '#ffffff' });
-      list.push({ id: 't_drib', type: 'text', text: 'DRIBLING Y CENTRO', x: 18, y: 52, color: '#ffffff' });
-      list.push({ id: 't_penal', type: 'text', text: 'ZONA DE REMATE', x: 14, y: 42, color: '#ffffff' });
-      list.push({ id: 't_trans', type: 'text', text: 'TRANSICIÓN DEFENSIVA', x: 52, y: 8, color: '#ffffff' });
-      // 2. Transición y finalización con barrera, maniquíes y tiro
-      if (t.includes('tiro') || t.includes('maniqu') || t.includes('barrera') || t.includes('finalizac')) {
-        // Arquero en portería
-        list.push({ id: 'p_gk', type: 'player', number: '1', role: 'GK', team: 'gk', x: 7, y: 34, rotation: 0 });
-        // Barrera de maniquíes en el borde del área
-        list.push({ id: 'm_dum1', type: 'dummy', x: 22, y: 28, color: '#eab308' });
-        list.push({ id: 'm_dum2', type: 'dummy', x: 22, y: 31, color: '#eab308' });
-        list.push({ id: 'm_dum3', type: 'dummy', x: 22, y: 34, color: '#eab308' });
-        // Conos de tiro libre
-        list.push({ id: 'm_c1', type: 'cone', x: 25, y: 27, color: '#ea580c' });
-        list.push({ id: 'm_c2', type: 'cone', x: 25, y: 35, color: '#ea580c' });
-        // Volante 10 con balón
-        list.push({ id: 'p_10', type: 'player', number: '10', role: 'MCO', team: 'blue', x: 28, y: 31, rotation: 180 });
-        list.push({ id: 'b_free', type: 'ball', x: 27, y: 31 });
-        // Tiro con rosca hacia el arco
-        list.push({ id: 'l_shot', type: 'arrow', style: 'curve', startX: 27, startY: 31, endX: 5, endY: 30, color: '#facc15' });
+    if (!apiKey) {
+      alert("Error: No se encontró la API Key de Gemini.");
+      setIsGeneratingPrompt(false);
+      return;
+    }
 
-        // Banda izquierda: extremo 7, dribling entre 4 conos y centro al penal
-        list.push({ id: 'p_7', type: 'player', number: '7', role: 'EI', team: 'blue', x: 30, y: 60, rotation: 180 });
-        list.push({ id: 'm_cd1', type: 'cone', x: 24, y: 61, color: '#ea580c' });
-        list.push({ id: 'm_cd2', type: 'cone', x: 19, y: 59, color: '#ea580c' });
-        list.push({ id: 'm_cd3', type: 'cone', x: 14, y: 61, color: '#ea580c' });
-        list.push({ id: 'm_cd4', type: 'cone', x: 9, y: 59, color: '#ea580c' });
-        list.push({ id: 'l_drib', type: 'arrow', style: 'dribble', startX: 30, startY: 60, endX: 8, endY: 60, color: '#38bdf8' });
-        // Centro hacia el 9
-        list.push({ id: 'p_9', type: 'player', number: '9', role: 'DC', team: 'blue', x: 14, y: 34, rotation: 180 });
-        list.push({ id: 'l_cross', type: 'arrow', style: 'solid', startX: 8, endY: 34, endX: 14, startY: 60, color: '#ffffff' });
-
-        // Mitad de cancha: mini porterías y centrales rivales
-        list.push({ id: 'mg_1', type: 'mini_goal', x: 52.5, y: 18 });
-        list.push({ id: 'mg_2', type: 'mini_goal', x: 52.5, y: 50 });
-        list.push({ id: 'p_r4', type: 'player', number: '4', role: 'CB', team: 'red', x: 48, y: 22, rotation: 0 });
-        list.push({ id: 'p_r5', type: 'player', number: '5', role: 'CB', team: 'red', x: 48, y: 46, rotation: 0 });
-        list.push({ id: 'l_rep', type: 'arrow', style: 'dashed', startX: 42, startY: 34, endX: 52, endY: 34, color: '#facc15' });
-      }
-
-      // Si no fue de tiro, pero tiene escalera / vallas / estacas
-      if (list.length === 0 && (t.includes('escalera') || t.includes('coordinaci'))) {
-        list.push({ id: 'm_ladder', type: 'ladder', x: 20, y: 15, rotation: 90 });
-        list.push({ id: 'm_h1', type: 'hurdle', x: 28, y: 15, rotation: 90 });
-        list.push({ id: 'm_h2', type: 'hurdle', x: 33, y: 15, rotation: 90 });
-        list.push({ id: 'm_h3', type: 'hurdle', x: 38, y: 15, rotation: 90 });
-        list.push({ id: 'p_8', type: 'player', number: '8', role: 'MC', team: 'blue', x: 15, y: 15 });
-        list.push({ id: 'l_run_circ', type: 'arrow', startX: 16, startY: 15, endX: 42, endY: 15, style: 'dashed', color: '#facc15' });
-      }
-
-      return list.length > 0 ? list : [
-        { id: 'p_1', type: 'player', number: '1', role: 'GK', team: 'gk', x: 11, y: 34 },
-        { id: 'b_1', type: 'ball', x: 12.5, y: 34 }
-      ];
-    };
-
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     const promptDirecto = `Cancha fútbol (105x68 m). Centro (52.5, 34).
 Instrucción: "${promptText}".
 Devuelve ÚNICAMENTE un array JSON plano:
@@ -4251,27 +4178,26 @@ Devuelve ÚNICAMENTE un array JSON plano:
 - Materiales: {"id":"m1","type":"cone"|"hurdle"|"pole"|"ladder"|"dummy"|"mini_goal"|"hoop","x":20,"y":20,"rotation":0,"color":"#ea580c"|"#eab308"}
 Sin markdown. Inicia con [ y termina con ]:`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
-
     try {
-      if (!apiKey) throw new Error("Sin API Key");
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+      let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptDirecto }] }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 900,
-            responseMimeType: "application/json"
-          }
+          contents: [{ role: "user", parts: [{ text: promptDirecto }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
         })
       });
 
-      clearTimeout(timeoutId);
+      if (!response.ok) {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: promptDirecto }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+          })
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -4280,8 +4206,8 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
       const data = await response.json();
       let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      
       rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-
       const jsonMatch = rawText.match(/\[[\s\S]*\]/);
       if (jsonMatch) rawText = jsonMatch[0];
 
@@ -4289,50 +4215,18 @@ Sin markdown. Inicia con [ y termina con ]:`;
       if (Array.isArray(parsedObjects) && parsedObjects.length > 0) {
         dispatchTacticalElements(parsedObjects);
       } else {
-        throw new Error("Respuesta vacía");
+        throw new Error("La IA devolvió una respuesta vacía o mal formateada.");
       }
     } catch (err) {
-      clearTimeout(timeoutId);
-      // Extrae la semántica real solicitada
-      const fallbackList = buildAdvancedTactics(promptText);
-      dispatchTacticalElements(fallbackList);
+      console.error("[Motor IA] Error crítico:", err);
+      alert(`Error al generar táctica: ${err.message}`);
     } finally {
       setIsGeneratingPrompt(false);
       setShowPromptModal(false);
       setPromptText('');
     }
-  };
-
-  const maxX = isPC ? (pitchMode === 'half' ? 55 : 105) : 68;
-  const maxY = isPC ? 68 : (pitchMode === 'half' ? 85 : 105);
-
-  const getCoordinates = (e) => {
-    if (!svgRef.current) return { x: maxX / 2, y: maxY / 2 };
-    const pt = svgRef.current.createSVGPoint();
-    pt.x = e.touches ? e.touches[0].clientX : e.clientX;
-    pt.y = e.touches ? e.touches[0].clientY : e.clientY;
-    const c = pt.matrixTransform(svgRef.current.getScreenCTM().inverse());
-    return { x: Math.max(1, Math.min(maxX - 1, c.x)), y: Math.max(1, Math.min(maxY - 1, c.y)) };
-  };
-
-  const recordHistory = (objs) => {
-    const nextH = history.slice(0, historyIndex + 1);
-    nextH.push(JSON.parse(JSON.stringify(objs)));
-    setHistory(nextH);
-    setHistoryIndex(nextH.length - 1);
-  };
-
-  const handlePointerDown = (e, obj) => {
-    e.stopPropagation();
-    if (tool === 'eraser') {
-      const f = objects.filter(o => o.id !== obj.id);
-      setObjects(f); recordHistory(f); return;
-    }
-    if (tool !== 'move') return;
-    setSelectedMaterial(obj.type !== 'player' && obj.type !== 'ball' ? obj : null);
-    setSelectedObj(obj);
-    isDraggingRef.current = true;
-  };
+    };
+  
 
   const handlePitchPointerDown = (e) => {
     const c = getCoordinates(e);
@@ -4362,13 +4256,13 @@ Sin markdown. Inicia con [ y termina con ]:`;
   };
 
   const handlePointerUp = () => {
-    if (isDraggingRef.current) { isDraggingRef.current = false; recordHistory(objects); }
+    if (isDraggingRef.current) { isDraggingRef.current = false; }
     if (currentLine) { setDrawings(prev => [...prev, currentLine]); setCurrentLine(null); }
   };
 
   const rotateObject = (id) => {
     const u = objects.map(o => o.id === id ? { ...o, rotation: ((o.rotation || 0) + 45) % 360 } : o);
-    setObjects(u); recordHistory(u);
+    setObjects(u);
   };
 
   const addElement = (itemType, extra = {}) => {
@@ -4379,7 +4273,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
     const item = { id, type: itemType, x: spawnX, y: spawnY, rotation: 0, name: '', number: String(extra.number || count), ...extra };
     const nextObjs = [...objects, item];
     setObjects(nextObjs);
-    recordHistory(nextObjs);
+    
   };
 
   const applyTacticalSystem = (sysKey) => {
@@ -5032,7 +4926,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                       setSelectedObj={setSelectedObj}
                       teamColors={teamColors}
                       cameraLocked={cameraLocked}
-                      recordHistory={recordHistory}
+                    
                       isPC={isPC}
                       onDragStart={cancelPlayerFx}
                     />
