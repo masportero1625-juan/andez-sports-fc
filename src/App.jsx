@@ -4341,12 +4341,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
   return (
     <div className="flex flex-col h-[100dvh] w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black">
       
-      {/* OVERLAY BLOQUEO MODO VERTICAL (PORTRAIT) EN MÓVILES */}
-      <div className="fixed inset-0 z-[9999] bg-zinc-950 flex-col items-center justify-center text-center px-6 hidden portrait:flex md:portrait:hidden">
-        <RotateCw className="w-12 h-12 text-amber-400 mb-4 animate-[spin_3s_linear_infinite]" />
-        <h2 className="text-xl font-black text-white mb-2">Gira tu dispositivo</h2>
-        <p className="text-sm text-zinc-400">Para una experiencia óptima, utiliza la pizarra en modo horizontal.</p>
-      </div>
+      
 
       {/* MEMBRETE INSTITUCIONAL EXCLUSIVO PARA IMPRESIÓN (PDF / HOJA FÍSICA) */}
       <div className="hidden print:flex items-center justify-between border-b-2 border-black pb-4 mb-4 w-full px-6 pt-2 bg-white">
@@ -4478,12 +4473,12 @@ Sin markdown. Inicia con [ y termina con ]:`;
         {/* PANELES LATERALES FLOTANTES (ESTILO TACTICALPAD DEFINITIVO) */}
         
         {/* LADO IZQUIERDO: EQUIPO LOCAL Y MENÚ */}
-        <div className="absolute top-16 bottom-20 left-[7%] sm:left-[8%] lg:left-[9%] z-40 flex flex-col justify-between items-center select-none pointer-events-none">
+        <div className="absolute top-12 bottom-16 left-2 sm:left-[7%] sm:top-16 sm:bottom-20 z-40 flex flex-col items-center justify-between pointer-events-none">
           {/* Cápsula Superior Local */}
           <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
               onClick={() => { setRosterTeam('blue'); setBottomBarMode(bottomBarMode === 'roster' && rosterTeam === 'blue' ? 'menu' : 'roster'); }}
-              className="w-11 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-inner mb-2 border border-white/20 transition-transform hover:scale-105 active:scale-95"
+              className="w-9 h-10 sm:w-11 sm:h-14 rounded-xl flex items-center justify-center font-black text-white text-xs sm:text-sm shadow-lg pointer-events-auto transition-transform active:scale-95"
               style={{ backgroundColor: teamColors.blue }}
               title="Plantilla Local"
             >
@@ -4521,12 +4516,12 @@ Sin markdown. Inicia con [ y termina con ]:`;
         </div>
 
         {/* LADO DERECHO: EQUIPO VISITANTE Y HERRAMIENTAS */}
-        <div className="absolute top-16 bottom-20 right-[7%] sm:right-[8%] lg:right-[9%] z-40 flex flex-col justify-between items-center select-none pointer-events-none">
+        <div className="absolute top-12 bottom-16 right-2 sm:right-[7%] sm:top-16 sm:bottom-20 z-40 flex flex-col items-center justify-between pointer-events-none">
           {/* Cápsula Superior Visitante */}
           <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
               onClick={() => { setRosterTeam('red'); setBottomBarMode(bottomBarMode === 'roster' && rosterTeam === 'red' ? 'menu' : 'roster'); }}
-              className="w-11 h-14 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-inner mb-2 border border-white/20 transition-transform hover:scale-105 active:scale-95"
+              className="w-9 h-10 sm:w-11 sm:h-14 rounded-xl flex items-center justify-center font-black text-white text-xs sm:text-sm shadow-lg pointer-events-auto transition-transform active:scale-95"
               style={{ backgroundColor: teamColors.red }}
               title="Plantilla Visitante"
             >
@@ -4609,7 +4604,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
             style={{ touchAction: 'none' }}
             preserveAspectRatio="xMidYMid meet"
           
-            viewBox={isPC ? (pitchMode === 'half' ? "-2 -1 59 70" : "-3 -1 111 70") : (pitchMode === 'half' ? "-1 -2 70 89" : "-1 -2 70 109")}
+            viewBox={isLandscape ? "0 0 105 68" : "-3 -1 111 70"}
           >
       <defs>
               <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" stroke="none" /></marker>
@@ -5806,7 +5801,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-[#1a1a1a] flex flex-col shrink-0 z-30 border-t border-zinc-800 no-print max-w-full select-none h-14 sm:h-16">
+      <footer className="bg-[#1a1a1a] flex flex-col shrink-0 z-30 border-t border-zinc-800 no-print w-full select-none h-12 text-xs">
         
         {/* LÍNEA DE TIEMPO / FOTOGRAMAS */}
         {bottomBarMode === 'timeline' && (
@@ -5904,7 +5899,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         )}
 
         {/* CONTENEDOR PRINCIPAL DE LA BARRA INFERIOR */}
-        <div className="w-full px-2 py-2 flex items-center justify-start sm:justify-center overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <div className="w-full h-full px-1 flex items-center justify-between overflow-hidden">
           
           {/* MODO: MENÚ PRINCIPAL */}
           {/* MODO: MENÚ PRINCIPAL (ESTILO TACTICALPAD VECTORIAL) */}
@@ -5914,12 +5909,12 @@ Sin markdown. Inicia con [ y termina con ]:`;
           {/* MODO: MENÚ PRINCIPAL (TACTICALPAD 1:1 VECTOR OFICIAL) */}
           {/* MODO: MENÚ PRINCIPAL (ESCALA REAL TACTICALPAD) */}
           {bottomBarMode === 'menu' && (
-  <div className="w-full flex items-center justify-start sm:justify-center gap-1 sm:gap-4 px-2 sm:px-4 py-1 sm:py-2.5 bg-[#111113] overflow-x-auto scrollbar-none select-none">
+  <div className="w-full h-full flex items-center justify-between gap-0.5 px-0.5">
     
     {/* 1. Nuevo Proyecto */}
     <button 
       onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} 
-      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+      className="flex flex-col items-center justify-center flex-1 min-w-0 px-0.5 py-0.5 w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
     >
       <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
         <path strokeLinecap="round" strokeLinejoin="round" d="M7 4h11l7 7v16a1.5 1.5 0 01-1.5 1.5H7A1.5 1.5 0 015.5 27V5.5A1.5 1.5 0 017 4z" />
