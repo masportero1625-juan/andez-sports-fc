@@ -4853,7 +4853,12 @@ Sin markdown. Inicia con [ y termina con ]:`;
                 const hasName = obj.name && obj.name.trim().length > 0;
                 const w = Math.max(14, (obj.name || '').length * 1.5 + 4);
                 return (
-                  <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={e => handlePointerDown(e, obj)} onDoubleClick={() => { setEditingPlayer(obj); setPlayerCustomName(obj.name || ''); setPlayerCustomNumber(obj.number); }} className="cursor-grab active:cursor-grabbing touch-none select-none">
+                  <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => {
+      e.stopPropagation();
+      setSelectedObj(obj);
+      isDraggingRef.current = obj.id;
+      if (tool !== 'move') setTool('move');
+    }}>
                     <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'blue' ? teamColors.blue : teamColors.red))} stroke="#ffffff" strokeWidth="0.6" />
                     <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" pointerEvents="none">{obj.number}</text>
                     {hasName && (
