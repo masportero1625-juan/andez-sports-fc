@@ -3180,6 +3180,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       <StadiumEnvironment />
 
       {/* Malla receptora de interacción táctil y mouse con rango amplio */}
+      {/* Malla receptora de interacción táctil y mouse con rango amplio */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.02, 0]}
@@ -3187,6 +3188,10 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
           if (window.__onPickFlightTarget && e.point) {
             e.stopPropagation();
             window.__onPickFlightTarget(e.point);
+          } else if (cameraLocked) {
+            // Si hace clic en el pasto sin tocar ficha, limpia la selección
+            setSelectedObj(null);
+            setSelectedMaterial(null);
           }
         }}
         onPointerMove={handlePointerMove}
@@ -3223,8 +3228,6 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       position={[pos?.x ?? pos?.[0] ?? 0, 0, pos?.z ?? pos?.[2] ?? 0]}
       rotation={[0, finalRotY, 0]}
       onPointerDown={onDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
             >
               {/* Hitbox táctil ampliada para móvil */}
