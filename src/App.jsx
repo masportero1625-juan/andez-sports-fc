@@ -4452,12 +4452,12 @@ Sin markdown. Inicia con [ y termina con ]:`;
           </button>
 
           <button 
-            onClick={() => { if (confirm('¿Cerrar sesión?')) window.location.reload(); }} 
-            className="p-1.5 sm:p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition"
-            title="Cerrar Sesión"
-          >
-            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
+  onClick={handleLogout} 
+  className="p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition"
+  title="Cerrar Sesión"
+>
+  <LogOut className="w-4 h-4" />
+</button>
         </div>
       </header>
 
