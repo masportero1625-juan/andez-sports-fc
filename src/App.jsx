@@ -3207,7 +3207,15 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
 
       {objects.map((obj) => {
         const pos = toWorld(obj);
-        const onDown = (e) => handlePointerDown(e, obj);
+        const onDown = (e) => {
+  if (e.cancelable) e.preventDefault();
+  e.stopPropagation();
+  if (!cameraLocked) return;
+  setSelectedObj(obj);
+  dragId.current = obj.id;
+  isDragging.current = true;
+  setActiveDragId(obj.id);
+};
 
         if (obj.type === 'player') {
   const col = obj.customColor || (
