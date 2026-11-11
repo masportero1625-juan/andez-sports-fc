@@ -4255,10 +4255,10 @@ Sin markdown. Inicia con [ y termina con ]:`;
   };
 
   const handlePointerMove = (e) => {
-    if (isDraggingRef.current && selectedObj) {
+    if (isDraggingRef.current) {
       if (e.cancelable) e.preventDefault();
       const c = getCoordinates(e);
-      setObjects(prev => prev.map(o => o.id === selectedObj.id ? { ...o, x: c.x, y: c.y } : o));
+      setObjects(prev => prev.map(o => o.id === isDraggingRef.current ? { ...o, x: c.x, y: c.y } : o));
       setTextBlocks(prev => prev.map(t => t.id === selectedObj.id ? { ...t, x: c.x, y: c.y } : t));
     } else if (currentLine) {
       if (e.cancelable) e.preventDefault();
