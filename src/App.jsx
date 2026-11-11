@@ -4604,7 +4604,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
             style={{ touchAction: 'none' }}
             preserveAspectRatio="xMidYMid meet"
           
-            viewBox={isLandscape ? "0 0 105 68" : "-3 -1 111 70"}
+            viewBox={isPC ? "-3 -1 111 70" : "-3 -1 111 70"}
           >
       <defs>
               <marker id="arrow-white" viewBox="0 0 10 10" refX="1" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="4" orient="auto"><path d="M 0 1 L 8 5 L 0 9 L 2 5 z" fill="#ffffff" stroke="none" /></marker>
