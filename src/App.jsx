@@ -3049,6 +3049,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
   };
   const handlePointerDown = (e, obj) => {
     if (!cameraLocked) return;
+    if (e.cancelable) e.preventDefault();
     e.stopPropagation();
     if (onDragStart) onDragStart(obj);
     setSelectedObj(obj);
@@ -3204,17 +3205,24 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
         const onDown = (e) => handlePointerDown(e, obj);
 
         if (obj.type === 'player') {
-          const col = obj.customColor || (
-            obj.role === 'GK'
-              ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk)
-              : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
-          );
-          return (
-            <group
-              key={obj.id}
-              position={[pos?.x ?? pos?.[0] ?? 0, 0, pos?.z ?? pos?.[2] ?? 0]}
-            rotation={[0, obj.rotationY || 0, 0]}
-              onPointerDown={onDown}
+  const col = obj.customColor || (
+    obj.role === 'GK'
+      ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk)
+      : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
+  );
+
+  // Rotación automática hacia el campo rival
+  let baseRot = 0;
+  if (obj.team === 'blue' || obj.team === 'gk') baseRot = Math.PI / 2;
+  if (obj.team === 'red' || obj.team === 'gk_away') baseRot = -Math.PI / 2;
+  const finalRotY = obj.rotationY !== undefined ? obj.rotationY : baseRot;
+
+  return (
+    <group
+      key={obj.id}
+      position={[pos?.x ?? pos?.[0] ?? 0, 0, pos?.z ?? pos?.[2] ?? 0]}
+      rotation={[0, finalRotY, 0]}
+      onPointerDown={onDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
@@ -4045,12 +4053,15 @@ export default function App() {
     try {
       let stream = null;
 
-      // 1. En móviles o en modo 3D, capturar directamente el lienzo WebGL sin pedir pantalla completa
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert('Tu navegador móvil no soporta la grabación de pantalla nativa. Por favor, utiliza la función "Grabar Pantalla" integrada en tu celular (iOS/Android).');
+        return;
+      }
+
       const canvasEl = document.querySelector('canvas');
-      if (canvasEl && (viewMode === '3d' || !navigator.mediaDevices?.getDisplayMedia)) {
+      if (canvasEl && (viewMode === '3d')) {
         stream = canvasEl.captureStream(30);
-      } else if (navigator.mediaDevices?.getDisplayMedia) {
-        // 2. En PC permite la selección de pantalla/ventana habitual
+      } else {
         stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 } });
       }
 
@@ -4229,6 +4240,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
   
 
   const handlePitchPointerDown = (e) => {
+    if (e.cancelable) e.preventDefault();
     const c = getCoordinates(e);
     if (tool === 'text') {
       setPendingTextPos(c);
@@ -4327,9 +4339,16 @@ Sin markdown. Inicia con [ y termina con ]:`;
   const currentCategoryContext = isTeacherRestricted ? authenticatedUser.categoryId : (selectedCategoryFilter === 'all' ? (categories[0]?.id || 'sub10') : selectedCategoryFilter);
 
   return (
-    <div
-      className="flex flex-col h-screen w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black"
-    > {/* MEMBRETE INSTITUCIONAL EXCLUSIVO PARA IMPRESIÓN (PDF / HOJA FÍSICA) */}
+    <div className="flex flex-col h-[100dvh] w-screen bg-black overflow-hidden select-none font-sans print:bg-white print:text-black">
+      
+      {/* OVERLAY BLOQUEO MODO VERTICAL (PORTRAIT) EN MÓVILES */}
+      <div className="fixed inset-0 z-[9999] bg-zinc-950 flex-col items-center justify-center text-center px-6 hidden portrait:flex md:portrait:hidden">
+        <RotateCw className="w-12 h-12 text-amber-400 mb-4 animate-[spin_3s_linear_infinite]" />
+        <h2 className="text-xl font-black text-white mb-2">Gira tu dispositivo</h2>
+        <p className="text-sm text-zinc-400">Para una experiencia óptima, utiliza la pizarra en modo horizontal.</p>
+      </div>
+
+      {/* MEMBRETE INSTITUCIONAL EXCLUSIVO PARA IMPRESIÓN (PDF / HOJA FÍSICA) */}
       <div className="hidden print:flex items-center justify-between border-b-2 border-black pb-4 mb-4 w-full px-6 pt-2 bg-white">
         <div className="flex items-center gap-4">
           {clubLogo ? (
@@ -4353,8 +4372,9 @@ Sin markdown. Inicia con [ y termina con ]:`;
           <span className="text-[10px] text-zinc-600 block">Sistema Táctico Profesional</span>
         </div>
       </div>
-      {/* HEADER DE GESTIÓN Y ADMINISTRACIÓN */}
-      <header className="bg-[#121214] border-b border-zinc-800/80 px-4 py-2.5 flex items-center justify-between z-30 select-none shadow-md">
+
+      {/* HEADER DE GESTIÓN Y ADMINISTRACIÓN (ALTURA FIJA RESPONSIVA) */}
+      <header className="bg-[#121214] border-b border-zinc-800/80 px-4 flex items-center justify-between z-30 select-none shadow-md h-10 sm:h-12 shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
         {/* Lado Izquierdo: Marca Institucional y Gestión */}
         <div className="flex items-center gap-3">
           <label className="relative cursor-pointer group flex items-center justify-center" title="Cambiar Logo Institucional">
@@ -4372,9 +4392,9 @@ Sin markdown. Inicia con [ y termina con ]:`;
               }} 
             />
             {clubLogo ? (
-              <img src={clubLogo} alt="Logo Club" className="w-9 h-9 object-contain rounded-full border border-zinc-700 group-hover:ring-2 ring-amber-400 transition" />
+              <img src={clubLogo} alt="Logo Club" className="w-7 h-7 sm:w-9 sm:h-9 object-contain rounded-full border border-zinc-700 group-hover:ring-2 ring-amber-400 transition" />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center font-black text-[10px] text-amber-400 group-hover:scale-105 transition">
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center font-black text-[8px] sm:text-[10px] text-amber-400 group-hover:scale-105 transition">
                 ANDEZ
               </div>
             )}
@@ -4382,63 +4402,66 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
           <button 
             onClick={() => setShowLibraryModal(true)} 
-            className="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700/60 transition flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700/60 transition flex items-center justify-center"
             title="Biblioteca de Sesiones"
           >
-            <Folder className="w-4 h-4" />
+            <Folder className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
-
-          
         </div>
 
         {/* Lado Derecho: Controles Administrativos */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button 
             onClick={startRecording} 
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-xs font-semibold border border-zinc-700/60 transition"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-[10px] sm:text-xs font-semibold border border-zinc-700/60 transition"
             title="Grabar Video / Sesión"
           >
-            <Video className="w-3.5 h-3.5 text-red-500" />
+            <Video className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-500" />
             <span className="hidden sm:inline">Grabar</span>
           </button>
 
           <button 
-  onClick={() => { if (typeof handleExportImage === 'function') handleExportImage(); else alert('Exportando imagen...'); }} 
-  className="p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
-  title="Descargar Imagen PNG"
->
-  <Download className="w-4 h-4" />
-</button>
+            onClick={() => { if (typeof handleExportImage === 'function') handleExportImage(); else alert('Exportando imagen...'); }} 
+            className="p-1.5 sm:p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
+            title="Descargar Imagen PNG"
+          >
+            <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
 
           <button 
-  onClick={() => window.print()} 
-  className="p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
-  title="Imprimir Pizarra"
->
-  <Printer className="w-4 h-4" />
-</button>
+            onClick={() => window.print()} 
+            className="p-1.5 sm:p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
+            title="Imprimir Pizarra"
+          >
+            <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
 
           <button 
             onClick={() => setShowSaveModal(true)} 
-            className="p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
+            className="p-1.5 sm:p-2 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg border border-zinc-700/60 transition"
             title="Guardar Sesión"
           >
-            <Save className="w-4 h-4" />
+            <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
 
-          <div className="w-px h-6 bg-zinc-800 mx-1"></div>
+          <div className="w-px h-4 sm:h-6 bg-zinc-800 mx-0.5 sm:mx-1"></div>
 
-          <div className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-[11px] tracking-wider flex items-center gap-1.5">
+          {/* BOTÓN SUPER ADMIN CON SOPORTE TÁCTIL */}
+          <button 
+            onClick={() => setShowAdminDashboard(true)}
+            onTouchEnd={(e) => { e.preventDefault(); setShowAdminDashboard(true); }}
+            className="px-2 sm:px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-[9px] sm:text-[11px] tracking-wider flex items-center gap-1 sm:gap-1.5 cursor-pointer active:scale-95"
+          >
             <span>SUPER ADMIN</span>
-            <Lock className="w-3 h-3" />
-          </div>
+            <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+          </button>
 
           <button 
             onClick={() => { if (confirm('¿Cerrar sesión?')) window.location.reload(); }} 
-            className="p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition"
+            className="p-1.5 sm:p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition"
             title="Cerrar Sesión"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </header>
@@ -4582,9 +4605,10 @@ Sin markdown. Inicia con [ y termina con ]:`;
             onPointerDown={handlePitchPointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
-            className="w-full h-full max-h-full max-w-full touch-none select-none"
+            className="w-full h-full object-contain touch-none select-none"
+            style={{ touchAction: 'none' }}
             preserveAspectRatio="xMidYMid meet"
+          
             viewBox={isPC ? (pitchMode === 'half' ? "-2 -1 59 70" : "-3 -1 111 70") : (pitchMode === 'half' ? "-1 -2 70 89" : "-1 -2 70 109")}
           >
       <defs>
@@ -5782,7 +5806,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-[#1a1a1a] flex flex-col shrink-0 z-30 border-t border-zinc-800 no-print max-w-full select-none">
+      <footer className="bg-[#1a1a1a] flex flex-col shrink-0 z-30 border-t border-zinc-800 no-print max-w-full select-none h-14 sm:h-16">
         
         {/* LÍNEA DE TIEMPO / FOTOGRAMAS */}
         {bottomBarMode === 'timeline' && (
@@ -5890,178 +5914,178 @@ Sin markdown. Inicia con [ y termina con ]:`;
           {/* MODO: MENÚ PRINCIPAL (TACTICALPAD 1:1 VECTOR OFICIAL) */}
           {/* MODO: MENÚ PRINCIPAL (ESCALA REAL TACTICALPAD) */}
           {bottomBarMode === 'menu' && (
-            <div className="w-full flex items-center justify-center gap-2 sm:gap-5 px-4 py-3 bg-[#111113]">
-              
-              {/* 1. Nuevo Proyecto */}
-              <button 
-                onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
-              >
-                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 4h11l7 7v16a1.5 1.5 0 01-1.5 1.5H7A1.5 1.5 0 015.5 27V5.5A1.5 1.5 0 017 4z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 4v7h7M16 15v8M12 19h8" />
-                </svg>
-                <span className="text-xs text-white font-medium tracking-tight">Nuevo Proyecto</span>
-              </button>
+  <div className="w-full flex items-center justify-start sm:justify-center gap-1 sm:gap-4 px-2 sm:px-4 py-1 sm:py-2.5 bg-[#111113] overflow-x-auto scrollbar-none select-none">
+    
+    {/* 1. Nuevo Proyecto */}
+    <button 
+      onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 4h11l7 7v16a1.5 1.5 0 01-1.5 1.5H7A1.5 1.5 0 015.5 27V5.5A1.5 1.5 0 017 4z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 4v7h7M16 15v8M12 19h8" />
+      </svg>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Nuevo</span>
+    </button>
 
-              {/* 2. Abrir Proyecto */}
-              <button 
-                onClick={() => setShowLibraryModal(true)} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
-              >
-                <svg className="w-10 h-10 text-white fill-current" viewBox="0 0 32 32">
-                  <path d="M4 8.5A1.5 1.5 0 015.5 7h7.1l2.4 2.5H26A1.5 1.5 0 0127.5 11v1.5H6.8a2 2 0 00-1.95 1.6L3 25V8.5z" opacity="0.85" />
-                  <path d="M6.5 13h22.2a1.2 1.2 0 011.18 1.53l-2.6 11a1.2 1.2 0 01-1.18.87H4.8a1.2 1.2 0 01-1.18-1.53l2.6-11a1.2 1.2 0 011.18-.87z" />
-                </svg>
-                <span className="text-xs text-white font-medium tracking-tight">Abrir Proyecto</span>
-              </button>
+    {/* 2. Abrir Proyecto */}
+    <button 
+      onClick={() => setShowLibraryModal(true)} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-current" viewBox="0 0 32 32">
+        <path d="M4 8.5A1.5 1.5 0 015.5 7h7.1l2.4 2.5H26A1.5 1.5 0 0127.5 11v1.5H6.8a2 2 0 00-1.95 1.6L3 25V8.5z" opacity="0.85" />
+        <path d="M6.5 13h22.2a1.2 1.2 0 011.18 1.53l-2.6 11a1.2 1.2 0 01-1.18.87H4.8a1.2 1.2 0 01-1.18-1.53l2.6-11a1.2 1.2 0 011.18-.87z" />
+      </svg>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Abrir</span>
+    </button>
 
-              {/* 3. Guardar */}
-              <button 
-                onClick={() => {
-                  const n = { id: 'd-' + Date.now(), title: drillTitle, notes: drillNotes, category: drillCategory, date: new Date().toISOString().split('T')[0], objects, drawings };
-                  setSavedDrills([n, ...savedDrills]); alert('¡Sesión guardada!');
-                }} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
-              >
-                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
-                  <rect x="5.5" y="4" width="21" height="24" rx="2.5" />
-                  <path strokeLinecap="round" d="M9 4v7h14V4" />
-                  <rect x="10" y="17" width="12" height="11" rx="1.5" />
-                </svg>
-                <span className="text-xs text-white font-medium tracking-tight">Guardar</span>
-              </button>
+    {/* 3. Guardar */}
+    <button 
+      onClick={() => {
+        const n = { id: 'd-' + Date.now(), title: drillTitle, notes: drillNotes, category: drillCategory, date: new Date().toISOString().split('T')[0], objects, drawings };
+        setSavedDrills([n, ...savedDrills]); alert('¡Sesión guardada!');
+      }} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
+        <rect x="5.5" y="4" width="21" height="24" rx="2.5" />
+        <path strokeLinecap="round" d="M9 4v7h14V4" />
+        <rect x="10" y="17" width="12" height="11" rx="1.5" />
+      </svg>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Guardar</span>
+    </button>
 
-              {/* 4. Guardar como */}
-              <button 
-                onClick={() => setShowSaveModal(true)} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
-              >
-                <div className="relative">
-                  <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
-                    <rect x="5.5" y="4" width="21" height="24" rx="2.5" />
-                    <path strokeLinecap="round" d="M9 4v7h14V4" />
-                    <rect x="10" y="17" width="12" height="11" rx="1.5" />
-                  </svg>
-                  <div className="absolute -bottom-1 -right-1 bg-black border-2 border-white rounded-full w-5 h-5 flex items-center justify-center shadow">
-                    <span className="text-white text-xs font-black leading-none mb-0.5">+</span>
-                  </div>
-                </div>
-                <span className="text-xs text-white font-medium tracking-tight">Guardar como</span>
-              </button>
+    {/* 4. Guardar como */}
+    <button 
+      onClick={() => setShowSaveModal(true)} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <div className="relative">
+        <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
+          <rect x="5.5" y="4" width="21" height="24" rx="2.5" />
+          <path strokeLinecap="round" d="M9 4v7h14V4" />
+          <rect x="10" y="17" width="12" height="11" rx="1.5" />
+        </svg>
+        <div className="absolute -bottom-1 -right-1 bg-black border border-white rounded-full w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center shadow">
+          <span className="text-white text-[7px] sm:text-[10px] font-black leading-none mb-0.5">+</span>
+        </div>
+      </div>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Guardar +</span>
+    </button>
 
-              {/* Separador fino */}
-              <div className="w-px h-12 bg-zinc-700/60 mx-1"></div>
+    {/* Separador fino */}
+    <div className="w-px h-6 sm:h-10 bg-zinc-700/60 mx-0.5 shrink-0"></div>
 
-              {/* 5. Ajustes */}
-              <button 
-                onClick={() => setShowKitPalette(prev => !prev)} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
-              >
-                <div className="relative w-10 h-10 flex items-center justify-center">
-                  <svg className="w-9 h-9 text-white fill-current" viewBox="0 0 24 24">
-                    <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.32.07-.65.07-.98 0-.33-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 13.5 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65z" />
-                  </svg>
-                  <div className="absolute -top-1 -right-1 bg-black rounded-full border-2 border-white w-5 h-5 flex items-center justify-center">
-                    <span className="text-[10px] font-black text-white leading-none">?</span>
-                  </div>
-                </div>
-                <span className="text-xs text-white font-medium tracking-tight">Ajustes</span>
-              </button>
+    {/* 5. Ajustes */}
+    <button 
+      onClick={() => setShowKitPalette(prev => !prev)} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <div className="relative w-5 h-5 sm:w-8 sm:h-8 flex items-center justify-center">
+        <svg className="w-5 h-5 sm:w-7 sm:h-7 text-white fill-current" viewBox="0 0 24 24">
+          <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.32.07-.65.07-.98 0-.33-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 13.5 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65z" />
+        </svg>
+        <div className="absolute -top-1 -right-1 bg-black rounded-full border border-white w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center">
+          <span className="text-[7px] sm:text-[9px] font-black text-white leading-none">?</span>
+        </div>
+      </div>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Ajustes</span>
+    </button>
 
-              {/* 6. Compartir */}
-              <button 
-                onClick={startRecording} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
-              >
-                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 21v5a1.5 1.5 0 001.5 1.5h17A1.5 1.5 0 0026 26v-5M16 5v16M10 11l6-6 6 6" />
-                </svg>
-                <span className="text-xs text-white font-medium tracking-tight">Compartir</span>
-              </button>
+    {/* 6. Compartir */}
+    <button 
+      onClick={startRecording} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 21v5a1.5 1.5 0 001.5 1.5h17A1.5 1.5 0 0026 26v-5M16 5v16M10 11l6-6 6 6" />
+      </svg>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Compartir</span>
+    </button>
 
-              {/* 7. Pizarras */}
-              <button 
-                onClick={() => setBottomBarMode(bottomBarMode === 'timeline' ? 'menu' : 'timeline')} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
-              >
-                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 32 32">
-                  <rect x="6" y="5" width="20" height="24" rx="2" strokeWidth="2.4" />
-                  <path d="M12 5V3a1 1 0 011-1h6a1 1 0 011 1v2" strokeWidth="2.4" strokeLinecap="round" />
-                  <circle cx="16" cy="17" r="3.5" strokeWidth="2" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 13l4.5 3 6-3m-6 8l3-2" />
-                  <circle cx="10" cy="13" r="1.5" fill="currentColor" stroke="none" />
-                  <circle cx="20.5" cy="13" r="1.5" fill="currentColor" stroke="none" />
-                </svg>
-                <span className="text-xs text-white font-medium tracking-tight">Pizarras</span>
-              </button>
+    {/* 7. Pizarras */}
+    <button 
+      onClick={() => setBottomBarMode(bottomBarMode === 'timeline' ? 'menu' : 'timeline')} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 32 32">
+        <rect x="6" y="5" width="20" height="24" rx="2" strokeWidth="2.4" />
+        <path d="M12 5V3a1 1 0 011-1h6a1 1 0 011 1v2" strokeWidth="2.4" strokeLinecap="round" />
+        <circle cx="16" cy="17" r="3.5" strokeWidth="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 13l4.5 3 6-3m-6 8l3-2" />
+        <circle cx="10" cy="13" r="1.5" fill="currentColor" stroke="none" />
+        <circle cx="20.5" cy="13" r="1.5" fill="currentColor" stroke="none" />
+      </svg>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Pizarras</span>
+    </button>
 
-              {/* 8. Campo */}
-              <button 
-                onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-white/10 rounded-xl transition gap-2 select-none group"
-              >
-                <svg className="w-11 h-9 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 38 28">
-                  <rect x="4" y="3" width="30" height="22" rx="1.5" strokeWidth="2.4" />
-                  <line x1="19" y1="3" x2="19" y2="25" strokeWidth="2" />
-                  <circle cx="19" cy="14" r="4.5" strokeWidth="2" />
-                  <rect x="4" y="8" width="5.5" height="12" strokeWidth="2" />
-                  <rect x="28.5" y="8" width="5.5" height="12" strokeWidth="2" />
-                  <path d="M1.5 10v8M36.5 10v8" strokeWidth="2.4" strokeLinecap="round" />
-                </svg>
-                <span className="text-xs text-white font-medium tracking-tight">Campo</span>
-              </button>
+    {/* 8. Campo */}
+    <button 
+      onClick={() => setPitchMode(pitchMode === 'full' ? 'half' : 'full')} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <svg className="w-6 h-4 sm:w-9 sm:h-7 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 38 28">
+        <rect x="4" y="3" width="30" height="22" rx="1.5" strokeWidth="2.4" />
+        <line x1="19" y1="3" x2="19" y2="25" strokeWidth="2" />
+        <circle cx="19" cy="14" r="4.5" strokeWidth="2" />
+        <rect x="4" y="8" width="5.5" height="12" strokeWidth="2" />
+        <rect x="28.5" y="8" width="5.5" height="12" strokeWidth="2" />
+        <path d="M1.5 10v8M36.5 10v8" strokeWidth="2.4" strokeLinecap="round" />
+      </svg>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Campo</span>
+    </button>
 
-              {/* 9. 3D */}
-              <button 
-                onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} 
-                className={`flex flex-col items-center justify-center w-24 sm:w-28 h-20 rounded-xl transition select-none group ${
-                  viewMode === '3d' ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400' : 'hover:bg-white/10 text-white'
-                }`}
-              >
-                <div className="flex flex-col items-center justify-center w-14 h-10">
-                  <span className="text-base font-black italic tracking-wider text-white leading-none">3D</span>
-                  <svg className="w-12 h-6 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 44 18">
-                    <polygon points="11,2 33,2 41,16 3,16" strokeLinejoin="round" />
-                    <line x1="22" y1="2" x2="22" y2="16" strokeWidth="2" />
-                    <ellipse cx="22" cy="9" rx="4.5" ry="2.2" strokeWidth="1.8" />
-                  </svg>
-                </div>
-                <span className="text-xs text-white font-medium tracking-tight">3D</span>
-              </button>
+    {/* 9. 3D */}
+    <button 
+      onClick={() => setViewMode(viewMode === '2d' ? '3d' : '2d')} 
+      className={`flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 rounded-xl transition shrink-0 group ${
+        viewMode === '3d' ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400' : 'hover:bg-white/10 text-white'
+      }`}
+    >
+      <div className="flex flex-col items-center justify-center w-7 h-5 sm:w-10 sm:h-8">
+        <span className="text-[9px] sm:text-xs font-black italic tracking-wider text-white leading-none">3D</span>
+        <svg className="w-7 h-3 sm:w-10 sm:h-5 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 44 18">
+          <polygon points="11,2 33,2 41,16 3,16" strokeLinejoin="round" />
+          <line x1="22" y1="2" x2="22" y2="16" strokeWidth="2" />
+          <ellipse cx="22" cy="9" rx="4.5" ry="2.2" strokeWidth="1.8" />
+        </svg>
+      </div>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">3D</span>
+    </button>
 
-              {/* 10. Repositorios */}
-              <button 
-                onClick={() => setShowTrainingMenu(!showTrainingMenu)} 
-                className={`flex flex-col items-center justify-center w-24 sm:w-28 h-20 rounded-xl transition gap-2 select-none group ${
-                  showTrainingMenu ? 'bg-amber-500 text-black shadow-lg' : 'hover:bg-white/10 text-white'
-                }`}
-              >
-                <svg className="w-10 h-10 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 32 32">
-                  <circle cx="23" cy="7" r="3" fill="currentColor" stroke="none" />
-                  <path d="M10 9l2.5-6h3l2.5 6" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M5 13l11-4.5 11 4.5v10l-11 5-11-5V13z" strokeWidth="2.6" strokeLinejoin="round" />
-                  <path d="M5 13l11 4.5 11-4.5M16 17.5v10" strokeWidth="2.6" />
-                </svg>
-                <span className="text-xs text-white font-medium tracking-tight">Repositorios</span>
-              </button>
+    {/* 10. Repositorios */}
+    <button 
+      onClick={() => setShowTrainingMenu(!showTrainingMenu)} 
+      className={`flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group ${
+        showTrainingMenu ? 'bg-amber-500 text-black shadow-lg' : 'hover:bg-white/10 text-white'
+      }`}
+    >
+      <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-none stroke-current stroke-[2.4]" viewBox="0 0 32 32">
+        <circle cx="23" cy="7" r="3" fill="currentColor" stroke="none" />
+        <path d="M10 9l2.5-6h3l2.5 6" strokeWidth="2" strokeLinecap="round" />
+        <path d="M5 13l11-4.5 11 4.5v10l-11 5-11-5V13z" strokeWidth="2.6" strokeLinejoin="round" />
+        <path d="M5 13l11 4.5 11-4.5M16 17.5v10" strokeWidth="2.6" />
+      </svg>
+      <span className="text-[8px] sm:text-xs text-white font-medium tracking-tight whitespace-nowrap">Materiales</span>
+    </button>
 
-              {/* Separador fino */}
-              <div className="w-px h-12 bg-zinc-700/60 mx-1"></div>
+    {/* Separador fino */}
+    <div className="w-px h-6 sm:h-10 bg-zinc-700/60 mx-0.5 shrink-0"></div>
 
-              {/* 11. IA Táctica */}
-              <button 
-                onClick={() => setShowPromptModal(true)} 
-                className="flex flex-col items-center justify-center w-24 sm:w-28 h-20 hover:bg-amber-500/20 rounded-xl transition gap-2 group select-none"
-              >
-                <svg className="w-10 h-10 text-amber-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L14.39 8.26L21 9.27L16.5 14.14L17.77 21L12 17.77L6.23 21L7.5 14.14L3 9.27L9.61 8.26L12 2Z" />
-                </svg>
-                <span className="text-xs text-amber-400 font-bold tracking-tight">IA Táctica</span>
-              </button>
+    {/* 11. IA Táctica */}
+    <button 
+      onClick={() => setShowPromptModal(true)} 
+      className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-amber-500/20 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
+    >
+      <svg className="w-5 h-5 sm:w-8 sm:h-8 text-amber-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2L14.39 8.26L21 9.27L16.5 14.14L17.77 21L12 17.77L6.23 21L7.5 14.14L3 9.27L9.61 8.26L12 2Z" />
+      </svg>
+      <span className="text-[8px] sm:text-xs text-amber-400 font-bold tracking-tight whitespace-nowrap">IA Táctica</span>
+    </button>
 
-            </div>
-          )}
+  </div>
+)}
 
           {/* MODO: HERRAMIENTAS DE DIBUJO Y MATERIALES */}
           {bottomBarMode === 'tools' && (
