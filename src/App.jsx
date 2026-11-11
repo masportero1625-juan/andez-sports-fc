@@ -3191,7 +3191,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
           } else if (cameraLocked) {
             // Si hace clic en el pasto sin tocar ficha, limpia la selección
             setSelectedObj(null);
-            setSelectedMaterial(null);
+          
           }
         }}
         onPointerMove={handlePointerMove}
