@@ -3048,9 +3048,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     };
   };
   const handlePointerDown = (e, obj) => {
-    // Si la cámara NO está bloqueada, permitimos que el evento pase para que la escena 3D rote
     if (!cameraLocked) return;
-
     if (e.cancelable) e.preventDefault();
     e.stopPropagation();
     if (onDragStart) onDragStart(obj);
