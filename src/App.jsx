@@ -4857,8 +4857,9 @@ Sin markdown. Inicia con [ y termina con ]:`;
       e.stopPropagation();
       setSelectedObj(obj);
       isDraggingRef.current = obj.id;
-      if (tool !== 'move') setTool('move');
+      if (typeof setTool === 'function') setTool('move');
     }}>
+      
                     <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'blue' ? teamColors.blue : teamColors.red))} stroke="#ffffff" strokeWidth="0.6" />
                     <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" pointerEvents="none">{obj.number}</text>
                     {hasName && (
