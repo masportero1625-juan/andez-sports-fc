@@ -3043,9 +3043,9 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     // En celular: el eje vertical Y (0..105) se mapea al largo X de la cancha 3D (-52.5..+52.5)
     // y el ancho X (0..68) se mapea al ancho Z (-34..+34)
     return {
-      x: (obj.y - 52.5),
-      z: (34 - obj.x)
-    };
+        x: (52.5 - obj.y),
+        z: (obj.x - 34)
+      };
   };
   const handlePointerDown = (e, obj) => {
     if (!cameraLocked) return;
@@ -3093,8 +3093,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
         newFieldX = targetX + 52.5;
         newFieldY = targetZ + 34;
       } else {
-        newFieldY = targetX + 52.5;
-        newFieldX = 34 - targetZ;
+        newFieldY = 52.5 - targetX;
+        newFieldX = targetZ + 34;
       }
 
       setObjects((prev) =>
@@ -3223,15 +3223,11 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
   );
 
-  // Rotación automática hacia la portería contraria según dispositivo y equipo
+  // Rotación unificada para PC, Tablet y Móvil (Azul izquierda -> derecha, Rojo derecha -> izquierda)
         const isBlueSide = (obj.team === 'blue' || obj.team === 'gk');
-        let baseRot = 0;
-        if (isPC) {
-          baseRot = isBlueSide ? 0 : Math.PI;
-        } else {
-          baseRot = isBlueSide ? Math.PI : 0;
-        }
+        const baseRot = isBlueSide ? 0 : Math.PI;
         const finalRotY = (obj.rotationY !== undefined && obj.rotationY !== 0) ? obj.rotationY : baseRot;
+        
   return (
     <group
       key={obj.id}
