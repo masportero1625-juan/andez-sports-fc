@@ -4865,11 +4865,12 @@ Sin markdown. Inicia con [ y termina con ]:`;
                 const w = Math.max(14, (obj.name || '').length * 1.5 + 4);
                 return (
                   <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => {
-      e.stopPropagation();
-      setSelectedObj(obj);
-      isDraggingRef.current = obj.id;
-      if (typeof setTool === 'function') setTool('move');
-    }}>
+            e.stopPropagation();
+            if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+            setSelectedObj(obj);
+            isDraggingRef.current = obj.id;
+            if (typeof setTool === 'function') setTool('move');
+          }}>
       
       
                     <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'blue' ? teamColors.blue : teamColors.red))} stroke="#ffffff" strokeWidth="0.6" />
@@ -4883,13 +4884,37 @@ Sin markdown. Inicia con [ y termina con ]:`;
                   </g>
                 );
               }
-              if (obj.type === 'ball') return <SoccerBall key={obj.id} x={obj.x} y={obj.y} onPointerDown={e => handlePointerDown(e, obj)} />;
-              
-              const isMatSelected = selectedMaterial?.id === obj.id;
-              const matScale = obj.scale || 1.0;
-              return (
-                <g key={obj.id}>
-                  <TrainingMaterial obj={obj} onPointerDown={e => handlePointerDown(e, obj)} onDoubleClick={() => rotateObject(obj.id)} />
+              if (obj.type === 'ball') return (
+            <SoccerBall
+              key={obj.id}
+              x={obj.x}
+              y={obj.y}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+                setSelectedObj(obj);
+                isDraggingRef.current = obj.id;
+                if (typeof setTool === 'function') setTool('move');
+              }}
+            />
+          );
+
+          const isMatSelected = selectedMaterial?.id === obj.id;
+          const matScale = obj.scale || 1.0;
+          return (
+            <g key={obj.id}>
+              <TrainingMaterial
+                obj={obj}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+                  setSelectedMaterial(obj);
+                  setSelectedObj(null);
+                  isDraggingRef.current = obj.id;
+                  if (typeof setTool === 'function') setTool('move');
+                }}
+                onDoubleClick={() => rotateObject(obj.id)}
+              />
                   {isMatSelected && (
                     <g transform={`translate(${obj.x}, ${obj.y})`} className="select-none">
                       <circle r={6 * matScale + 2} fill="none" stroke="#facc15" strokeWidth="0.5" strokeDasharray="1.2,1.2" />
