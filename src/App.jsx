@@ -4597,8 +4597,8 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         type: 'player',
                         number: p.n,
                         role: p.r,
-                        x: showSystemsModal === 'home' ? p.x : (isPC ? 105 - p.x : p.x),
-                        y: showSystemsModal === 'home' ? p.y : (isPC ? 68 - p.y : p.y),
+                        x: showSystemsModal === 'home' ? p.x : (isPC ? 105 - p.x : 68 - p.x),
+                  y: showSystemsModal === 'home' ? p.y : (isPC ? 68 - p.y : 105 - p.y),
                         team: p.r === 'GK' ? (teamTarget === 'blue' ? 'gk' : 'gk_away') : teamTarget,
                         customColor: p.r === 'GK' ? teamColors[teamTarget === 'blue' ? 'gk' : 'gk_away'] : teamColors[teamTarget],
                         name: ''
