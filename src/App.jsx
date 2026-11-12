@@ -3223,10 +3223,12 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
   );
 
-  // Rotación automática hacia el campo rival
-        let baseRot = 0;
-        if (obj.team === 'blue' || obj.team === 'gk') baseRot = 0;
-        if (obj.team === 'red' || obj.team === 'gk_away') baseRot = Math.PI;
+  // Rotación automática inteligente hacia la portería contraria (PC, Tablet y Móvil)
+        const isBlueSide = (obj.team === 'blue' || obj.team === 'gk');
+        const sameTeamObjs = objects.filter(o => o.type === 'player' && (isBlueSide ? (o.team === 'blue' || o.team === 'gk') : (o.team === 'red' || o.team === 'gk_away')));
+        const teamGk = sameTeamObjs.find(o => o.role === 'GK' || o.role === 'POR' || o.team === 'gk' || o.team === 'gk_away');
+        const refX = teamGk ? toWorld(teamGk).x : (sameTeamObjs.reduce((acc, o) => acc + toWorld(o).x, 0) / (sameTeamObjs.length || 1));
+        const baseRot = refX > 0 ? Math.PI : 0;
         const finalRotY = (obj.rotationY !== undefined && obj.rotationY !== 0) ? obj.rotationY : baseRot;
 
   return (
