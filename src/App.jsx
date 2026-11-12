@@ -3370,12 +3370,12 @@ export default function App() {
   const [isLoopPlaying, setIsLoopPlaying] = useState(false);
   const loopIntervalRef = useRef(null);
   const initialPositionsRef = useRef(null);
-  const [isPC, setIsPC] = useState(window.innerWidth > 768);
+  const [isPC, setIsPC] = useState(true);
   const [viewMode, setViewMode] = useState('2d');
   const [cameraLocked, setCameraLocked] = useState(true);
 
   useEffect(() => {
-    const handleResize = () => setIsPC(window.innerWidth > 768);
+    const handleResize = () => setIsPC(true);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
