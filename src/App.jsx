@@ -3224,10 +3224,11 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
   );
 
   // Rotación automática hacia el campo rival
-  let baseRot = 0;
-  if (obj.team === 'blue' || obj.team === 'gk') baseRot = Math.PI / 2;
-  if (obj.team === 'red' || obj.team === 'gk_away') baseRot = -Math.PI / 2;
-  const finalRotY = obj.rotationY !== undefined ? obj.rotationY : baseRot;
+        let baseRot = 0;
+        if (obj.team === 'blue' || obj.team === 'gk') baseRot = -Math.PI / 2;
+        if (obj.team === 'red' || obj.team === 'gk_away') baseRot = Math.PI / 2;
+        const manualOffset = obj.rotation ? -(obj.rotation * Math.PI) / 180 : 0;
+        const finalRotY = baseRot + manualOffset;
 
   return (
     <group
