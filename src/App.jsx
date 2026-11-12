@@ -4251,7 +4251,13 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
   const handlePitchPointerDown = (e) => {
     if (e.cancelable) e.preventDefault();
-    const c = getCoordinates(e);
+    const svg = svgRef.current;
+    if (!svg) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const c = { x: svgP.x, y: svgP.y };
     if (tool === 'text') {
       setPendingTextPos(c);
       setInputTextVal('');
@@ -4265,15 +4271,20 @@ Sin markdown. Inicia con [ y termina con ]:`;
   };
 
   const handlePointerMove = (e) => {
+    if (!isDraggingRef.current && !currentLine) return;
+    if (e.cancelable) e.preventDefault();
+    const svg = svgRef.current;
+    if (!svg) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const c = pt.matrixTransform(svg.getScreenCTM().inverse());
+
     if (isDraggingRef.current) {
-      if (e.cancelable) e.preventDefault();
-      const c = getCoordinates(e);
       setObjects(prev => prev.map(o => o.id === isDraggingRef.current ? { ...o, x: c.x, y: c.y } : o));
       setTextBlocks(prev => prev.map(t => t.id === isDraggingRef.current ? { ...t, x: c.x, y: c.y } : t));
     } else if (currentLine) {
-      if (e.cancelable) e.preventDefault();
-      const c = getCoordinates(e);
-      setCurrentLine(prev => ({ ...prev, end: c }));
+      setCurrentLine(prev => ({ ...prev, end: { x: c.x, y: c.y } }));
     }
   };
 
@@ -4859,6 +4870,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
       isDraggingRef.current = obj.id;
       if (typeof setTool === 'function') setTool('move');
     }}>
+      
       
                     <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'blue' ? teamColors.blue : teamColors.red))} stroke="#ffffff" strokeWidth="0.6" />
                     <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" pointerEvents="none">{obj.number}</text>
