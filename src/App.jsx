@@ -6229,7 +6229,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Cono N.',
                         action: () => addElement('cone', { color: '#ea580c' }),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <ellipse cx="24" cy="40" rx="16" ry="5" fill="#9a3412" />
                             <polygon points="11,39 21,9 27,9 37,39" fill="#f97316" />
                             <polygon points="15.5,26 32.5,26 34.5,32 13.5,32" fill="#ffffff" opacity="0.92" />
@@ -6241,7 +6241,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Cono A.',
                         action: () => addElement('cone', { color: '#2563eb' }),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <ellipse cx="24" cy="40" rx="16" ry="5" fill="#1e3a8a" />
                             <polygon points="11,39 21,9 27,9 37,39" fill="#3b82f6" />
                             <polygon points="15.5,26 32.5,26 34.5,32 13.5,32" fill="#ffffff" opacity="0.92" />
@@ -6252,7 +6252,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Cono Am.',
                         action: () => addElement('cone', { color: '#eab308' }),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <ellipse cx="24" cy="40" rx="16" ry="5" fill="#854d0e" />
                             <polygon points="11,39 21,9 27,9 37,39" fill="#facc15" />
                             <polygon points="15.5,26 32.5,26 34.5,32 13.5,32" fill="#ffffff" opacity="0.92" />
@@ -6263,7 +6263,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Estaca',
                         action: () => addElement('pole', { color: '#facc15' }),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <ellipse cx="24" cy="41" rx="9" ry="3.5" fill="#18181b" stroke="#52525b" strokeWidth="1.2" />
                             <rect x="22.3" y="7" width="3.4" height="34" rx="1.5" fill="#facc15" />
                             <rect x="22.3" y="7" width="3.4" height="5" rx="1" fill="#ef4444" />
@@ -6274,7 +6274,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Plato',
                         action: () => addElement('saucer', { color: '#facc15' }),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <ellipse cx="24" cy="30" rx="15" ry="6" fill="#ca8a04" />
                             <path d="M10,29 Q24,18 38,29 Z" fill="#facc15" />
                             <ellipse cx="24" cy="24" rx="5" ry="2" fill="#fef08a" />
@@ -6285,7 +6285,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Aro',
                         action: () => addElement('ring', { color: '#38bdf8' }),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <ellipse cx="24" cy="27" rx="16" ry="8" fill="none" stroke="#0284c7" strokeWidth="3.5" />
                             <ellipse cx="24" cy="26" rx="16" ry="8" fill="none" stroke="#38bdf8" strokeWidth="2.5" />
                           </svg>
@@ -6295,7 +6295,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Valla',
                         action: () => addElement('hurdle'),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <path d="M11,37 L15,18 L33,18 L37,37" fill="none" stroke="#f97316" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
                             <line x1="8" y1="37" x2="15" y2="37" stroke="#ea580c" strokeWidth="3.5" strokeLinecap="round" />
                             <line x1="33" y1="37" x2="40" y2="37" stroke="#ea580c" strokeWidth="3.5" strokeLinecap="round" />
@@ -6306,7 +6306,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Maniquí',
                         action: () => addElement('dummy'),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <ellipse cx="24" cy="42" rx="10" ry="3" fill="#27272a" />
                             <line x1="20" y1="33" x2="20" y2="41" stroke="#a1a1aa" strokeWidth="2.2" />
                             <line x1="28" y1="33" x2="28" y2="41" stroke="#a1a1aa" strokeWidth="2.2" />
@@ -6319,7 +6319,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Portería',
                         action: () => addElement('mini_goal'),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <polygon points="10,16 34,13 40,29 14,34" fill="rgba(255,255,255,0.14)" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="2 2" />
                             <polyline points="10,35 10,16 34,13 34,31" fill="none" stroke="#ffffff" strokeWidth="2.8" strokeLinejoin="round" />
                             <polyline points="10,35 15,34 40,29 34,31" fill="none" stroke="#d4d4d8" strokeWidth="1.8" />
@@ -6330,7 +6330,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         label: 'Escalera',
                         action: () => addElement('ladder'),
                         svg: (
-                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                          <svg viewBox="0 0 48 48" className="w-5 h-5 sm:w-6 sm:h-6">
                             <line x1="15" y1="9" x2="11" y2="39" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
                             <line x1="33" y1="9" x2="37" y2="39" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
                             <line x1="14.5" y1="14" x2="33.5" y2="14" stroke="#ffffff" strokeWidth="2" />
