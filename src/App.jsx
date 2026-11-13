@@ -6212,7 +6212,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
             <>
               {/* CATÁLOGO LATERAL DE ARTÍCULOS TRAS EL ARCO DERECHO (NO INVADE LA CANCHA NI GRABACIONES) */}
               {showTrainingMenu && !isRecording && (
-                <aside className="fixed right-16 sm:right-24 top-14 sm:top-16 bottom-16 sm:bottom-20 w-24 sm:w-28 bg-zinc-950/95 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
+                <aside className="fixed right-20 lg:right-24 top-14 sm:top-16 bottom-16 sm:bottom-20 w-20 lg:w-28 bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
                   <div className="flex items-center justify-between px-2 py-1 border-b border-zinc-800 bg-zinc-900/90 shrink-0">
                     <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tight text-amber-400">Artículos</span>
                     <button
