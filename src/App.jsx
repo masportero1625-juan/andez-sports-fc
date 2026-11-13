@@ -3716,8 +3716,9 @@ export default function App() {
 
   const svgRef = useRef(null);
   const isDraggingRef = useRef(false);
+  const lastPlayerTapRef = useRef({ id: null, time: 0 });
   const [selectedObj, setSelectedObj] = useState(null);
-  // ESTADOS MODULARES Y LÍNEA DE TIEMPO TIPO TACTICALPAD
+  const [editingPlayerId, setEditingPlayerId] = useState(null);
   const [bottomBarMode, setBottomBarMode] = useState('menu');
   const [rosterTeam, setRosterTeam] = useState('blue');
   const [showSystemsModal, setShowSystemsModal] = useState(null);
@@ -4856,18 +4857,25 @@ Sin markdown. Inicia con [ y termina con ]:`;
             })}
 
             {/* JUGADORES, BALÓN Y MATERIALES */}
-            {objects.map(obj => {
-              if (obj.type === 'player') {
-                const hasName = obj.name && obj.name.trim().length > 0;
-                const w = Math.max(14, (obj.name || '').length * 1.5 + 4);
-                return (
-                  <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => {
-            e.stopPropagation();
-            if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
-            setSelectedObj(obj);
-            isDraggingRef.current = obj.id;
-            if (typeof setTool === 'function') setTool('move');
-          }}>
+      {objects.map(obj => {
+        if (obj.type === 'player') {
+      const hasName = displayLabel.trim().length > 0;
+      const w = Math.max(14, displayLabel.length * 1.5 + 4);
+      return (
+        <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => {
+          e.stopPropagation();
+          const now = Date.now();
+          if (lastPlayerTapRef.current.id === obj.id && now - lastPlayerTapRef.current.time < 350) {
+            setEditingPlayerId(obj.id);
+            lastPlayerTapRef.current = { id: null, time: 0 };
+            return;
+          }
+          lastPlayerTapRef.current = { id: obj.id, time: now };
+          if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+          setSelectedObj(obj);
+          isDraggingRef.current = obj.id;
+          if (typeof setTool === 'function') setTool('move');
+        }}>
       
       
                     <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'red' ? teamColors.red : teamColors.blue))} stroke="#ffffff" strokeWidth="0.45" />
@@ -5004,50 +5012,61 @@ Sin markdown. Inicia con [ y termina con ]:`;
               </Suspense>
             </Scene3DBoundary>
           </div>
-        {/* Selector de nombre o posición del jugador seleccionado */}
-      {selectedObj && selectedObj.type === 'player' && (
-        <div className="fixed bottom-16 lg:bottom-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900/95 border border-zinc-700 text-white px-3 py-1.5 rounded-2xl shadow-2xl flex items-center gap-2">
-          <span
-            className="w-6 h-6 rounded-full border border-white flex items-center justify-center text-[11px] font-black shrink-0"
-            style={{ backgroundColor: selectedObj.customColor || '#2563eb' }}
-          >
-            {selectedObj.number}
-          </span>
-          <input
-            type="text"
-            placeholder="Nombre o posición..."
-            value={selectedObj.name || ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              setSelectedObj((prev) => (prev ? { ...prev, name: val } : prev));
-              setObjects((prev) => prev.map((o) => (o.id === selectedObj.id ? { ...o, name: val } : o)));
-            }}
-            className="bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 text-xs text-white w-36 lg:w-44 focus:outline-none focus:border-amber-400"
-          />
-          {selectedObj.name && (
+        {/* Selector de nombre y posición del jugador (solo doble clic / doble toque) */}
+      {(() => {
+        const editingPlayer = editingPlayerId ? objects.find((o) => o.id === editingPlayerId && o.type === 'player') : null;
+        if (!editingPlayer) return null;
+        return (
+          <div className="fixed bottom-16 lg:bottom-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900/95 border border-zinc-700 text-white px-3 py-2 rounded-2xl shadow-2xl flex items-center gap-2">
+            <span
+              className="w-6 h-6 rounded-full border border-white flex items-center justify-center text-[11px] font-black shrink-0"
+              style={{ backgroundColor: editingPlayer.customColor || '#2563eb' }}
+            >
+              {editingPlayer.number}
+            </span>
+            <input
+              type="text"
+              placeholder="Nombre..."
+              value={editingPlayer.name || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                setObjects((prev) => prev.map((o) => (o.id === editingPlayer.id ? { ...o, name: val } : o)));
+              }}
+              className="bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 text-xs text-white w-28 lg:w-36 focus:outline-none focus:border-amber-400"
+            />
+            <input
+              type="text"
+              placeholder="Posición (ej. DC)"
+              value={editingPlayer.position || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                setObjects((prev) => prev.map((o) => (o.id === editingPlayer.id ? { ...o, position: val } : o)));
+              }}
+              className="bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 text-xs text-white w-28 lg:w-32 focus:outline-none focus:border-amber-400"
+            />
+            {(editingPlayer.name || editingPlayer.position) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setObjects((prev) => prev.map((o) => (o.id === editingPlayer.id ? { ...o, name: '', position: '' } : o)));
+                }}
+                className="text-[10px] px-2 py-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-bold"
+                title="Quitar etiqueta"
+              >
+                Quitar
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => {
-                setSelectedObj((prev) => (prev ? { ...prev, name: '' } : prev));
-                setObjects((prev) => prev.map((o) => (o.id === selectedObj.id ? { ...o, name: '' } : o)));
-              }}
-              className="text-[10px] px-2 py-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-bold"
-              title="Quitar etiqueta"
+              onClick={() => setEditingPlayerId(null)}
+              className="text-zinc-400 hover:text-white text-xs px-1 font-bold"
+              title="Cerrar"
             >
-              Quitar
+              ✕
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setSelectedObj(null)}
-            className="text-zinc-400 hover:text-white text-xs px-1 font-bold"
-            title="Cerrar"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
+          </div>
+        );
+      })()}
       {/* Selector de altura y gestion del balon seleccionado */}
       {selectedObj && selectedObj.type === 'ball' && (
         <div className="fixed bottom-16 left-4 md:left-6 z-50 bg-slate-900/95 text-white px-3 py-2 rounded-xl backdrop-blur-md border border-slate-700 flex items-center gap-2 shadow-2xl">
