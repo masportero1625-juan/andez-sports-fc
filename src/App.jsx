@@ -6204,41 +6204,96 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
           {/* MODO: PLANTILLA (JUGADORES Y BALÓN) */}
           {bottomBarMode === 'roster' && (
-            <div className="flex items-center gap-4 min-w-max px-4 w-full justify-center">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider mr-2">
-                Plantilla {rosterTeam === 'blue' ? 'Local' : 'Visitante'}
-              </span>
-              <button 
-                onClick={() => addElement('player', { role: 'GK', number: '1', team: rosterTeam === 'blue' ? 'gk' : 'gk_away', customColor: teamColors[rosterTeam === 'blue' ? 'gk' : 'gk_away'] })} 
-                style={{ backgroundColor: teamColors[rosterTeam === 'blue' ? 'gk' : 'gk_away'] }} 
-                className="w-12 h-12 rounded-full border-2 border-white text-white font-black text-base shadow-lg hover:scale-110 transition-transform flex items-center justify-center" 
-                title="Añadir Arquero"
-              >
-                1
-              </button>
-              <button 
-                onClick={() => addElement('player', { team: rosterTeam, customColor: teamColors[rosterTeam] })} 
-                style={{ backgroundColor: teamColors[rosterTeam] }} 
-                className="w-12 h-12 rounded-full border-2 border-white text-white font-bold text-base shadow-lg hover:scale-110 transition-transform flex items-center justify-center" 
-                title="Añadir Jugador"
-              >
-                11
-              </button>
-              <div className="w-px h-10 bg-zinc-700 mx-2"></div>
-              <button
-                type="button"
-                onClick={() => {
-                  const newBall = { id: `ball-${Date.now()}`, type: 'ball', x: isPC ? 52.5 : 34, y: isPC ? 34 : 52.5, elevation: 0 };
-                  setObjects(prev => [...prev, newBall]);
-                }}
-                className="w-12 h-12 rounded-full bg-white text-2xl shadow-lg hover:scale-110 active:scale-95 transition flex items-center justify-center"
-                title="Añadir Balón"
-              >
-                ⚽
-              </button>
-            </div>
-          )}
+        <div className="flex items-center gap-1.5 lg:gap-2.5 px-2 lg:px-4 w-full h-full overflow-x-auto justify-start lg:justify-center">
+          {Array.from({ length: 15 }, (_, idx) => idx + 1).map((num) => {
+            const isGK = num === 1;
+            const onPitchObj = objects.find(
+              (o) => o.type === 'player' && o.team === rosterTeam && Number(o.number) === num
+            );
+            const isActive = Boolean(onPitchObj);
+            const badgeColor = isGK
+              ? teamColors[rosterTeam === 'blue' ? 'gk' : 'gk_away']
+              : teamColors[rosterTeam];
 
+            return (
+              <button
+                key={num}
+                type="button"
+                onClick={() => {
+                  if (isActive) {
+                    setObjects((prev) => prev.filter((o) => o.id !== onPitchObj.id));
+                  } else {
+                    const defaultX = rosterTeam === 'blue' ? (isGK ? 6 : 22 + ((num % 4) * 7)) : (isGK ? 99 : 83 - ((num % 4) * 7));
+                    const defaultY = isGK ? 34 : 12 + (((num * 13) % 44));
+                    setObjects((prev) => [
+                      ...prev,
+                      {
+                        id: `${rosterTeam}-${num}-${Date.now()}`,
+                        type: 'player',
+                        number: num,
+                        role: isGK ? 'GK' : 'JUG',
+                        x: defaultX,
+                        y: defaultY,
+                        team: rosterTeam,
+                        customColor: badgeColor,
+                        name: `Jugador ${num}`,
+                      },
+                    ]);
+                  }
+                }}
+                className={`flex flex-col items-center justify-center shrink-0 w-11 h-12 lg:w-16 lg:h-16 rounded-xl border transition-all ${
+                  isActive
+                    ? 'bg-zinc-800 border-amber-400 shadow-md scale-105 opacity-100'
+                    : 'bg-zinc-900/70 border-zinc-700/60 opacity-60 hover:opacity-100'
+                }`}
+                title={isActive ? `Devolver Jugador ${num} al fichero` : `Colocar Jugador ${num} en cancha`}
+              >
+                <div
+                  className="w-6 h-6 lg:w-8 lg:h-8 rounded-full border-2 border-white flex items-center justify-center text-white font-black text-[10px] lg:text-xs shadow"
+                  style={{ backgroundColor: badgeColor }}
+                >
+                  {num}
+                </div>
+                <span className="text-[7px] lg:text-[9px] text-zinc-300 font-medium mt-0.5 leading-none">
+                  {isGK ? 'Arquero' : `Jug. ${num}`}
+                </span>
+              </button>
+            );
+          })}
+
+          <div className="w-px h-8 lg:h-10 bg-zinc-700 mx-0.5 shrink-0"></div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const existingBall = objects.find((o) => o.type === 'ball');
+              if (existingBall) {
+                setObjects((prev) => prev.filter((o) => o.id !== existingBall.id));
+              } else {
+                setObjects((prev) => [...prev, { id: `ball-${Date.now()}`, type: 'ball', x: 52.5, y: 34 }]);
+              }
+            }}
+            className="flex flex-col items-center justify-center shrink-0 w-11 h-12 lg:w-16 lg:h-16 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 transition-all"
+            title="Poner / Quitar Balón"
+          >
+            <span className="text-base lg:text-xl leading-none">⚽</span>
+            <span className="text-[7px] lg:text-[9px] text-zinc-300 font-medium mt-0.5 leading-none">Balón</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setKitTarget(rosterTeam);
+              setShowKitPalette((prev) => !prev);
+            }}
+            className="flex flex-col items-center justify-center shrink-0 w-11 h-12 lg:w-16 lg:h-16 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 transition-all"
+            title="Configuración y Colores del Equipo"
+          >
+            <Settings className="w-4 h-4 lg:w-6 lg:h-6 text-zinc-200" />
+            <span className="text-[7px] lg:text-[9px] text-zinc-300 font-medium mt-0.5 leading-none">Equipo</span>
+          </button>
+        </div>
+      )}
         </div>
       </footer>
     </div>
