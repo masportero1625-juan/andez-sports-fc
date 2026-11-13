@@ -4770,15 +4770,17 @@ Sin markdown. Inicia con [ y termina con ]:`;
                   transform={`translate(${tb.x}, ${tb.y}) rotate(${rot})`}
                   className="cursor-move select-none"
                   onPointerDown={(e) => {
-                    e.stopPropagation();
-                    if (tool === 'eraser') {
-                      setTextBlocks(prev => prev.filter(t => t.id !== tb.id));
-                      return;
-                    }
-                    setSelectedTextId(isSelected ? null : tb.id);
-                    setSelectedObj(tb);
-                    isDraggingRef.current = true;
-                  }}
+            e.stopPropagation();
+            if (tool === 'eraser') {
+              setTextBlocks(prev => prev.filter(t => t.id !== tb.id));
+              return;
+            }
+            if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+            setSelectedTextId(tb.id);
+            setSelectedObj(tb);
+            isDraggingRef.current = tb.id;
+            if (typeof setTool === 'function') setTool('move');
+          }}
                 >
                   <rect
                     x={-(tb.text.length * size * 0.35 + 2)}
@@ -4868,17 +4870,17 @@ Sin markdown. Inicia con [ y termina con ]:`;
           }}>
       
       
-                    <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'blue' ? teamColors.blue : teamColors.red))} stroke="#ffffff" strokeWidth="0.6" />
-                    <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" pointerEvents="none">{obj.number}</text>
-                    {hasName && (
-                      <g>
-                        <rect x={-w / 2} y="3.8" width={w} height="3.6" rx="1" fill="rgba(10, 10, 10, 0.88)" stroke="#27272a" strokeWidth="0.25" />
-                        <text x="0" y="6.3" textAnchor="middle" fontSize="1.9" fontWeight="bold" fill="#ffffff">{obj.name}</text>
-                      </g>
-                    )}
-                  </g>
-                );
-              }
+                    <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'red' ? teamColors.red : teamColors.blue))} stroke="#ffffff" strokeWidth="0.45" />
+          <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" className="select-none pointer-events-none">{obj.number}</text>
+          {hasName && (
+            <g>
+              <rect x={-w / 2} y="3.8" width={w} height="3.6" rx="1" fill="rgba(10, 10, 10, 0.85)" />
+              <text x="0" y="6.3" textAnchor="middle" fontSize="1.9" fontWeight="bold" fill="#ffffff" className="select-none pointer-events-none">{obj.name}</text>
+            </g>
+          )}
+        </g>
+      );
+    }
               if (obj.type === 'ball') return (
             <SoccerBall
               key={obj.id}
@@ -5002,8 +5004,51 @@ Sin markdown. Inicia con [ y termina con ]:`;
               </Suspense>
             </Scene3DBoundary>
           </div>
-        
-        {/* Selector de altura y gestion del balon seleccionado */}
+        {/* Selector de nombre o posición del jugador seleccionado */}
+      {selectedObj && selectedObj.type === 'player' && (
+        <div className="fixed bottom-16 lg:bottom-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900/95 border border-zinc-700 text-white px-3 py-1.5 rounded-2xl shadow-2xl flex items-center gap-2">
+          <span
+            className="w-6 h-6 rounded-full border border-white flex items-center justify-center text-[11px] font-black shrink-0"
+            style={{ backgroundColor: selectedObj.customColor || '#2563eb' }}
+          >
+            {selectedObj.number}
+          </span>
+          <input
+            type="text"
+            placeholder="Nombre o posición..."
+            value={selectedObj.name || ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedObj((prev) => (prev ? { ...prev, name: val } : prev));
+              setObjects((prev) => prev.map((o) => (o.id === selectedObj.id ? { ...o, name: val } : o)));
+            }}
+            className="bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 text-xs text-white w-36 lg:w-44 focus:outline-none focus:border-amber-400"
+          />
+          {selectedObj.name && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedObj((prev) => (prev ? { ...prev, name: '' } : prev));
+                setObjects((prev) => prev.map((o) => (o.id === selectedObj.id ? { ...o, name: '' } : o)));
+              }}
+              className="text-[10px] px-2 py-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-bold"
+              title="Quitar etiqueta"
+            >
+              Quitar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setSelectedObj(null)}
+            className="text-zinc-400 hover:text-white text-xs px-1 font-bold"
+            title="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Selector de altura y gestion del balon seleccionado */}
       {selectedObj && selectedObj.type === 'ball' && (
         <div className="fixed bottom-16 left-4 md:left-6 z-50 bg-slate-900/95 text-white px-3 py-2 rounded-xl backdrop-blur-md border border-slate-700 flex items-center gap-2 shadow-2xl">
           <span className="text-xs font-semibold text-amber-400">Balón:</span>
@@ -6228,16 +6273,16 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     setObjects((prev) => [
                       ...prev,
                       {
-                        id: `${rosterTeam}-${num}-${Date.now()}`,
-                        type: 'player',
-                        number: num,
-                        role: isGK ? 'GK' : 'JUG',
-                        x: defaultX,
-                        y: defaultY,
-                        team: rosterTeam,
-                        customColor: badgeColor,
-                        name: `Jugador ${num}`,
-                      },
+                      id: `${rosterTeam}-${num}-${Date.now()}`,
+                      type: 'player',
+                      number: num,
+                      role: isGK ? 'GK' : 'JUG',
+                      x: defaultX,
+                      y: defaultY,
+                      team: rosterTeam,
+                      customColor: badgeColor,
+                      name: '',
+                    },
                     ]);
                   }
                 }}
@@ -6297,6 +6342,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
           </button>
         </div>
       )}
+
         </div>
       </footer>
     </div>
