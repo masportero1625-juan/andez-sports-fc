@@ -4859,36 +4859,46 @@ Sin markdown. Inicia con [ y termina con ]:`;
             {/* JUGADORES, BALÓN Y MATERIALES */}
       {objects.map(obj => {
         if (obj.type === 'player') {
-          const displayLabel = [obj.name, obj.position].filter(Boolean).join(' • ');
-          const hasName = displayLabel.trim().length > 0;
-          const w = Math.max(14, displayLabel.length * 1.5 + 4);
+          const nameTxt = (obj.name || '').trim();
+          const posTxt = (obj.position || '').trim();
+          const hasLabel = nameTxt.length > 0 || posTxt.length > 0;
+          const bothLines = nameTxt.length > 0 && posTxt.length > 0;
+          const longestLen = Math.max(nameTxt.length, posTxt.length);
+          const w = Math.max(10, longestLen * 1.45 + 3.2);
+          const boxH = bothLines ? 5.6 : 3.4;
           return (
             <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => {
-          const now = Date.now();
-          if (lastPlayerTapRef.current.id === obj.id && now - lastPlayerTapRef.current.time < 350) {
-            setEditingPlayerId(obj.id);
-            lastPlayerTapRef.current = { id: null, time: 0 };
-            return;
-          }
-          lastPlayerTapRef.current = { id: obj.id, time: now };
-          if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
-          setSelectedObj(obj);
-          isDraggingRef.current = obj.id;
-          if (typeof setTool === 'function') setTool('move');
-        }}>
-      
-      
-                    <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'red' ? teamColors.red : teamColors.blue))} stroke="#ffffff" strokeWidth="0.45" />
-          <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" className="select-none pointer-events-none">{obj.number}</text>
-          {hasName && (
-            <g>
-              <rect x={-w / 2} y="3.8" width={w} height="3.6" rx="1" fill="rgba(10, 10, 10, 0.85)" />
-              <text x="0" y="6.3" textAnchor="middle" fontSize="1.9" fontWeight="bold" fill="#ffffff" className="select-none pointer-events-none">{obj.name}</text>
+              e.stopPropagation();
+              const now = Date.now();
+              if (lastPlayerTapRef.current.id === obj.id && now - lastPlayerTapRef.current.time < 350) {
+                setEditingPlayerId(obj.id);
+                lastPlayerTapRef.current = { id: null, time: 0 };
+                return;
+              }
+              lastPlayerTapRef.current = { id: obj.id, time: now };
+              if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+              setSelectedObj(obj);
+              isDraggingRef.current = obj.id;
+              if (typeof setTool === 'function') setTool('move');
+            }}>
+              <circle r="3.0" fill={obj.customColor || (obj.role === 'GK' ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk) : (obj.team === 'red' ? teamColors.red : teamColors.blue))} stroke="#ffffff" strokeWidth="0.45" />
+              <text textAnchor="middle" dy="1.0" fontSize="2.5" fontWeight="bold" fill="#ffffff" className="select-none pointer-events-none">{obj.number}</text>
+              {hasLabel && (
+                <g>
+                  <rect x={-w / 2} y="3.7" width={w} height={boxH} rx="1" fill="rgba(10, 10, 10, 0.88)" />
+                  {bothLines ? (
+                    <>
+                      <text x="0" y="6.0" textAnchor="middle" fontSize="1.8" fontWeight="bold" fill="#ffffff" className="select-none pointer-events-none">{nameTxt}</text>
+                      <text x="0" y="8.3" textAnchor="middle" fontSize="1.5" fontWeight="bold" fill="#fbbf24" className="select-none pointer-events-none">{posTxt}</text>
+                    </>
+                  ) : (
+                    <text x="0" y="6.1" textAnchor="middle" fontSize="1.8" fontWeight="bold" fill={nameTxt ? '#ffffff' : '#fbbf24'} className="select-none pointer-events-none">{nameTxt || posTxt}</text>
+                  )}
+                </g>
+              )}
             </g>
-          )}
-        </g>
-      );
-    }
+          );
+        }
               if (obj.type === 'ball') return (
             <SoccerBall
               key={obj.id}
