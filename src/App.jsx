@@ -3707,11 +3707,7 @@ export default function App() {
   const [textIsUnderline, setTextIsUnderline] = useState(false);
   const [textSize, setTextSize] = useState(2.8);
 
-  const [objects, setObjects] = useState(() => {
-    const sys = GET_TACTICAL_SYSTEMS(window.innerWidth > 768)['4-3-3'];
-    const pts = sys.map(p => ({ id: 'init-' + p.n, type: 'player', number: p.n, role: p.r, x: p.x, y: p.y, team: 'blue', name: '' }));
-    return [...pts, { id: 'ball-1', type: 'ball', x: window.innerWidth > 768 ? 52.5 : 34, y: window.innerWidth > 768 ? 34 : 52.5 }];
-  });
+  const [objects, setObjects] = useState([]);
 
   const [drawings, setDrawings] = useState([]);
   const [currentLine, setCurrentLine] = useState(null);
