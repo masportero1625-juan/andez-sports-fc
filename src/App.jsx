@@ -4859,11 +4859,11 @@ Sin markdown. Inicia con [ y termina con ]:`;
             {/* JUGADORES, BALÓN Y MATERIALES */}
       {objects.map(obj => {
         if (obj.type === 'player') {
-      const hasName = displayLabel.trim().length > 0;
-      const w = Math.max(14, displayLabel.length * 1.5 + 4);
-      return (
-        <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => {
-          e.stopPropagation();
+          const displayLabel = [obj.name, obj.position].filter(Boolean).join(' • ');
+          const hasName = displayLabel.trim().length > 0;
+          const w = Math.max(14, displayLabel.length * 1.5 + 4);
+          return (
+            <g key={obj.id} transform={`translate(${obj.x}, ${obj.y})`} onPointerDown={(e) => {
           const now = Date.now();
           if (lastPlayerTapRef.current.id === obj.id && now - lastPlayerTapRef.current.time < 350) {
             setEditingPlayerId(obj.id);
