@@ -5263,23 +5263,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
           </div>
         )}
 
-        {/* SUB-BARRA DE MATERIALES */}
-        {showTrainingMenu && (
-          <aside className="fixed top-12 left-2 right-2 sm:left-1/2 sm:-translate-x-1/2 sm:w-max bg-zinc-950/95 backdrop-blur border border-zinc-800 rounded-2xl p-1.5 shadow-2xl z-40 flex items-center gap-1.5 overflow-x-auto max-w-[96vw] shrink-0 no-print [&::-webkit-scrollbar]:hidden">
-            <span className="text-[10px] font-bold text-amber-400 uppercase shrink-0 px-1">Materiales:</span>
-            <button onClick={() => addElement('mini_goal')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🥅 Mini Portería</button>
-            <button onClick={() => addElement('ladder')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🪜 Escalera</button>
-            <button onClick={() => addElement('dummy')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🧍 Maniquí</button>
-            <button onClick={() => addElement('hurdle')} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🚧 Valla</button>
-            <button onClick={() => addElement('cone', { color: '#ea580c' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-orange-500">▲</span> Cono Naranja</button>
-            <button onClick={() => addElement('cone', { color: '#2563eb' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-blue-500">▲</span> Cono Azul</button>
-            <button onClick={() => addElement('cone', { color: '#eab308' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1"><span className="text-yellow-400">▲</span> Cono Amarillo</button>
-            <button onClick={() => addElement('saucer', { color: '#facc15' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🟡 Plato Chino</button>
-            <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">⭕ Aro</button>
-            <button onClick={() => addElement('pole', { color: '#facc15' })} className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-white shrink-0 flex items-center gap-1">🥢 Estaca</button>
-            <button onClick={() => setShowTrainingMenu(false)} className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shrink-0 ml-1">✕</button>
-          </aside>
-        )}
+        {/* SUB-BARRA DE MATERIALES UNIFICADA EN HERRAMIENTAS */}
 
         {/* MODAL SISTEMAS */}
         {showSystemsMenu && (
@@ -6223,77 +6207,252 @@ Sin markdown. Inicia con [ y termina con ]:`;
   </div>
 )}
 
-          {/* MODO: HERRAMIENTAS DE DIBUJO Y MATERIALES */}
-          {bottomBarMode === 'tools' && (
-            <div className="flex items-center gap-2 sm:gap-4 min-w-max px-4 w-full justify-start sm:justify-center overflow-x-auto [&::-webkit-scrollbar]:hidden">
-              
-              {/* Herramientas de Dibujo */}
-              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                <button onClick={() => setShowLinePalette(true)} className={`flex flex-col items-center justify-center w-14 sm:w-16 h-14 rounded-lg transition gap-1 ${tool === 'draw' ? 'bg-amber-500 text-black' : 'hover:bg-white/10 text-white'}`}>
-                  <PenTool className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <span className="text-[9px] sm:text-[10px] font-medium">Trazos</span>
-                </button>
-                <button onClick={() => setTool(tool === 'text' ? 'move' : 'text')} className={`flex flex-col items-center justify-center w-14 sm:w-16 h-14 rounded-lg transition gap-1 ${tool === 'text' ? 'bg-amber-500 text-black' : 'hover:bg-white/10 text-white'}`}>
-                  <Type className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <span className="text-[9px] sm:text-[10px] font-medium">Texto</span>
-                </button>
-                <button onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')} className={`flex flex-col items-center justify-center w-14 sm:w-16 h-14 rounded-lg transition gap-1 ${tool === 'eraser' ? 'bg-red-600 text-white animate-pulse' : 'hover:bg-white/10 text-white'}`}>
-                  <Eraser className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <span className="text-[9px] sm:text-[10px] font-medium">Borrar</span>
-                </button>
-                <button onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); setTextBlocks([]); } }} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-red-500/20 rounded-lg transition gap-1 text-red-400">
-                  <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <span className="text-[9px] sm:text-[10px] font-medium">Limpiar</span>
-                </button>
-              </div>
+          {/* MODO: HERRAMIENTAS ESTILO TACTICALPAD + CATÁLOGO TRAS ARCO DERECHO */}
+          {bottomBarMode === 'tools' && (
+            <>
+              {/* CATÁLOGO LATERAL DE ARTÍCULOS TRAS EL ARCO DERECHO (NO INVADE LA CANCHA NI GRABACIONES) */}
+              {showTrainingMenu && !isRecording && (
+                <aside className="fixed right-2 sm:right-3 top-14 sm:top-16 bottom-16 sm:bottom-20 w-36 sm:w-48 bg-zinc-950/95 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
+                  <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-800 bg-zinc-900/90 shrink-0">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-400">Artículos</span>
+                    <button
+                      onClick={() => setShowTrainingMenu(false)}
+                      className="p-0.5 text-zinc-400 hover:text-white rounded-md hover:bg-zinc-800"
+                      title="Cerrar catálogo"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-1.5 sm:p-2 grid grid-cols-2 gap-1.5 sm:gap-2">
+                    {[
+                      {
+                        label: 'Cono N.',
+                        action: () => addElement('cone', { color: '#ea580c' }),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <ellipse cx="24" cy="40" rx="16" ry="5" fill="#9a3412" />
+                            <polygon points="11,39 21,9 27,9 37,39" fill="#f97316" />
+                            <polygon points="15.5,26 32.5,26 34.5,32 13.5,32" fill="#ffffff" opacity="0.92" />
+                            <polygon points="18.5,17 29.5,17 31,21.5 17,21.5" fill="#ffffff" opacity="0.92" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Cono A.',
+                        action: () => addElement('cone', { color: '#2563eb' }),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <ellipse cx="24" cy="40" rx="16" ry="5" fill="#1e3a8a" />
+                            <polygon points="11,39 21,9 27,9 37,39" fill="#3b82f6" />
+                            <polygon points="15.5,26 32.5,26 34.5,32 13.5,32" fill="#ffffff" opacity="0.92" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Cono Am.',
+                        action: () => addElement('cone', { color: '#eab308' }),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <ellipse cx="24" cy="40" rx="16" ry="5" fill="#854d0e" />
+                            <polygon points="11,39 21,9 27,9 37,39" fill="#facc15" />
+                            <polygon points="15.5,26 32.5,26 34.5,32 13.5,32" fill="#ffffff" opacity="0.92" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Estaca',
+                        action: () => addElement('pole', { color: '#facc15' }),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <ellipse cx="24" cy="41" rx="9" ry="3.5" fill="#18181b" stroke="#52525b" strokeWidth="1.2" />
+                            <rect x="22.3" y="7" width="3.4" height="34" rx="1.5" fill="#facc15" />
+                            <rect x="22.3" y="7" width="3.4" height="5" rx="1" fill="#ef4444" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Plato',
+                        action: () => addElement('saucer', { color: '#facc15' }),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <ellipse cx="24" cy="30" rx="15" ry="6" fill="#ca8a04" />
+                            <path d="M10,29 Q24,18 38,29 Z" fill="#facc15" />
+                            <ellipse cx="24" cy="24" rx="5" ry="2" fill="#fef08a" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Aro',
+                        action: () => addElement('ring', { color: '#38bdf8' }),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <ellipse cx="24" cy="27" rx="16" ry="8" fill="none" stroke="#0284c7" strokeWidth="3.5" />
+                            <ellipse cx="24" cy="26" rx="16" ry="8" fill="none" stroke="#38bdf8" strokeWidth="2.5" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Valla',
+                        action: () => addElement('hurdle'),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <path d="M11,37 L15,18 L33,18 L37,37" fill="none" stroke="#f97316" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <line x1="8" y1="37" x2="15" y2="37" stroke="#ea580c" strokeWidth="3.5" strokeLinecap="round" />
+                            <line x1="33" y1="37" x2="40" y2="37" stroke="#ea580c" strokeWidth="3.5" strokeLinecap="round" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Maniquí',
+                        action: () => addElement('dummy'),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <ellipse cx="24" cy="42" rx="10" ry="3" fill="#27272a" />
+                            <line x1="20" y1="33" x2="20" y2="41" stroke="#a1a1aa" strokeWidth="2.2" />
+                            <line x1="28" y1="33" x2="28" y2="41" stroke="#a1a1aa" strokeWidth="2.2" />
+                            <rect x="16" y="15" width="16" height="19" rx="5" fill="#facc15" stroke="#ca8a04" strokeWidth="1.2" />
+                            <circle cx="24" cy="9.5" r="4.2" fill="#facc15" stroke="#ca8a04" strokeWidth="1.2" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Portería',
+                        action: () => addElement('mini_goal'),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <polygon points="10,16 34,13 40,29 14,34" fill="rgba(255,255,255,0.14)" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="2 2" />
+                            <polyline points="10,35 10,16 34,13 34,31" fill="none" stroke="#ffffff" strokeWidth="2.8" strokeLinejoin="round" />
+                            <polyline points="10,35 15,34 40,29 34,31" fill="none" stroke="#d4d4d8" strokeWidth="1.8" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        label: 'Escalera',
+                        action: () => addElement('ladder'),
+                        svg: (
+                          <svg viewBox="0 0 48 48" className="w-8 h-8 sm:w-10 sm:h-10">
+                            <line x1="15" y1="9" x2="11" y2="39" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
+                            <line x1="33" y1="9" x2="37" y2="39" stroke="#facc15" strokeWidth="2.4" strokeLinecap="round" />
+                            <line x1="14.5" y1="14" x2="33.5" y2="14" stroke="#ffffff" strokeWidth="2" />
+                            <line x1="13.5" y1="21" x2="34.5" y2="21" stroke="#ffffff" strokeWidth="2" />
+                            <line x1="12.5" y1="28" x2="35.5" y2="28" stroke="#ffffff" strokeWidth="2" />
+                            <line x1="11.5" y1="35" x2="36.5" y2="35" stroke="#ffffff" strokeWidth="2" />
+                          </svg>
+                        ),
+                      },
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={item.action}
+                        className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/60 transition active:scale-95"
+                      >
+                        {item.svg}
+                        <span className="text-[9px] sm:text-[10px] font-medium text-zinc-200 mt-0.5 leading-tight">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </aside>
+              )}
 
-              <div className="w-px h-10 bg-zinc-700 mx-1 shrink-0"></div>
+              {/* BARRA INFERIOR UNIFICADA ESTILO TACTICALPAD */}
+              <div className="flex items-center gap-1.5 sm:gap-3 min-w-max px-3 w-full justify-start sm:justify-center">
+                {/* Mover / Seleccionar */}
+                <button
+                  onClick={() => setTool('move')}
+                  className={`flex flex-col items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl transition ${
+                    tool === 'move' ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400' : 'hover:bg-white/10 text-zinc-300'
+                  }`}
+                >
+                  <Move className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium mt-0.5">Mover</span>
+                </button>
 
-              {/* Materiales de Entrenamiento */}
-              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                <button onClick={() => addElement('mini_goal')} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
-                  <span className="text-lg sm:text-xl">🥅</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium">Portería</span>
-                </button>
-                <button onClick={() => addElement('ladder')} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
-                  <span className="text-lg sm:text-xl">🪜</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium">Escalera</span>
-                </button>
-                <button onClick={() => addElement('dummy')} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
-                  <span className="text-lg sm:text-xl">🧍</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium">Maniquí</span>
-                </button>
-                <button onClick={() => addElement('hurdle')} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
-                  <span className="text-lg sm:text-xl">🚧</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium">Valla</span>
-                </button>
-                <button onClick={() => addElement('cone', { color: '#ea580c' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-orange-500">
-                  <span className="text-lg sm:text-xl">▲</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium text-white">Cono N.</span>
-                </button>
-                <button onClick={() => addElement('cone', { color: '#2563eb' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-blue-500">
-                  <span className="text-lg sm:text-xl">▲</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium text-white">Cono A.</span>
-                </button>
-                <button onClick={() => addElement('cone', { color: '#eab308' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-yellow-400">
-                  <span className="text-lg sm:text-xl">▲</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium text-white">Cono Am.</span>
-                </button>
-                <button onClick={() => addElement('saucer', { color: '#facc15' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
-                  <span className="text-lg sm:text-xl">🟡</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium">Plato</span>
-                </button>
-                <button onClick={() => addElement('ring', { color: '#38bdf8' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
-                  <span className="text-lg sm:text-xl">⭕</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium">Aro</span>
-                </button>
-                <button onClick={() => addElement('pole', { color: '#facc15' })} className="flex flex-col items-center justify-center w-14 sm:w-16 h-14 hover:bg-white/10 rounded-lg transition gap-1 text-white">
-                  <span className="text-lg sm:text-xl">🥢</span>
-                  <span className="text-[9px] sm:text-[10px] font-medium">Estaca</span>
-                </button>
-              </div>
-            </div>
-          )}
+                {/* Trazos y Flechas */}
+                <button
+                  onClick={() => setShowLinePalette(true)}
+                  className={`flex flex-col items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl transition ${
+                    tool === 'draw' ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400' : 'hover:bg-white/10 text-zinc-300'
+                  }`}
+                >
+                  <PenTool className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium mt-0.5">Trazos</span>
+                </button>
+
+                {/* Borrar trazo */}
+                <button
+                  onClick={() => setTool(tool === 'eraser' ? 'move' : 'eraser')}
+                  className={`flex flex-col items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl transition ${
+                    tool === 'eraser' ? 'bg-amber-500 text-black shadow-lg' : 'hover:bg-white/10 text-zinc-300'
+                  }`}
+                >
+                  <Eraser className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium mt-0.5">Borrar</span>
+                </button>
+
+                {/* Limpiar pizarra */}
+                <button
+                  onClick={() => { if (confirm('¿Vaciar toda la pizarra?')) { setObjects([]); setDrawings([]); } }}
+                  className="flex flex-col items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl hover:bg-red-500/20 text-red-400 transition"
+                >
+                  <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium mt-0.5">Limpiar</span>
+                </button>
+
+                <div className="w-px h-10 bg-zinc-700 mx-0.5 shrink-0"></div>
+
+                {/* Artículos (Despliega catálogo lateral tras el arco derecho) */}
+                <button
+                  onClick={() => setShowTrainingMenu(!showTrainingMenu)}
+                  className={`flex flex-col items-center justify-center w-14 sm:w-20 h-12 sm:h-16 rounded-xl transition ${
+                    showTrainingMenu ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400' : 'hover:bg-white/10 text-white'
+                  }`}
+                >
+                  <svg viewBox="0 0 32 32" className="w-5 h-5 sm:w-6 sm:h-6">
+                    <circle cx="11" cy="12" r="5.5" fill="none" stroke="currentColor" strokeWidth="2" />
+                    <polygon points="15,26 21,10 24,10 30,26" fill="currentColor" opacity="0.9" />
+                    <line x1="13" y1="26" x2="31" y2="26" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                  </svg>
+                  <span className="text-[9px] sm:text-[10px] font-semibold mt-0.5">Artículos</span>
+                </button>
+
+                {/* Texto */}
+                <button
+                  onClick={() => setTool(tool === 'text' ? 'move' : 'text')}
+                  className={`flex flex-col items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl transition ${
+                    tool === 'text' ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-white/10 text-zinc-300'
+                  }`}
+                >
+                  <Type className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium mt-0.5">Texto</span>
+                </button>
+
+                {/* Notas */}
+                <button
+                  onClick={() => setShowTrainingMenu(false)}
+                  className="flex flex-col items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl hover:bg-white/10 text-zinc-300 transition"
+                  title="Notas tácticas"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 sm:w-6 sm:h-6 fill-none stroke-current stroke-2">
+                    <rect x="5" y="3" width="14" height="18" rx="2" />
+                    <line x1="9" y1="8" x2="15" y2="8" />
+                    <line x1="9" y1="12" x2="15" y2="12" />
+                    <line x1="9" y1="16" x2="12" y2="16" />
+                  </svg>
+                  <span className="text-[9px] sm:text-[10px] font-medium mt-0.5">Notas</span>
+                </button>
+
+                {/* Efectos */}
+                <button
+                  onClick={() => setShowTrainingMenu(false)}
+                  className="flex flex-col items-center justify-center w-12 sm:w-16 h-12 sm:h-16 rounded-xl hover:bg-white/10 text-zinc-300 transition"
+                  title="Efectos visuales"
+                >
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-[9px] sm:text-[10px] font-medium mt-0.5">Efectos</span>
+                </button>
+              </div>
+            </>
+          )}
 
           {/* MODO: PLANTILLA (JUGADORES Y BALÓN) */}
           {bottomBarMode === 'roster' && (
