@@ -6212,18 +6212,18 @@ Sin markdown. Inicia con [ y termina con ]:`;
             <>
               {/* CATÁLOGO LATERAL DE ARTÍCULOS TRAS EL ARCO DERECHO (NO INVADE LA CANCHA NI GRABACIONES) */}
               {showTrainingMenu && !isRecording && (
-                <aside className="fixed right-[4.25rem] sm:right-[5.5rem] top-14 sm:top-16 bottom-16 sm:bottom-20 w-28 sm:w-36 bg-zinc-950/95 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
-                  <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-800 bg-zinc-900/90 shrink-0">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-400">Artículos</span>
+                <aside className="fixed right-16 sm:right-24 top-14 sm:top-16 bottom-16 sm:bottom-20 w-24 sm:w-28 bg-zinc-950/95 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
+                  <div className="flex items-center justify-between px-2 py-1 border-b border-zinc-800 bg-zinc-900/90 shrink-0">
+                    <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tight text-amber-400">Artículos</span>
                     <button
                       onClick={() => setShowTrainingMenu(false)}
-                      className="p-0.5 text-zinc-400 hover:text-white rounded-md hover:bg-zinc-800"
+                      className="p-0.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800"
                       title="Cerrar catálogo"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-3 h-3" />
                     </button>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-1.5 sm:p-2 grid grid-cols-2 gap-1.5 sm:gap-2">
+                  <div className="flex-1 overflow-y-auto p-1 grid grid-cols-2 gap-1">
                     {[
                       {
                         label: 'Cono N.',
