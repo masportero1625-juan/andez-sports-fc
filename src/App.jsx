@@ -4467,14 +4467,34 @@ Sin markdown. Inicia con [ y termina con ]:`;
             <span>SUPER ADMIN</span>
             <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
           </button>
+          <button
+            onClick={async () => {
+              try {
+                if (!document.fullscreenElement) {
+                  await document.documentElement.requestFullscreen();
+                  if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape').catch(() => {});
+                  }
+                } else {
+                  await document.exitFullscreen();
+                }
+              } catch (err) {}
+            }}
+            className="p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition"
+            title="Pantalla Completa Horizontal"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
+          </button>
 
-          <button 
-  onClick={handleLogout} 
-  className="p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition"
-  title="Cerrar Sesión"
->
-  <LogOut className="w-4 h-4" />
-</button>
+          <button
+            onClick={handleLogout}
+            className="p-2 text-zinc-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition"
+            title="Cerrar Sesión"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
