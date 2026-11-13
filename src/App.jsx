@@ -4493,7 +4493,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         {/* PANELES LATERALES FLOTANTES (ESTILO TACTICALPAD DEFINITIVO) */}
         
         {/* LADO IZQUIERDO: EQUIPO LOCAL Y MENÚ */}
-        <div className="absolute top-12 bottom-16 left-2 sm:left-[7%] sm:top-16 sm:bottom-20 z-40 flex flex-col items-center justify-between pointer-events-none">
+        <div className="absolute top-3 bottom-3 left-2 sm:left-4 lg:left-[7%] lg:top-16 lg:bottom-20 z-40 flex flex-col items-center justify-center gap-2 lg:justify-between pointer-events-auto">
           {/* Cápsula Superior Local */}
           <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
@@ -4522,7 +4522,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
           {/* Botón Menú Casa */}
           <button
             onClick={() => setBottomBarMode('menu')}
-            className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all duration-200 pointer-events-auto ${
+            className={`w-12 h-11 lg:w-14 lg:h-16 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all ${
               bottomBarMode === 'menu' ? 'bg-blue-600 border-blue-400 scale-105 shadow-blue-500/40 ring-2 ring-blue-400/50' : 'bg-[#252528] border-zinc-600/70 hover:bg-[#303035]'
             }`}
             title="Menú Principal"
@@ -4536,7 +4536,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         </div>
 
         {/* LADO DERECHO: EQUIPO VISITANTE Y HERRAMIENTAS */}
-        <div className="absolute top-12 bottom-16 right-2 sm:right-[7%] sm:top-16 sm:bottom-20 z-40 flex flex-col items-center justify-between pointer-events-none">
+        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-40 flex flex-col items-center justify-center gap-2 lg:justify-between pointer-events-auto">
           {/* Cápsula Superior Visitante */}
           <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
@@ -4565,7 +4565,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
           {/* Botón Herramientas Lápiz */}
           <button
             onClick={() => setBottomBarMode('tools')}
-            className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all duration-200 pointer-events-auto ${
+            className={`w-12 h-11 lg:w-14 lg:h-16 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all ${
               bottomBarMode === 'tools' ? 'bg-blue-600 border-blue-400 scale-105 shadow-blue-500/40 ring-2 ring-blue-400/50' : 'bg-[#252528] border-zinc-600/70 hover:bg-[#303035]'
             }`}
             title="Herramientas y Trazados"
@@ -5961,7 +5961,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
           {/* MODO: MENÚ PRINCIPAL (TACTICALPAD 1:1 VECTOR OFICIAL) */}
           {/* MODO: MENÚ PRINCIPAL (ESCALA REAL TACTICALPAD) */}
           {bottomBarMode === 'menu' && (
-  <div className="w-full h-full flex items-center justify-between gap-0.5 px-0.5">
+        <div className="w-full h-full flex items-center justify-between gap-0.5 px-1 [&_button]:!min-w-0 [&_button]:!w-auto [&_button]:!flex-1 [&_button]:!px-0.5 [&_button]:!h-12 lg:[&_button]:!h-18 lg:[&_button]:!w-24 lg:[&_button]:!flex-none [&_svg]:!w-4 [&_svg]:!h-4 lg:[&_svg]:!w-8 lg:[&_svg]:!h-8 [&_span]:!text-[8px] sm:[&_span]:!text-[9px] lg:[&_span]:!text-xs [&_span]:!tracking-tighter lg:[&_span]:!tracking-tight">
     
     {/* 1. Nuevo Proyecto */}
     <button 
