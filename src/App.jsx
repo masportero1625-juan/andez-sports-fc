@@ -4992,17 +4992,16 @@ Sin markdown. Inicia con [ y termina con ]:`;
             })}
           </svg>
   </div>
-  <div 
-    className={`absolute inset-0 transition-opacity duration-150 ${
-      viewMode === '3d' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-    }`}
-    style={{ visibility: viewMode === '3d' ? 'visible' : 'hidden' }}
-  >
-            <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl p-2 shadow-2xl flex items-center gap-2">
+  <div
+            className={`absolute inset-0 ${
+              viewMode === '3d' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none -z-10'
+            }`}
+          >
+            <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl">
               <button
                 onClick={() => setCameraLocked(!cameraLocked)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                  cameraLocked ? 'bg-emerald-600 text-white shadow-lg' : 'bg-amber-500 text-black shadow-lg animate-pulse'
+                  cameraLocked ? 'bg-emerald-600 text-white shadow-lg' : 'bg-amber-500 text-black shadow-lg'
                 }`}
               >
                 {cameraLocked ? <Lock className="w-4 h-4" /> : <Move className="w-4 h-4" />}
@@ -5010,10 +5009,10 @@ Sin markdown. Inicia con [ y termina con ]:`;
               </button>
             </div>
             <Scene3DBoundary>
-              <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando 3D...</div>}>
+              <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando motor 3D...</div>}>
                 <Canvas
-                  frameloop={viewMode === '3d' ? 'always' : 'never'}
-                  dpr={[1, isPC ? 2 : 1.5]}
+                  frameloop="always"
+                  dpr={[1, isPC ? 1.5 : 1]}
                   shadows
                   gl={{ antialias: true, powerPreference: "high-performance" }}
                   className="w-full h-full touch-none select-none"
