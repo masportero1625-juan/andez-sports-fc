@@ -4553,7 +4553,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         </div>
 
         {/* LADO DERECHO: EQUIPO VISITANTE Y HERRAMIENTAS */}
-        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-40 flex flex-col items-center justify-center gap-2 lg:justify-between pointer-events-auto">
+        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-20 flex flex-col justify-between md:justify-start md:gap-2 lg:justify-between items-center pointer-events-none no-print">
           {/* Cápsula Superior Visitante */}
           <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
@@ -6212,7 +6212,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
             <>
               {/* CATÁLOGO LATERAL DE ARTÍCULOS TRAS EL ARCO DERECHO (NO INVADE LA CANCHA NI GRABACIONES) */}
               {showTrainingMenu && !isRecording && (
-                <aside className="fixed right-20 md:right-24 lg:right-32 top-14 sm:top-16 bottom-16 sm:bottom-20 w-20 md:w-16 lg:w-24 bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
+                <aside className="fixed right-20 top-14 bottom-16 w-20 md:right-3 md:top-52 md:bottom-20 md:w-24 lg:right-40 lg:top-16 lg:bottom-20 lg:w-24 bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
                   <div className="flex items-center justify-between px-2 py-1 border-b border-zinc-800 bg-zinc-900/90 shrink-0">
                     <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tight text-amber-400">Artículos</span>
                     <button
