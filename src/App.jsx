@@ -4553,7 +4553,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         </div>
 
         {/* LADO DERECHO: EQUIPO VISITANTE Y HERRAMIENTAS */}
-        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-20 flex flex-col justify-between md:justify-start md:gap-2 lg:justify-between items-center pointer-events-none no-print">
+        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-20 flex flex-col justify-between [@media(min-width:768px)_and_(min-height:600px)]:justify-start [@media(min-width:768px)_and_(min-height:600px)]:gap-2 lg:justify-between items-center pointer-events-none no-print">
           {/* Cápsula Superior Visitante */}
           <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
@@ -4581,7 +4581,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
           {/* Botón Herramientas Lápiz */}
           <button
-            onClick={() => setBottomBarMode('tools')}
+            onClick={() => { setBottomBarMode('tools'); setShowTrainingMenu(true); }}
             className={`w-12 h-11 lg:w-14 lg:h-16 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all ${
               bottomBarMode === 'tools' ? 'bg-blue-600 border-blue-400 scale-105 shadow-blue-500/40 ring-2 ring-blue-400/50' : 'bg-[#252528] border-zinc-600/70 hover:bg-[#303035]'
             }`}
@@ -6212,7 +6212,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
             <>
               {/* CATÁLOGO LATERAL DE ARTÍCULOS TRAS EL ARCO DERECHO (NO INVADE LA CANCHA NI GRABACIONES) */}
               {showTrainingMenu && !isRecording && (
-                <aside className="fixed right-20 top-14 bottom-16 w-20 md:right-3 md:top-52 md:bottom-20 md:w-24 lg:right-40 lg:top-16 lg:bottom-20 lg:w-24 bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
+                <aside className="fixed right-20 top-14 bottom-16 w-20 [@media(min-width:768px)_and_(min-height:600px)]:right-3 [@media(min-width:768px)_and_(min-height:600px)]:top-52 [@media(min-width:768px)_and_(min-height:600px)]:bottom-20 [@media(min-width:768px)_and_(min-height:600px)]:w-24 lg:right-40 lg:top-16 lg:bottom-20 lg:w-24 bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl z-40 flex flex-col overflow-hidden no-print">
                   <div className="flex items-center justify-between px-2 py-1 border-b border-zinc-800 bg-zinc-900/90 shrink-0">
                     <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tight text-amber-400">Artículos</span>
                     <button
