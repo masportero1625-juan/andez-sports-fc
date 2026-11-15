@@ -4553,7 +4553,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         </div>
 
         {/* LADO DERECHO: EQUIPO VISITANTE Y HERRAMIENTAS */}
-        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-20 flex flex-col items-center pointer-events-none no-print" style={{ justifyContent: (window.innerWidth >= 768 && window.innerWidth < 1366 && window.innerHeight >= 600) ? 'flex-start' : 'space-between', gap: (window.innerWidth >= 768 && window.innerWidth < 1366 && window.innerHeight >= 600) ? '0.5rem' : '0' }}>
+        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-20 flex flex-col items-center pointer-events-none no-print" style={{ justifyContent: (window.innerWidth >= 760 && window.innerWidth < 1360) ? 'flex-start' : 'space-between', gap: (window.innerWidth >= 760 && window.innerWidth < 1360) ? '0.5rem' : '0' }}>
           {/* Cápsula Superior Visitante */}
           <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
@@ -6212,7 +6212,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
             <>
               {/* CATÁLOGO LATERAL DE ARTÍCULOS TRAS EL ARCO DERECHO (NO INVADE LA CANCHA NI GRABACIONES) */}
               {showTrainingMenu && !isRecording && (
-                <aside className="fixed z-40 flex flex-col overflow-hidden no-print bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl" style={{ right: window.innerWidth >= 1366 ? '10rem' : ((window.innerWidth >= 768 && window.innerWidth < 1366 && window.innerHeight >= 600) ? '0.75rem' : '5rem'), top: window.innerWidth >= 1366 ? '4rem' : ((window.innerWidth >= 768 && window.innerWidth < 1366 && window.innerHeight >= 600) ? '13rem' : '3.5rem'), bottom: window.innerWidth >= 1366 ? '5rem' : '4rem', width: window.innerWidth >= 1366 ? '6rem' : ((window.innerWidth >= 768 && window.innerWidth < 1366 && window.innerHeight >= 600) ? '6rem' : '5rem') }}>
+                <aside className="fixed z-40 flex flex-col overflow-hidden no-print bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl" style={{ right: window.innerWidth >= 1360 ? '10rem' : (window.innerWidth >= 760 ? '0.75rem' : '5rem'), top: window.innerWidth >= 1360 ? '4rem' : (window.innerWidth >= 760 ? '12rem' : '3.5rem'), bottom: window.innerWidth >= 1360 ? '5rem' : '4rem', width: window.innerWidth >= 1360 ? '6rem' : (window.innerWidth >= 760 ? '6rem' : '5rem') }}>
                   <div className="flex items-center justify-between px-2 py-1 border-b border-zinc-800 bg-zinc-900/90 shrink-0">
                     <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tight text-amber-400">Artículos</span>
                     <button
