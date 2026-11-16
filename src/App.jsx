@@ -4094,14 +4094,16 @@ export default function App() {
           serializing2D = false;
         }
       };
-
-      const drawLoop = () => {
+          const drawLoop = () => {
         if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
 
         ctx.fillStyle = '#09090b';
         ctx.fillRect(0, 0, 1920, 1080);
 
-        if (viewMode === '3d') {
+        const mainEl = document.querySelector('main');
+        const is3DNow = mainEl?.firstElementChild?.style?.visibility === 'hidden';
+
+        if (is3DNow) {
           const webglCanvas = Array.from(document.querySelectorAll('canvas')).find(
             (c) => c !== recordCanvas && c.width > 0
           );
@@ -4123,21 +4125,10 @@ export default function App() {
       };
 
       const stream = recordCanvas.captureStream(30);
-      const supportedTypes = [
-        'video/webm;codecs=vp8',
-        'video/webm',
-        'video/mp4;codecs=avc1',
-        'video/mp4'
-      ];
-      const mimeType = supportedTypes.find(
-        (type) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)
-      ) || '';
-      const mr = new MediaRecorder(
-        stream,
-        mimeType ? { mimeType, videoBitsPerSecond: 12000000 } : { videoBitsPerSecond: 12000000 }
-      );
+      const supportedTypes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4;codecs=avc1', 'video/mp4'];
+      const mimeType = supportedTypes.find((t) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) || '';
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 12000000 } : { videoBitsPerSecond: 12000000 });
       mediaRecorderRef.current = mr;
-      setTimeout(() => requestAnimationFrame(drawLoop), 50);
 
       mr.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data);
@@ -4148,16 +4139,23 @@ export default function App() {
         const finalType = mimeType || 'video/webm';
         const ext = finalType.includes('mp4') ? 'mp4' : 'webm';
         let blob = new Blob(recordedChunksRef.current, { type: finalType });
+
+        // Inyectar duración real en cabecera WebM/Matroska (4 u 8 bytes) para barra de tiempo navegable
         if (ext === 'webm') {
           const buf = new Uint8Array(await blob.arrayBuffer());
-          const durIdx = buf.findIndex((_, i) => buf[i] === 0x44 && buf[i + 1] === 0x89);
-          if (durIdx !== -1 && buf[durIdx + 2] === 0x88) {
-            new DataView(buf.buffer).setFloat64(durIdx + 3, durationMs, false);
-            blob = new Blob([buf], { type: finalType });
+          for (let i = 0; i < Math.min(buf.length - 12, 4096); i++) {
+            if (buf[i] === 0x44 && buf[i + 1] === 0x89) {
+              const view = new DataView(buf.buffer);
+              if (buf[i + 2] === 0x88) view.setFloat64(i + 3, durationMs, false);
+              else if (buf[i + 2] === 0x84) view.setFloat32(i + 3, durationMs, false);
+              blob = new Blob([buf], { type: finalType });
+              break;
+            }
           }
         }
+
         const url = URL.createObjectURL(blob);
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach((t) => t.stop());
         setIsRecording(false);
 
         const defaultName = (typeof drillTitle === 'string' && drillTitle.trim() && drillTitle !== 'Salida y Progresión') ? drillTitle.trim() : '';
@@ -4167,7 +4165,6 @@ export default function App() {
         const fileName = `${cleanName}.${ext}`;
         const file = new File([blob], fileName, { type: finalType });
 
-        // Descarga automática del video guardado
         const a = document.createElement('a');
         a.href = url;
         a.download = fileName;
@@ -4175,17 +4172,13 @@ export default function App() {
         a.click();
         document.body.removeChild(a);
 
-        // Si el celular/tablet soporta compartir archivos directamente, abre el menú compartir
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
-            await navigator.share({
-              files: [file],
-              title: 'Jugada Táctica - Andez Sports',
-            });
+            await navigator.share({ files: [file], title: userTitle.trim() || 'Jugada Táctica - Andez Sports' });
           } catch (_) {}
         }
       };
-
+        
       mr.start(250);
       setIsRecording(true);
     } catch (err) {
