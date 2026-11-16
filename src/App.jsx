@@ -4553,7 +4553,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         </div>
 
         {/* LADO DERECHO: EQUIPO VISITANTE Y HERRAMIENTAS */}
-        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-20 flex flex-col items-center justify-between pointer-events-none no-print tablet-botones">
+        <div className="absolute top-3 bottom-3 right-2 sm:right-4 lg:right-[7%] lg:top-16 lg:bottom-20 z-20 flex flex-col items-center justify-center gap-3 lg:justify-between lg:gap-0 pointer-events-none no-print tablet-botones">
           {/* Cápsula Superior Visitante */}
           <div className="flex flex-col items-center bg-[#252528] border border-zinc-600/70 rounded-2xl p-1.5 shadow-2xl pointer-events-auto">
             <button
@@ -6212,7 +6212,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
             <>
               {/* CATÁLOGO LATERAL DE ARTÍCULOS TRAS EL ARCO DERECHO (NO INVADE LA CANCHA NI GRABACIONES) */}
               {showTrainingMenu && !isRecording && (
-                <aside className="fixed z-40 flex flex-col overflow-hidden no-print bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl right-20 top-14 bottom-16 w-20 lg:right-40 lg:top-16 lg:bottom-20 lg:w-24 tablet-catalogo">
+                <aside className="fixed z-40 flex flex-col overflow-hidden no-print bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl right-16 top-2 bottom-2 w-20 lg:right-40 lg:top-16 lg:bottom-20 lg:w-24 tablet-catalogo">
                   <style>{`
                     @media (min-width: 768px) and (max-width: 1299px) and (min-height: 500px) {
                       .tablet-botones { justify-content: flex-start !important; gap: 0.5rem !important; }
