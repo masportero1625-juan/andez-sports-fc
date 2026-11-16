@@ -4070,6 +4070,12 @@ export default function App() {
 
       const recordStartTime = Date.now();
       let busy = false;
+      const stream = recordCanvas.captureStream(0);
+      const videoTrack = stream.getVideoTracks()[0];
+      const cssText = Array.from(document.styleSheets).map((sheet) => {
+        try { return Array.from(sheet.cssRules || []).map((r) => r.cssText).join('\n'); } catch (_) { return ''; }
+      }).join('\n');
+
       const drawLoop = () => {
         if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
         const is3DActive = mainEl.firstElementChild?.style?.visibility === 'hidden';
@@ -4081,23 +4087,23 @@ export default function App() {
           ctx.fillStyle = '#09090b';
           ctx.fillRect(0, 0, 1920, 1080);
           ctx.drawImage(webglCanvas, 0, 0, 1920, 1080);
+          if (videoTrack?.requestFrame) videoTrack.requestFrame();
         } else if (!busy && mainEl.firstElementChild) {
           busy = true;
           const board2D = mainEl.firstElementChild;
-          const rect = board2D.getBoundingClientRect();
-          const w = Math.max(1, Math.round(rect.width));
-          const h = Math.max(1, Math.round(rect.height));
+          const w = Math.max(1, Math.round(mainEl.clientWidth || board2D.clientWidth));
+          const h = Math.max(1, Math.round(mainEl.clientHeight || board2D.clientHeight));
           const clone = board2D.cloneNode(true);
           clone.querySelectorAll('.no-print, canvas').forEach((el) => el.remove());
-          clone.style.cssText = `position:static;opacity:1;visibility:visible;width:${w}px;height:${h}px;`;
-          const inlineStyles = Array.from(document.querySelectorAll('style')).map((s) => s.outerHTML).join('');
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px;background:#09090b;overflow:hidden;font-family:sans-serif;">${inlineStyles}${new XMLSerializer().serializeToString(clone)}</div></foreignObject></svg>`;
+          clone.style.cssText = `position:relative;display:flex;align-items:center;justify-content:center;opacity:1;visibility:visible;width:${w}px;height:${h}px;overflow:hidden;`;
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px;background:#09090b;display:flex;align-items:center;justify-content:center;overflow:hidden;"><style>${cssText}</style>${new XMLSerializer().serializeToString(clone)}</div></foreignObject></svg>`;
           const img = new Image();
           img.onload = () => {
             ctx.fillStyle = '#09090b';
             ctx.fillRect(0, 0, 1920, 1080);
             const scale = Math.min(1920 / w, 1080 / h);
             ctx.drawImage(img, (1920 - w * scale) / 2, (1080 - h * scale) / 2, w * scale, h * scale);
+            if (videoTrack?.requestFrame) videoTrack.requestFrame();
             busy = false;
           };
           img.onerror = () => { busy = false; };
@@ -4106,10 +4112,9 @@ export default function App() {
         requestAnimationFrame(drawLoop);
       };
 
-      const stream = recordCanvas.captureStream(30);
       const supportedTypes = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
       const mimeType = supportedTypes.find((type) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) || '';
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 8000000 } : { videoBitsPerSecond: 8000000 });
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 10000000 } : { videoBitsPerSecond: 10000000 });
       mediaRecorderRef.current = mr;
       setTimeout(() => requestAnimationFrame(drawLoop), 50);
 
@@ -4131,12 +4136,14 @@ export default function App() {
           }
         }
         const url = URL.createObjectURL(blob);
-        setRecordedVideoUrl(url);
-
         stream.getTracks().forEach(t => t.stop());
         setIsRecording(false);
 
-        const fileName = `Andez_Tactica_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
+        const defaultName = (typeof drillTitle === 'string' && drillTitle.trim() && drillTitle !== 'Salida y Progresión') ? drillTitle.trim() : '';
+        const userTitle = window.prompt('Nombre de la actividad o sesión:', defaultName);
+        if (userTitle === null) return;
+        const cleanName = (userTitle.trim() || `Sesion_Tactica_${new Date().toISOString().slice(0, 10)}`).replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_\-\s]/g, '').replace(/\s+/g, '_');
+        const fileName = `${cleanName}.${ext}`;
         const file = new File([blob], fileName, { type: finalType });
 
         // Descarga automática del video guardado
@@ -5450,24 +5457,6 @@ Sin markdown. Inicia con [ y termina con ]:`;
                 <textarea rows={3} value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Ej: Rondo 4v2 con conos y balón..." className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400 resize-none" autoFocus />
                 <button type="submit" disabled={isGeneratingPrompt} className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-black text-xs uppercase rounded-xl shadow">{isGeneratingPrompt ? 'Generando con Gemini...' : 'Crear en la Pizarra'}</button>
               </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL VIDEO */}
-        {recordedVideoUrl && (
-          <div className="absolute inset-0 bg-black/85 flex items-center justify-center p-4 z-50 no-print">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md p-5 shadow-2xl flex flex-col items-center">
-              <div className="w-full flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5"><Video className="w-4 h-4 text-red-500" /> Video Grabado</h3>
-                <button onClick={() => setRecordedVideoUrl(null)} className="text-zinc-400 hover:text-white"><X className="w-4 h-4" /></button>
-              </div>
-              <video src={recordedVideoUrl} controls autoPlay className="w-full rounded-2xl mb-4 border border-zinc-800 max-h-60" />
-              <div className="w-full flex gap-2">
-                <a href={recordedVideoUrl} download={`ejercicio-${drillTitle.replace(/\s+/g, '_')}.webm`} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-1.5 shadow">
-                  <Download className="w-4 h-4" /> Descargar
-                </a>
-              </div>
             </div>
           </div>
         )}
