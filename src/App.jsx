@@ -4057,25 +4057,58 @@ export default function App() {
     setRecordedVideoUrl(null);
     recordedChunksRef.current = [];
     try {
-      const canvases = Array.from(document.querySelectorAll('canvas'));
-      const targetCanvas = canvases.find(c => c.offsetParent !== null && c.width > 0) || canvases[0];
+      const recordCanvas = document.createElement('canvas');
+      recordCanvas.width = 1920;
+      recordCanvas.height = 1080;
+      const ctx = recordCanvas.getContext('2d');
+      const mainEl = document.querySelector('main');
 
-      if (!targetCanvas || typeof targetCanvas.captureStream !== 'function') {
-        alert('No se encontró un lienzo activo para grabar en este dispositivo.');
+      if (!mainEl || typeof recordCanvas.captureStream !== 'function') {
+        alert('Tu dispositivo no soporta la grabación directa.');
         return;
       }
 
-      const stream = targetCanvas.captureStream(30);
-      const supportedTypes = [
-        'video/webm;codecs=vp9',
-        'video/webm;codecs=vp8',
-        'video/webm',
-        'video/mp4'
-      ];
-      const mimeType = supportedTypes.find(type => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) || '';
+      let busy = false;
+      const drawLoop = () => {
+        if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
+        const webglCanvas = Array.from(document.querySelectorAll('canvas')).find(
+          (c) => c !== recordCanvas && c.offsetParent !== null && c.width > 0
+        );
+        if (webglCanvas) {
+          ctx.fillStyle = '#09090b';
+          ctx.fillRect(0, 0, 1920, 1080);
+          ctx.drawImage(webglCanvas, 0, 0, 1920, 1080);
+        } else if (!busy && mainEl.firstElementChild) {
+          busy = true;
+          const board2D = mainEl.firstElementChild;
+          const rect = board2D.getBoundingClientRect();
+          const w = Math.max(1, Math.round(rect.width));
+          const h = Math.max(1, Math.round(rect.height));
+          const clone = board2D.cloneNode(true);
+          clone.querySelectorAll('.no-print').forEach((el) => el.remove());
+          clone.style.cssText = `position:static;opacity:1;visibility:visible;width:${w}px;height:${h}px;`;
+          const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map((s) => s.outerHTML).join('');
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px;background:#09090b;overflow:hidden;">${styles}${new XMLSerializer().serializeToString(clone)}</div></foreignObject></svg>`;
+          const img = new Image();
+          img.onload = () => {
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(0, 0, 1920, 1080);
+            const scale = Math.min(1920 / w, 1080 / h);
+            ctx.drawImage(img, (1920 - w * scale) / 2, (1080 - h * scale) / 2, w * scale, h * scale);
+            busy = false;
+          };
+          img.onerror = () => { busy = false; };
+          img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }
+        requestAnimationFrame(drawLoop);
+      };
 
-      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const stream = recordCanvas.captureStream(30);
+      const supportedTypes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+      const mimeType = supportedTypes.find((type) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) || '';
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 8000000 } : { videoBitsPerSecond: 8000000 });
       mediaRecorderRef.current = mr;
+      setTimeout(() => requestAnimationFrame(drawLoop), 50);
 
       mr.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data);
