@@ -4571,7 +4571,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
           {/* Botón Menú Casa */}
           <button
             onClick={() => setBottomBarMode('menu')}
-            className={`w-12 h-11 lg:w-14 lg:h-16 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center border shadow-2xl transition-all ${
+            className={`pointer-events-auto w-12 h-11 lg:w-14 lg:h-16 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center gap-0.5 shadow-xl transition-all border ${
               bottomBarMode === 'menu' ? 'bg-blue-600 border-blue-400 scale-105 shadow-blue-500/40 ring-2 ring-blue-400/50' : 'bg-[#252528] border-zinc-600/70 hover:bg-[#303035]'
             }`}
             title="Menú Principal"
