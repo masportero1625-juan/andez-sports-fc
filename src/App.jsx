@@ -4068,12 +4068,15 @@ export default function App() {
         return;
       }
 
+      const recordStartTime = Date.now();
       let busy = false;
       const drawLoop = () => {
         if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
-        const webglCanvas = Array.from(document.querySelectorAll('canvas')).find(
-          (c) => c !== recordCanvas && c.offsetParent !== null && c.width > 0
-        );
+        const is3DActive = mainEl.firstElementChild?.style?.visibility === 'hidden';
+        const webglCanvas = is3DActive
+          ? Array.from(document.querySelectorAll('canvas')).find((c) => c !== recordCanvas && c.width > 0)
+          : null;
+
         if (webglCanvas) {
           ctx.fillStyle = '#09090b';
           ctx.fillRect(0, 0, 1920, 1080);
@@ -4085,10 +4088,10 @@ export default function App() {
           const w = Math.max(1, Math.round(rect.width));
           const h = Math.max(1, Math.round(rect.height));
           const clone = board2D.cloneNode(true);
-          clone.querySelectorAll('.no-print').forEach((el) => el.remove());
+          clone.querySelectorAll('.no-print, canvas').forEach((el) => el.remove());
           clone.style.cssText = `position:static;opacity:1;visibility:visible;width:${w}px;height:${h}px;`;
-          const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map((s) => s.outerHTML).join('');
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px;background:#09090b;overflow:hidden;">${styles}${new XMLSerializer().serializeToString(clone)}</div></foreignObject></svg>`;
+          const inlineStyles = Array.from(document.querySelectorAll('style')).map((s) => s.outerHTML).join('');
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px;background:#09090b;overflow:hidden;font-family:sans-serif;">${inlineStyles}${new XMLSerializer().serializeToString(clone)}</div></foreignObject></svg>`;
           const img = new Image();
           img.onload = () => {
             ctx.fillStyle = '#09090b';
@@ -4104,7 +4107,7 @@ export default function App() {
       };
 
       const stream = recordCanvas.captureStream(30);
-      const supportedTypes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+      const supportedTypes = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
       const mimeType = supportedTypes.find((type) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) || '';
       const mr = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 8000000 } : { videoBitsPerSecond: 8000000 });
       mediaRecorderRef.current = mr;
@@ -4115,9 +4118,18 @@ export default function App() {
       };
 
       mr.onstop = async () => {
+        const durationMs = Date.now() - recordStartTime;
         const finalType = mimeType || 'video/webm';
         const ext = finalType.includes('mp4') ? 'mp4' : 'webm';
-        const blob = new Blob(recordedChunksRef.current, { type: finalType });
+        let blob = new Blob(recordedChunksRef.current, { type: finalType });
+        if (ext === 'webm') {
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          const durIdx = buf.findIndex((_, i) => buf[i] === 0x44 && buf[i + 1] === 0x89);
+          if (durIdx !== -1 && buf[durIdx + 2] === 0x88) {
+            new DataView(buf.buffer).setFloat64(durIdx + 3, durationMs, false);
+            blob = new Blob([buf], { type: finalType });
+          }
+        }
         const url = URL.createObjectURL(blob);
         setRecordedVideoUrl(url);
 
