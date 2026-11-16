@@ -4057,48 +4057,76 @@ export default function App() {
     setRecordedVideoUrl(null);
     recordedChunksRef.current = [];
     try {
-      let stream = null;
+      const canvases = Array.from(document.querySelectorAll('canvas'));
+      const targetCanvas = canvases.find(c => c.offsetParent !== null && c.width > 0) || canvases[0];
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        alert('Tu navegador móvil no soporta la grabación de pantalla nativa. Por favor, utiliza la función "Grabar Pantalla" integrada en tu celular (iOS/Android).');
+      if (!targetCanvas || typeof targetCanvas.captureStream !== 'function') {
+        alert('No se encontró un lienzo activo para grabar en este dispositivo.');
         return;
       }
 
-      const canvasEl = document.querySelector('canvas');
-      if (canvasEl && (viewMode === '3d')) {
-        stream = canvasEl.captureStream(30);
-      } else {
-        stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 } });
-      }
+      const stream = targetCanvas.captureStream(30);
+      const supportedTypes = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+        'video/mp4'
+      ];
+      const mimeType = supportedTypes.find(type => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) || '';
 
-      if (!stream) {
-        alert('Tu navegador no admite la grabación directa en este modo.');
-        return;
-      }
-
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm';
-
-      const mr = new MediaRecorder(stream, { mimeType });
+      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       mediaRecorderRef.current = mr;
-      mr.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
-      mr.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        setRecordedVideoUrl(URL.createObjectURL(blob));
+
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data);
+      };
+
+      mr.onstop = async () => {
+        const finalType = mimeType || 'video/webm';
+        const ext = finalType.includes('mp4') ? 'mp4' : 'webm';
+        const blob = new Blob(recordedChunksRef.current, { type: finalType });
+        const url = URL.createObjectURL(blob);
+        setRecordedVideoUrl(url);
+
         stream.getTracks().forEach(t => t.stop());
         setIsRecording(false);
+
+        const fileName = `Andez_Tactica_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
+        const file = new File([blob], fileName, { type: finalType });
+
+        // Descarga automática del video guardado
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Si el celular/tablet soporta compartir archivos directamente, abre el menú compartir
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'Jugada Táctica - Andez Sports',
+            });
+          } catch (_) {}
+        }
       };
-      mr.start();
+
+      mr.start(250);
       setIsRecording(true);
     } catch (err) {
-      alert('No se pudo iniciar la grabación.');
+      alert('No se pudo iniciar la grabación de la pizarra.');
       setIsRecording(false);
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) mediaRecorderRef.current.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    } else {
+      setIsRecording(false);
+    }
   };
 
   const [showPromptModal, setShowPromptModal] = useState(false);
@@ -4398,10 +4426,10 @@ Sin markdown. Inicia con [ y termina con ]:`;
                 const file = e.target.files?.[0];
                 if (file) {
                   const reader = new FileReader();
-                  reader.onload = (ev) => setClubLogo(ev.target?.result);
+                  reader.onload = (ev) => setClubLogo(ev.target.result);
                   reader.readAsDataURL(file);
                 }
-              }} 
+              }}
             />
             {clubLogo ? (
               <img src={clubLogo} alt="Logo Club" className="w-7 h-7 sm:w-9 sm:h-9 object-contain rounded-full border border-zinc-700 group-hover:ring-2 ring-amber-400 transition" />
@@ -4423,14 +4451,18 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
         {/* Lado Derecho: Controles Administrativos */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <button 
-            onClick={startRecording} 
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-[10px] sm:text-xs font-semibold border border-zinc-700/60 transition"
-            title="Grabar Video / Sesión"
-          >
-            <Video className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-red-500" />
-            <span className="hidden sm:inline">Grabar</span>
-          </button>
+          <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 border rounded-lg text-xs font-medium transition ${
+                isRecording
+                  ? 'bg-red-600 hover:bg-red-500 border-red-400 text-white animate-pulse'
+                  : 'bg-zinc-800/80 hover:bg-zinc-700 border-zinc-700/80 text-zinc-200'
+              }`}
+              title={isRecording ? 'Detener y Guardar Grabación' : 'Grabar Video / Sesión'}
+            >
+              <Video className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isRecording ? 'text-white' : 'text-red-500'}`} />
+              <span className="hidden sm:inline">{isRecording ? 'Detener' : 'Grabar'}</span>
+            </button>
 
           <button 
             onClick={() => { if (typeof handleExportImage === 'function') handleExportImage(); else alert('Exportando imagen...'); }} 
