@@ -4181,6 +4181,7 @@ export default function App() {
         
       mr.start(250);
       setIsRecording(true);
+      requestAnimationFrame(drawLoop);
     } catch (err) {
       alert('No se pudo iniciar la grabación de la pizarra.');
       setIsRecording(false);
