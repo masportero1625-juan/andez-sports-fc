@@ -4291,38 +4291,173 @@ export default function App() {
             const sc = obj.scale || 1.0;
             ctx.scale(sc, sc);
             ctx.rotate(((obj.rotation || 0) * Math.PI) / 180);
-            const matColor = obj.color || '#f97316';
-            if (obj.type === 'cone' || obj.type === 'disc') {
+            const itemColor = obj.color;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            if (obj.type === 'mini_goal' || obj.type === 'goal') {
+              // Sombra de base
+              ctx.fillStyle = 'rgba(0,0,0,0.22)';
               ctx.beginPath();
-              ctx.arc(0, 0, obj.type === 'disc' ? 1.5 : 1.8, 0, Math.PI * 2);
-              ctx.fillStyle = matColor;
-              ctx.fill();
-              ctx.lineWidth = 0.3;
-              ctx.strokeStyle = '#ffffff';
+              ctx.moveTo(-2.5, 0.4); ctx.lineTo(2.5, 0.4);
+              ctx.lineTo(3.1, -1.8); ctx.lineTo(-1.9, -1.8);
+              ctx.closePath(); ctx.fill();
+
+              // Fondo y mallas laterales
+              ctx.fillStyle = 'rgba(226,232,240,0.25)';
+              ctx.strokeStyle = '#94a3b8';
+              ctx.lineWidth = 0.06;
+              [
+                [[-2.4, 0], [-2.4, -1.8], [-1.7, -2.7], [-1.7, -0.9]],
+                [[-1.7, -0.9], [3.1, -0.9], [3.1, -2.7], [-1.7, -2.7]],
+                [[-2.4, -1.8], [2.4, -1.8], [3.1, -2.7], [-1.7, -2.7]],
+                [[2.4, 0], [2.4, -1.8], [3.1, -2.7], [3.1, -0.9]],
+              ].forEach((pts) => {
+                ctx.beginPath();
+                pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+              });
+
+              // Tubulares traseros
+              ctx.strokeStyle = '#cbd5e1';
+              ctx.lineWidth = 0.16;
+              ctx.beginPath();
+              ctx.moveTo(-2.4, -1.8); ctx.lineTo(-1.7, -2.7);
+              ctx.moveTo(2.4, -1.8); ctx.lineTo(3.1, -2.7);
+              ctx.moveTo(-1.7, -2.7); ctx.lineTo(3.1, -2.7);
               ctx.stroke();
-            } else if (obj.type === 'hurdle' || obj.type === 'pole' || obj.type === 'bar') {
-              ctx.fillStyle = matColor;
-              ctx.fillRect(-3.5, -0.45, 7, 0.9);
+
+              // Marco frontal blanco
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 0.28;
+              ctx.beginPath();
+              ctx.moveTo(-2.4, 0.1); ctx.lineTo(-2.4, -1.8);
+              ctx.moveTo(2.4, 0.1); ctx.lineTo(2.4, -1.8);
+              ctx.moveTo(-2.45, -1.8); ctx.lineTo(2.45, -1.8);
+              ctx.stroke();
+            } else if (obj.type === 'dummy') {
+              const dummyFill = itemColor || '#eab308';
+              ctx.fillStyle = 'rgba(0,0,0,0.32)';
+              ctx.beginPath(); ctx.ellipse(0, 2.9, 1.3, 0.45, 0, 0, Math.PI * 2); ctx.fill();
+
+              ctx.fillStyle = dummyFill;
+              ctx.strokeStyle = '#854d0e';
+              ctx.lineWidth = 0.12;
+              // Cabeza y cuello
+              ctx.beginPath(); ctx.arc(0, -2.8, 0.68, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+              ctx.beginPath(); ctx.roundRect(-0.22, -2.15, 0.44, 0.45, 0.08); ctx.fill(); ctx.stroke();
+              // Torso
+              ctx.beginPath();
+              ctx.moveTo(-1.35, -1.7);
+              ctx.bezierCurveTo(-0.8, -1.85, 0.8, -1.85, 1.35, -1.7);
+              ctx.lineTo(1.15, 0.7); ctx.lineTo(-1.15, 0.7);
+              ctx.closePath(); ctx.fill(); ctx.stroke();
+              // Rejillas interiores
+              ctx.lineWidth = 0.14;
+              ctx.beginPath();
+              ctx.moveTo(-0.75, -1.4); ctx.lineTo(-0.65, 0.45);
+              ctx.moveTo(0, -1.55); ctx.lineTo(0, 0.45);
+              ctx.moveTo(0.75, -1.4); ctx.lineTo(0.65, 0.45);
+              ctx.moveTo(-1.05, -0.8); ctx.lineTo(1.05, -0.8);
+              ctx.moveTo(-0.95, -0.1); ctx.lineTo(0.95, -0.1);
+              ctx.stroke();
+              // Cintura y picas
+              ctx.lineWidth = 0.12;
+              ctx.beginPath(); ctx.roundRect(-1.15, 0.7, 2.3, 0.32, 0.08); ctx.fill(); ctx.stroke();
+              ctx.strokeStyle = dummyFill; ctx.lineWidth = 0.26;
+              ctx.beginPath();
+              ctx.moveTo(-0.7, 1.02); ctx.lineTo(-0.7, 2.7);
+              ctx.moveTo(0.7, 1.02); ctx.lineTo(0.7, 2.7);
+              ctx.stroke();
+              ctx.strokeStyle = '#854d0e'; ctx.lineWidth = 0.18;
+              ctx.beginPath(); ctx.moveTo(-0.7, 2.1); ctx.lineTo(0.7, 2.1); ctx.stroke();
+              ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.18;
+              ctx.beginPath();
+              ctx.moveTo(-0.7, 2.7); ctx.lineTo(-0.7, 3.1);
+              ctx.moveTo(0.7, 2.7); ctx.lineTo(0.7, 3.1);
+              ctx.stroke();
             } else if (obj.type === 'ladder') {
-              ctx.strokeStyle = '#facc15';
-              ctx.lineWidth = 0.35;
-              ctx.strokeRect(-6, -1.6, 12, 3.2);
-              for (let lx = -4; lx <= 4; lx += 2) {
-                ctx.beginPath(); ctx.moveTo(lx, -1.6); ctx.lineTo(lx, 1.6); ctx.stroke();
-              }
-            } else if (obj.type === 'ring' || obj.type === 'hoop') {
+              ctx.fillStyle = 'rgba(0,0,0,0.15)';
+              ctx.fillRect(-1.8, -5.9, 3.6, 11.8);
+              ctx.strokeStyle = '#0284c7';
+              ctx.lineWidth = 0.22;
               ctx.beginPath();
-              ctx.arc(0, 0, 2.4, 0, Math.PI * 2);
-              ctx.lineWidth = 0.45;
-              ctx.strokeStyle = matColor;
+              ctx.moveTo(-1.6, -6.0); ctx.lineTo(-1.6, 6.0);
+              ctx.moveTo(1.6, -6.0); ctx.lineTo(1.6, 6.0);
               ctx.stroke();
-            } else if (obj.type === 'mini_goal' || obj.type === 'goal') {
-              ctx.strokeStyle = '#ffffff';
-              ctx.lineWidth = 0.5;
-              ctx.strokeRect(-2, -4.5, 4, 9);
+              [-4.8, -3.2, -1.6, 0.0, 1.6, 3.2, 4.8].forEach((ly) => {
+                ctx.fillStyle = '#facc15';
+                ctx.strokeStyle = '#ca8a04';
+                ctx.lineWidth = 0.04;
+                ctx.beginPath(); ctx.roundRect(-1.7, ly - 0.12, 3.4, 0.24, 0.06); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#0369a1';
+                ctx.fillRect(-1.7, ly - 0.12, 0.3, 0.24);
+                ctx.fillRect(1.4, ly - 0.12, 0.3, 0.24);
+              });
+            } else if (obj.type === 'hurdle') {
+              const hurdleColor = itemColor || '#facc15';
+              ctx.fillStyle = 'rgba(0,0,0,0.26)';
+              ctx.beginPath(); ctx.ellipse(0.2, 0.8, 2.4, 0.4, 0, 0, Math.PI * 2); ctx.fill();
+              ctx.strokeStyle = '#475569'; ctx.lineWidth = 0.24;
+              ctx.beginPath();
+              ctx.moveTo(-2.1, 0.5); ctx.lineTo(-2.1, 1.2);
+              ctx.moveTo(2.1, 0.5); ctx.lineTo(2.1, 1.2);
+              ctx.stroke();
+              ctx.strokeStyle = hurdleColor; ctx.lineWidth = 0.26;
+              ctx.beginPath();
+              ctx.moveTo(-2.1, 0.7); ctx.lineTo(-2.1, -0.7);
+              ctx.moveTo(2.1, 0.7); ctx.lineTo(2.1, -0.7);
+              ctx.stroke();
+              ctx.lineWidth = 0.34;
+              ctx.beginPath(); ctx.moveTo(-2.2, -0.7); ctx.lineTo(2.2, -0.7); ctx.stroke();
+              ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.08;
+              ctx.beginPath(); ctx.moveTo(-2.2, -0.7); ctx.lineTo(2.2, -0.7); ctx.stroke();
+            } else if (obj.type === 'pole' || obj.type === 'bar') {
+              const poleColor = itemColor || '#facc15';
+              ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 0.26;
+              ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(2.6, 2.6); ctx.stroke();
+              ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 0.1;
+              ctx.beginPath(); ctx.arc(0, 0, 0.9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+              ctx.fillStyle = '#334155';
+              ctx.beginPath(); ctx.arc(0, 0, 0.55, 0, Math.PI * 2); ctx.fill();
+              ctx.strokeStyle = poleColor; ctx.lineWidth = 0.3;
+              ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-0.8, -3.2); ctx.stroke();
+              ctx.fillStyle = '#1e293b';
+              ctx.beginPath(); ctx.arc(-0.8, -3.2, 0.25, 0, Math.PI * 2); ctx.fill();
+            } else if (obj.type === 'cone') {
+              const coneCol = itemColor || '#ea580c';
+              ctx.fillStyle = 'rgba(0,0,0,0.28)';
+              ctx.beginPath(); ctx.ellipse(0.2, 0.5, 1.3, 0.55, 0, 0, Math.PI * 2); ctx.fill();
+              ctx.fillStyle = coneCol; ctx.strokeStyle = '#9a3412'; ctx.lineWidth = 0.08;
+              ctx.beginPath(); ctx.roundRect(-1.0, -0.4, 2.0, 1.4, 0.18); ctx.fill(); ctx.stroke();
+              ctx.strokeStyle = '#c2410c';
+              ctx.beginPath();
+              ctx.moveTo(-0.85, 0.7); ctx.lineTo(0, -1.3); ctx.lineTo(0.85, 0.7);
+              ctx.closePath(); ctx.fill(); ctx.stroke();
+              ctx.fillStyle = 'rgba(255,255,255,0.9)';
+              ctx.beginPath();
+              ctx.moveTo(-0.45, 0.0); ctx.lineTo(0.45, 0.0);
+              ctx.lineTo(0.28, -0.55); ctx.lineTo(-0.28, -0.55);
+              ctx.closePath(); ctx.fill();
+            } else if (obj.type === 'disc') {
+              const discCol = itemColor || '#facc15';
+              ctx.fillStyle = 'rgba(0,0,0,0.25)';
+              ctx.beginPath(); ctx.ellipse(0.15, 0.3, 1.2, 0.65, 0, 0, Math.PI * 2); ctx.fill();
+              ctx.fillStyle = discCol; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.12;
+              ctx.beginPath(); ctx.ellipse(0, 0, 1.15, 0.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+              ctx.fillStyle = '#1e293b';
+              ctx.beginPath(); ctx.ellipse(0, -0.05, 0.32, 0.16, 0, 0, Math.PI * 2); ctx.fill();
+            } else if (obj.type === 'ring' || obj.type === 'hoop') {
+              const hoopCol = itemColor || '#3b82f6';
+              ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 0.18;
+              ctx.beginPath(); ctx.ellipse(0.1, 0.2, 1.5, 0.75, 0, 0, Math.PI * 2); ctx.stroke();
+              ctx.strokeStyle = hoopCol; ctx.lineWidth = 0.24;
+              ctx.beginPath(); ctx.ellipse(0, 0, 1.5, 0.75, 0, 0, Math.PI * 2); ctx.stroke();
             } else {
-              ctx.fillStyle = matColor;
-              ctx.fillRect(-1.8, -1.8, 3.6, 3.6);
+              ctx.fillStyle = itemColor || '#facc15';
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 0.15;
+              ctx.beginPath(); ctx.arc(0, 0, 1.0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             }
           }
           ctx.restore();
