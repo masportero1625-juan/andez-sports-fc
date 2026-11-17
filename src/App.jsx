@@ -11,6 +11,7 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment';
+import fixWebmDuration from 'fix-webm-duration';
 // CREDENCIALES SUPABASE
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
@@ -4053,10 +4054,21 @@ export default function App() {
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
 
+  const latestRecordStateRef = useRef({});
+  latestRecordStateRef.current = {
+    viewMode,
+    isPC,
+    pitchMode,
+    objects,
+    drawings,
+    currentLine,
+    textBlocks,
+    drillTitle,
+  };
+
   const startRecording = async () => {
-    setRecordedVideoUrl(null);
-    recordedChunksRef.current = [];
     try {
+      recordedChunksRef.current = [];
       const recordCanvas = document.createElement('canvas');
       recordCanvas.width = 1920;
       recordCanvas.height = 1080;
@@ -4068,66 +4080,292 @@ export default function App() {
       }
 
       const recordStartTime = Date.now();
-      let cached2DImg = null;
-      let serializing2D = false;
 
-      const refresh2DFrame = () => {
-        if (serializing2D || !svgRef.current) return;
-        serializing2D = true;
-        try {
-          const svgClone = svgRef.current.cloneNode(true);
-          svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-          const vb = svgRef.current.viewBox?.baseVal;
-          const vw = vb && vb.width ? vb.width : 1050;
-          const vh = vb && vb.height ? vb.height : 680;
-          svgClone.setAttribute('width', String(vw));
-          svgClone.setAttribute('height', String(vh));
-          const xml = new XMLSerializer().serializeToString(svgClone);
-          const img = new Image();
-          img.onload = () => {
-            cached2DImg = img;
-            serializing2D = false;
-          };
-          img.onerror = () => { serializing2D = false; };
-          img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
-        } catch (_) {
-          serializing2D = false;
-        }
-      };
-          const drawLoop = () => {
-        if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
-
-        ctx.fillStyle = '#09090b';
+      // Renderizador nativo 2D síncrono (< 0.5 ms por cuadro, sin bloquear la UI)
+      const renderNative2D = (st) => {
+        ctx.fillStyle = '#5c822b';
         ctx.fillRect(0, 0, 1920, 1080);
 
-        const mainEl = document.querySelector('main');
-        const is3DNow = mainEl?.firstElementChild?.style?.visibility === 'hidden';
+        const vbX = -3, vbY = -1, vbW = 111, vbH = 70;
+        const scale = Math.min(1920 / vbW, 1080 / vbH);
+        const offsetX = (1920 - vbW * scale) / 2 - vbX * scale;
+        const offsetY = (1080 - vbH * scale) / 2 - vbY * scale;
 
-        if (is3DNow) {
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+
+        // 1. Franjas de césped natural
+        for (let sx = -10; sx < 120; sx += 10.5) {
+          ctx.fillStyle = '#739b3a';
+          ctx.fillRect(sx, -5, 5.25, 80);
+          ctx.fillStyle = '#7ba440';
+          ctx.fillRect(sx + 5.25, -5, 5.25, 80);
+        }
+
+        // 2. Líneas reglamentarias de cancha
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 0.8;
+        ctx.fillStyle = 'none';
+        if (st.isPC) {
+          const fw = st.pitchMode === 'half' ? 51 : 101;
+          const midX = st.pitchMode === 'half' ? 53 : 52.5;
+          ctx.strokeRect(2, 2, fw, 64);
+          ctx.beginPath(); ctx.moveTo(midX, 2); ctx.lineTo(midX, 66); ctx.stroke();
+          ctx.beginPath(); ctx.arc(midX, 34, 9.15, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath(); ctx.arc(midX, 34, 0.8, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeRect(2, 13.8, 16.5, 40.4);
+          ctx.strokeRect(2, 24.8, 5.5, 18.4);
+          ctx.strokeRect(-0.8, 30.34, 2.8, 7.32);
+          ctx.beginPath(); ctx.arc(13, 34, 9.15, -0.92, 0.92); ctx.stroke();
+          if (!st.pitchMode?.includes('half')) {
+            ctx.strokeRect(86.5, 13.8, 16.5, 40.4);
+            ctx.strokeRect(97.5, 24.8, 5.5, 18.4);
+            ctx.strokeRect(103, 30.34, 2.8, 7.32);
+            ctx.beginPath(); ctx.arc(92, 34, 9.15, Math.PI - 0.92, Math.PI + 0.92); ctx.stroke();
+          }
+        } else {
+          const fh = st.pitchMode === 'half' ? 79 : 101;
+          const midY = st.pitchMode === 'half' ? 81 : 52.5;
+          ctx.strokeRect(2, 2, 64, fh);
+          ctx.beginPath(); ctx.moveTo(2, midY); ctx.lineTo(66, midY); ctx.stroke();
+          ctx.beginPath(); ctx.arc(34, midY, 9.15, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath(); ctx.arc(34, midY, 0.6, 0, Math.PI * 2); ctx.fill();
+          if (!st.pitchMode?.includes('half')) {
+            ctx.strokeRect(13.8, 2, 40.4, 16.5);
+            ctx.strokeRect(24.8, 2, 18.4, 5.5);
+          }
+          const botY = st.pitchMode === 'half' ? 64.5 : 86.5;
+          const penY = st.pitchMode === 'half' ? 75.5 : 97.5;
+          ctx.strokeRect(13.8, botY, 40.4, 16.5);
+          ctx.strokeRect(24.8, penY, 18.4, 5.5);
+        }
+
+        // 3. Trazos tácticos y flechas
+        const allLines = st.currentLine ? [...(st.drawings || []), st.currentLine] : (st.drawings || []);
+        allLines.forEach((l) => {
+          if (!l?.start || !l?.end) return;
+          const dx = l.end.x - l.start.x;
+          const dy = l.end.y - l.start.y;
+          const dist = Math.hypot(dx, dy) || 0.001;
+          const ux = dx / dist;
+          const uy = dy / dist;
+          const sw = l.width || 1.4;
+          const isArrow = l.type !== 'straight' && l.type !== 'block';
+
+          ctx.save();
+          ctx.strokeStyle = l.color || '#ffffff';
+          ctx.fillStyle = l.color || '#ffffff';
+          ctx.lineWidth = sw;
+          ctx.lineCap = 'round';
+          if (l.type === 'dashed') ctx.setLineDash([2.5, 2]);
+
+          ctx.beginPath();
+          if (l.type === 'wavy') {
+            const waves = Math.max(1, Math.round(dist / 8));
+            const wLen = dist / waves;
+            const px = -uy * 2.2, py = ux * 2.2;
+            ctx.moveTo(l.start.x, l.start.y);
+            for (let i = 0; i < waves; i++) {
+              const bx = l.start.x + ux * (i * wLen);
+              const by = l.start.y + uy * (i * wLen);
+              const ex = l.start.x + ux * ((i + 1) * wLen);
+              const ey = l.start.y + uy * ((i + 1) * wLen);
+              ctx.bezierCurveTo(
+                bx + ux * wLen * 0.35 + px, by + uy * wLen * 0.35 + py,
+                bx + ux * wLen * 0.65 - px, by + uy * wLen * 0.65 - py,
+                ex, ey
+              );
+            }
+          } else {
+            ctx.moveTo(l.start.x, l.start.y);
+            ctx.lineTo(l.end.x, l.end.y);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          if (isArrow && dist > 1) {
+            const headLen = sw * 2.6;
+            const angle = Math.atan2(dy, dx);
+            ctx.beginPath();
+            ctx.moveTo(l.end.x, l.end.y);
+            ctx.lineTo(l.end.x - headLen * Math.cos(angle - Math.PI / 6), l.end.y - headLen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(l.end.x - headLen * Math.cos(angle + Math.PI / 6), l.end.y - headLen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+          } else if (l.type === 'block') {
+            const px = -uy * sw * 2, py = ux * sw * 2;
+            ctx.beginPath();
+            ctx.moveTo(l.end.x - px, l.end.y - py);
+            ctx.lineTo(l.end.x + px, l.end.y + py);
+            ctx.stroke();
+          }
+          ctx.restore();
+        });
+
+        // 4. Textos tácticos
+        (st.textBlocks || []).forEach((tb) => {
+          if (!tb?.text) return;
+          ctx.save();
+          ctx.translate(tb.x, tb.y);
+          ctx.rotate(((tb.rotation || 0) * Math.PI) / 180);
+          const sz = tb.size || 2.8;
+          ctx.font = `${tb.isBold !== false ? 'bold' : 'normal'} ${sz}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'rgba(0,0,0,0.85)';
+          ctx.fillText(tb.text, 0.15, 0.15);
+          ctx.fillStyle = tb.color || '#ffffff';
+          ctx.fillText(tb.text, 0, 0);
+          ctx.restore();
+        });
+
+        // 5. Jugadores, Balón y Materiales
+        (st.objects || []).forEach((obj) => {
+          ctx.save();
+          ctx.translate(obj.x, obj.y);
+
+          if (obj.type === 'player') {
+            const fillCol =
+              obj.customColor ||
+              (obj.role === 'GK'
+                ? obj.team === 'red' ? '#eab308' : '#f97316'
+                : obj.team === 'red' ? '#ef4444' : '#2563eb');
+            ctx.beginPath();
+            ctx.arc(0, 0, 3.0, 0, Math.PI * 2);
+            ctx.fillStyle = fillCol;
+            ctx.fill();
+            ctx.lineWidth = 0.45;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            if (obj.number !== undefined && obj.number !== null) {
+              ctx.fillStyle = '#ffffff';
+              ctx.font = 'bold 2.5px sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(String(obj.number), 0, 0.15);
+            }
+
+            const nameTxt = (obj.name || '').trim();
+            const posTxt = (obj.position || '').trim();
+            if (nameTxt || posTxt) {
+              const both = nameTxt && posTxt;
+              const longest = Math.max(nameTxt.length, posTxt.length);
+              const bw = Math.max(10, longest * 1.45 + 3.2);
+              const bh = both ? 5.6 : 3.4;
+              ctx.fillStyle = 'rgba(10,10,10,0.88)';
+              ctx.beginPath();
+              ctx.roundRect(-bw / 2, 3.7, bw, bh, 1);
+              ctx.fill();
+              ctx.textAlign = 'center';
+              if (both) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 1.8px sans-serif';
+                ctx.fillText(nameTxt, 0, 5.7);
+                ctx.fillStyle = '#facc15';
+                ctx.font = 'bold 1.5px sans-serif';
+                ctx.fillText(posTxt, 0, 8.0);
+              } else {
+                ctx.fillStyle = nameTxt ? '#ffffff' : '#facc15';
+                ctx.font = 'bold 1.8px sans-serif';
+                ctx.fillText(nameTxt || posTxt, 0, 5.9);
+              }
+            }
+          } else if (obj.type === 'ball') {
+            ctx.beginPath();
+            ctx.arc(0, 0, 1.9, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.lineWidth = 0.35;
+            ctx.strokeStyle = '#111827';
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, 0, 0.75, 0, Math.PI * 2);
+            ctx.fillStyle = '#111827';
+            ctx.fill();
+          } else {
+            const sc = obj.scale || 1.0;
+            ctx.scale(sc, sc);
+            ctx.rotate(((obj.rotation || 0) * Math.PI) / 180);
+            const matColor = obj.color || '#f97316';
+            if (obj.type === 'cone' || obj.type === 'disc') {
+              ctx.beginPath();
+              ctx.arc(0, 0, obj.type === 'disc' ? 1.5 : 1.8, 0, Math.PI * 2);
+              ctx.fillStyle = matColor;
+              ctx.fill();
+              ctx.lineWidth = 0.3;
+              ctx.strokeStyle = '#ffffff';
+              ctx.stroke();
+            } else if (obj.type === 'hurdle' || obj.type === 'pole' || obj.type === 'bar') {
+              ctx.fillStyle = matColor;
+              ctx.fillRect(-3.5, -0.45, 7, 0.9);
+            } else if (obj.type === 'ladder') {
+              ctx.strokeStyle = '#facc15';
+              ctx.lineWidth = 0.35;
+              ctx.strokeRect(-6, -1.6, 12, 3.2);
+              for (let lx = -4; lx <= 4; lx += 2) {
+                ctx.beginPath(); ctx.moveTo(lx, -1.6); ctx.lineTo(lx, 1.6); ctx.stroke();
+              }
+            } else if (obj.type === 'ring' || obj.type === 'hoop') {
+              ctx.beginPath();
+              ctx.arc(0, 0, 2.4, 0, Math.PI * 2);
+              ctx.lineWidth = 0.45;
+              ctx.strokeStyle = matColor;
+              ctx.stroke();
+            } else if (obj.type === 'mini_goal' || obj.type === 'goal') {
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 0.5;
+              ctx.strokeRect(-2, -4.5, 4, 9);
+            } else {
+              ctx.fillStyle = matColor;
+              ctx.fillRect(-1.8, -1.8, 3.6, 3.6);
+            }
+          }
+          ctx.restore();
+        });
+
+        ctx.restore();
+      };
+
+      const drawLoop = () => {
+        if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
+
+        const st = latestRecordStateRef.current;
+        if (st.viewMode === '3d') {
           const webglCanvas = Array.from(document.querySelectorAll('canvas')).find(
             (c) => c !== recordCanvas && c.width > 0
           );
           if (webglCanvas) {
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(0, 0, 1920, 1080);
             ctx.drawImage(webglCanvas, 0, 0, 1920, 1080);
           }
         } else {
-          refresh2DFrame();
-          if (cached2DImg) {
-            const iw = cached2DImg.naturalWidth || 1050;
-            const ih = cached2DImg.naturalHeight || 680;
-            const scale = Math.min(1840 / iw, 1000 / ih);
-            const dw = iw * scale;
-            const dh = ih * scale;
-            ctx.drawImage(cached2DImg, (1920 - dw) / 2, (1080 - dh) / 2, dw, dh);
-          }
+          renderNative2D(st);
         }
         requestAnimationFrame(drawLoop);
       };
 
       const stream = recordCanvas.captureStream(30);
-      const supportedTypes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4;codecs=avc1', 'video/mp4'];
-      const mimeType = supportedTypes.find((t) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)) || '';
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType, videoBitsPerSecond: 12000000 } : { videoBitsPerSecond: 12000000 });
+      const supportedTypes = [
+        'video/webm;codecs=vp8',
+        'video/webm',
+        'video/mp4;codecs=avc1',
+        'video/mp4',
+      ];
+      const mimeType =
+        supportedTypes.find(
+          (t) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)
+        ) || '';
+      const mr = new MediaRecorder(
+        stream,
+        mimeType
+          ? { mimeType, videoBitsPerSecond: 10_000_000 }
+          : { videoBitsPerSecond: 10_000_000 }
+      );
       mediaRecorderRef.current = mr;
 
       mr.ondataavailable = (e) => {
@@ -4138,30 +4376,33 @@ export default function App() {
         const durationMs = Date.now() - recordStartTime;
         const finalType = mimeType || 'video/webm';
         const ext = finalType.includes('mp4') ? 'mp4' : 'webm';
-        let blob = new Blob(recordedChunksRef.current, { type: finalType });
+        const rawBlob = new Blob(recordedChunksRef.current, { type: finalType });
 
-        // Inyectar duración real en cabecera WebM/Matroska (4 u 8 bytes) para barra de tiempo navegable
-        if (ext === 'webm') {
-          const buf = new Uint8Array(await blob.arrayBuffer());
-          for (let i = 0; i < Math.min(buf.length - 12, 4096); i++) {
-            if (buf[i] === 0x44 && buf[i + 1] === 0x89) {
-              const view = new DataView(buf.buffer);
-              if (buf[i + 2] === 0x88) view.setFloat64(i + 3, durationMs, false);
-              else if (buf[i + 2] === 0x84) view.setFloat32(i + 3, durationMs, false);
-              blob = new Blob([buf], { type: finalType });
-              break;
-            }
-          }
-        }
+        const blob =
+          ext === 'webm'
+            ? await new Promise((resolve) => {
+                fixWebmDuration(rawBlob, durationMs, (fixedBlob) => resolve(fixedBlob || rawBlob));
+              })
+            : rawBlob;
 
         const url = URL.createObjectURL(blob);
         stream.getTracks().forEach((t) => t.stop());
         setIsRecording(false);
 
-        const defaultName = (typeof drillTitle === 'string' && drillTitle.trim() && drillTitle !== 'Salida y Progresión') ? drillTitle.trim() : '';
+        const currentTitle = latestRecordStateRef.current.drillTitle;
+        const defaultName =
+          typeof currentTitle === 'string' &&
+          currentTitle.trim() &&
+          currentTitle !== 'Salida y Progresión'
+            ? currentTitle.trim()
+            : '';
         const userTitle = window.prompt('Nombre de la actividad o sesión:', defaultName);
         if (userTitle === null) return;
-        const cleanName = (userTitle.trim() || `Sesion_Tactica_${new Date().toISOString().slice(0, 10)}`).replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_\-\s]/g, '').replace(/\s+/g, '_');
+        const cleanName = (
+          userTitle.trim() || `Sesion_Tactica_${new Date().toISOString().slice(0, 10)}`
+        )
+          .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_\-\s]/g, '')
+          .replace(/\s+/g, '_');
         const fileName = `${cleanName}.${ext}`;
         const file = new File([blob], fileName, { type: finalType });
 
@@ -4174,11 +4415,14 @@ export default function App() {
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
-            await navigator.share({ files: [file], title: userTitle.trim() || 'Jugada Táctica - Andez Sports' });
+            await navigator.share({
+              files: [file],
+              title: userTitle.trim() || 'Jugada Táctica - Andez Sports',
+            });
           } catch (_) {}
         }
       };
-        
+
       mr.start(250);
       setIsRecording(true);
       requestAnimationFrame(drawLoop);
@@ -4187,7 +4431,7 @@ export default function App() {
       setIsRecording(false);
     }
   };
-
+  
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
