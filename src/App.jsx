@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment';
 import fixWebmDuration from 'fix-webm-duration';
+
 // CREDENCIALES SUPABASE
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
