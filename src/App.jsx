@@ -6537,7 +6537,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
           {bottomBarMode === 'tools' && (
             <>
               {/* CATÁLOGO LATERAL DE ARTÍCULOS TRAS EL ARCO DERECHO (NO INVADE LA CANCHA NI GRABACIONES) */}
-              {showTrainingMenu && !isRecording && (
+              {showTrainingMenu && (
                 <aside className="fixed z-40 flex flex-col overflow-hidden no-print bg-zinc-950/90 border border-zinc-700/80 rounded-2xl shadow-2xl right-24 top-14 bottom-16 w-20 lg:right-40 lg:top-16 lg:bottom-20 lg:w-24 tablet-catalogo">
                   <style>{`
                     @media (min-width: 768px) and (max-width: 1299px) and (min-height: 500px) {
