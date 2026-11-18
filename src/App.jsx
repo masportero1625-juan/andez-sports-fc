@@ -4523,7 +4523,7 @@ export default function App() {
               ctx.imageSmoothingQuality = 'high';
               ctx.fillStyle = '#09090b';
               ctx.fillRect(0, 0, 1920, 1080);
-              const scale = Math.min(1920 / srcW, 1080 / srcH);
+              const scale = Math.max(1920 / srcW, 1080 / srcH);
               const drawW = Math.round(srcW * scale);
               const drawH = Math.round(srcH * scale);
               const drawX = Math.round((1920 - drawW) / 2);
@@ -4629,6 +4629,7 @@ export default function App() {
         });
         encoder.configure(encoderConfig);
 
+        let startPerf = null;
         let frameIndex = 0;
         const frameIntervalMs = 1000 / 30;
         const frameDurationUs = 33333;
@@ -4637,6 +4638,7 @@ export default function App() {
 
         const processFrame = (now) => {
           if (!isActive) return;
+          if (startPerf === null) startPerf = now;
           if (now - lastCapturePerf < frameIntervalMs - 2) return;
           if (encoder.encodeQueueSize > 2) return;
           lastCapturePerf = now;
@@ -4648,7 +4650,7 @@ export default function App() {
             sourceCanvas = fallbackCanvas;
           }
 
-          const timestampUs = frameIndex * frameDurationUs;
+          const timestampUs = Math.round((now - startPerf) * 1000);
           const isKeyFrame = frameIndex % 30 === 0;
           frameIndex += 1;
 
@@ -5679,9 +5681,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
             <span>{cameraLocked ? 'Cámara Bloqueada' : 'Rotar Cancha (Orbitar)'}</span>
           </button>
         </div>
-        <div
-          className={isRecording && viewMode === '3d' ? 'relative h-full max-w-full aspect-video' : 'relative w-full h-full'}
-        >
+        <div className="relative w-full h-full">
           <Scene3DBoundary>
             <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando motor 3D...</div>}>
               <Canvas
