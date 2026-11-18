@@ -4583,8 +4583,10 @@ export default function App() {
         let isActive = true;
         let frameIndex = 0;
         const fps = 24;
-        const frameDurationUs = Math.round(1_000_000 / fps);
+        const minIntervalMs = 1000 / fps;
+        let startPerfMs = null;
         let lastCapturedMs = 0;
+        let lastKeyFrameMs = -2000;
 
         const muxer = new Mp4Muxer.Muxer({
           target: new Mp4Muxer.ArrayBufferTarget(),
@@ -4601,15 +4603,25 @@ export default function App() {
         const captureTick = () => {
           if (!isActive) return;
           const now = performance.now();
-          if (now - lastCapturedMs >= 1000 / fps - 2 && encoder.encodeQueueSize <= 2) {
+          if (startPerfMs === null) startPerfMs = now;
+
+          if (now - lastCapturedMs >= minIntervalMs - 2 && encoder.encodeQueueSize <= 2) {
+            const elapsedMs = now - startPerfMs;
+            const deltaMs = lastCapturedMs === 0 ? minIntervalMs : now - lastCapturedMs;
             lastCapturedMs = now;
+
             renderCompositeFrame();
-            const timestampUs = frameIndex * frameDurationUs;
+
+            const timestampUs = Math.round(elapsedMs * 1000);
+            const durationUs = Math.max(1000, Math.round(deltaMs * 1000));
+            const isKeyFrame = elapsedMs - lastKeyFrameMs >= 1000;
+            if (isKeyFrame) lastKeyFrameMs = elapsedMs;
+
             const frame = new VideoFrame(recordCanvas, {
               timestamp: timestampUs,
-              duration: frameDurationUs,
+              duration: durationUs,
             });
-            encoder.encode(frame, { keyFrame: frameIndex % fps === 0 });
+            encoder.encode(frame, { keyFrame: isKeyFrame });
             frame.close();
             frameIndex++;
           }
