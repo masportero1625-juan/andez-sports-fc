@@ -5622,7 +5622,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                   frameloop="always"
                   dpr={[1, isPC ? 1.5 : 1]}
                   shadows
-                  gl={{ antialias: true, powerPreference: "high-performance" }}
+                  gl={{ antialias: true, powerPreference: "default", failIfMajorPerformanceCaveat: false }}
                   className="w-full h-full touch-none select-none"
                   style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
                   onCreated={({ gl }) => {
