@@ -5664,7 +5664,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
               <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando motor 3D...</div>}>
                 <Canvas
                   frameloop="always"
-                  dpr={isRecording ? 1 : [1, isPC ? 1.5 : 1]}
+                  dpr={[1, isPC ? 1.5 : 1]}
                   shadows
                   gl={{ antialias: true, powerPreference: "default", failIfMajorPerformanceCaveat: false, preserveDrawingBuffer: true }}
                   className="w-full h-full touch-none select-none"
