@@ -4691,10 +4691,14 @@ export default function App() {
     }
   };
   
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    } else {
+  const stopRecording = async () => {
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        await mediaRecorderRef.current.stop();
+      }
+    } catch (err) {
+      console.error('Error al detener grabación:', err);
+    } finally {
       setIsRecording(false);
     }
   };
@@ -6699,7 +6703,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
     {/* 6. Compartir */}
     <button 
-      onClick={startRecording} 
+      onClick={isRecording ? stopRecording : startRecording} 
       className="flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 hover:bg-white/10 rounded-xl transition gap-0.5 sm:gap-1.5 shrink-0 group"
     >
       <svg className="w-5 h-5 sm:w-8 sm:h-8 text-white fill-none stroke-current stroke-[2.6]" viewBox="0 0 32 32">
