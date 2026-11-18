@@ -4593,12 +4593,11 @@ export default function App() {
 
       if (useMuxer && encoderConfig) {
         let isActive = true;
-        let frameIndex = 0;
         const fps = 30;
-        const frameIntervalMs = 1000 / fps;
-        const frameDurationUs = 33333;
-        let lastTickMs = null;
-        let accumulatedMs = 0;
+        const minIntervalMs = 1000 / fps;
+        let startPerfMs = null;
+        let lastCapturedMs = 0;
+        let lastKeyFrameMs = -2000;
 
         const targetW = encoderConfig.width;
         const targetH = encoderConfig.height;
@@ -4624,38 +4623,31 @@ export default function App() {
 
         const captureTick = (now) => {
           if (!isActive) return;
-          if (lastTickMs === null) {
-            lastTickMs = now;
-            accumulatedMs = frameIntervalMs;
-          } else {
-            accumulatedMs += now - lastTickMs;
-            lastTickMs = now;
-          }
+          if (startPerfMs === null) startPerfMs = now;
 
-          if (accumulatedMs >= frameIntervalMs) {
-            const steps = Math.floor(accumulatedMs / frameIntervalMs);
-            accumulatedMs -= steps * frameIntervalMs;
+          if (now - lastCapturedMs >= minIntervalMs - 4 && encoder.encodeQueueSize <= 4) {
+            const elapsedMs = now - startPerfMs;
+            const deltaMs = lastCapturedMs === 0 ? minIntervalMs : now - lastCapturedMs;
+            lastCapturedMs = now;
 
-            if (encoder.encodeQueueSize <= 2) {
-              renderCompositeFrame();
-              let sourceCanvas = recordCanvas;
-              if (needsScale && fallbackCtx) {
-                fallbackCtx.drawImage(recordCanvas, 0, 0, targetW, targetH);
-                sourceCanvas = fallbackCanvas;
-              }
-
-              const timestampUs = frameIndex * frameDurationUs;
-              const durationUs = steps * frameDurationUs;
-              const isKeyFrame = frameIndex === 0 || (frameIndex % fps) < steps;
-
-              const frame = new VideoFrame(sourceCanvas, {
-                timestamp: timestampUs,
-                duration: durationUs,
-              });
-              encoder.encode(frame, { keyFrame: isKeyFrame });
-              frame.close();
+            renderCompositeFrame();
+            let sourceCanvas = recordCanvas;
+            if (needsScale && fallbackCtx) {
+              fallbackCtx.drawImage(recordCanvas, 0, 0, targetW, targetH);
+              sourceCanvas = fallbackCanvas;
             }
-            frameIndex += steps;
+
+            const timestampUs = Math.round(elapsedMs * 1000);
+            const durationUs = Math.max(1000, Math.round(deltaMs * 1000));
+            const isKeyFrame = elapsedMs - lastKeyFrameMs >= 1000;
+            if (isKeyFrame) lastKeyFrameMs = elapsedMs;
+
+            const frame = new VideoFrame(sourceCanvas, {
+              timestamp: timestampUs,
+              duration: durationUs,
+            });
+            encoder.encode(frame, { keyFrame: isKeyFrame });
+            frame.close();
           }
           requestAnimationFrame(captureTick);
         };
