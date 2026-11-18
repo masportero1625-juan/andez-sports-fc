@@ -4562,8 +4562,10 @@ export default function App() {
       let encoderConfig = null;
       if (useMuxer) {
         const candidates = [
-          { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 8_000_000, framerate: 30 },
-          { codec: 'avc1.42002a', width: 1920, height: 1080, bitrate: 8_000_000, framerate: 30 },
+          { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 5_000_000, framerate: 24, hardwareAcceleration: 'prefer-software' },
+          { codec: 'avc1.42002a', width: 1920, height: 1080, bitrate: 5_000_000, framerate: 24, hardwareAcceleration: 'prefer-software' },
+          { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 5_000_000, framerate: 24 },
+          { codec: 'avc1.42002a', width: 1920, height: 1080, bitrate: 5_000_000, framerate: 24 },
         ];
         for (const cfg of candidates) {
           try {
@@ -4580,7 +4582,7 @@ export default function App() {
       if (useMuxer && encoderConfig) {
         let isActive = true;
         let frameIndex = 0;
-        const fps = 30;
+        const fps = 24;
         const frameDurationUs = Math.round(1_000_000 / fps);
         let lastCapturedMs = 0;
 
@@ -4599,7 +4601,7 @@ export default function App() {
         const captureTick = () => {
           if (!isActive) return;
           const now = performance.now();
-          if (now - lastCapturedMs >= 1000 / fps - 2) {
+          if (now - lastCapturedMs >= 1000 / fps - 2 && encoder.encodeQueueSize <= 2) {
             lastCapturedMs = now;
             renderCompositeFrame();
             const timestampUs = frameIndex * frameDurationUs;
@@ -4607,7 +4609,7 @@ export default function App() {
               timestamp: timestampUs,
               duration: frameDurationUs,
             });
-            encoder.encode(frame, { keyFrame: frameIndex % 30 === 0 });
+            encoder.encode(frame, { keyFrame: frameIndex % fps === 0 });
             frame.close();
             frameIndex++;
           }
