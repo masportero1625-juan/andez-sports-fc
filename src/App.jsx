@@ -2529,11 +2529,60 @@ function TacticalDrawing3D({ drawing }) {
 function TacticalText3D({ item }) {
   const x = item.x - 52.5;
   const z = item.y - 34;
-  return <Html position={[x, 0.3, z]} center distanceFactor={24}>
-    <div style={{ color: item.color || '#ffffff', fontWeight: item.isBold === false ? 600 : 900, fontSize: `${Math.max(10, Math.min(22, (item.size || 2.8) * 4))}px`, textDecoration: item.isUnderline ? 'underline' : 'none', textShadow: '0 1px 4px rgba(0,0,0,.95)', whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none' }}>
-      {item.text}
-    </div>
-  </Html>;
+  const rotRad = -((item.rotation || 0) * Math.PI) / 180;
+  const scaleFactor = (item.size || 2.8) / 2.8;
+
+  const { tex, aspect } = useMemo(() => {
+    const txt = (item.text || '').trim();
+    const col = item.color || '#ffffff';
+    const isBold = item.isBold !== false;
+    const isUnder = Boolean(item.isUnderline);
+
+    const c = document.createElement('canvas');
+    const ctx = c.getContext('2d');
+    const fontSize = 96;
+    const fontStr = `${isBold ? '900' : '600'} ${fontSize}px Arial, Helvetica, sans-serif`;
+    ctx.font = fontStr;
+    const metrics = ctx.measureText(txt || ' ');
+    const padX = 48;
+    const padY = 36;
+    c.width = Math.max(128, Math.ceil(metrics.width + padX * 2));
+    c.height = fontSize + padY * 2;
+
+    ctx.font = fontStr;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.strokeText(txt, c.width / 2, c.height / 2);
+    ctx.fillStyle = col;
+    ctx.fillText(txt, c.width / 2, c.height / 2);
+
+    if (isUnder && txt) {
+      const uw = metrics.width;
+      ctx.fillRect((c.width - uw) / 2, c.height / 2 + fontSize * 0.48, uw, 8);
+    }
+
+    const texture = new THREE.CanvasTexture(c);
+    texture.anisotropy = 8;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    return { tex: texture, aspect: c.width / c.height };
+  }, [item.text, item.color, item.isBold, item.isUnderline]);
+
+  useEffect(() => () => tex.dispose(), [tex]);
+
+  if (!item.text || !item.text.trim()) return null;
+  const worldH = 3.2 * scaleFactor;
+  const worldW = worldH * aspect;
+
+  return (
+    <mesh position={[x, 0.14, z]} rotation={[-Math.PI / 2, 0, rotRad]}>
+      <planeGeometry args={[worldW, worldH]} />
+      <meshBasicMaterial map={tex} transparent depthWrite={false} toneMapped={false} />
+    </mesh>
+  );
 }
 // ===== ENTORNO REALISTA: CIELO, CÉSPED, VALLAS, PORTERÍAS Y GRADERÍAS CON BUTACAS (todo procedural) =====
 
@@ -4092,6 +4141,9 @@ export default function App() {
         const offsetX = (1920 - vbW * scale) / 2 - vbX * scale;
         const offsetY = (1080 - vbH * scale) / 2 - vbY * scale;
 
+        // Convierte coordenadas de celular vertical (!st.isPC) al campo horizontal 105x68
+        const toH = (x, y) => (st.isPC ? { x, y } : { x: 105 - y, y: x });
+
         ctx.save();
         ctx.translate(offsetX, offsetY);
         ctx.scale(scale, scale);
@@ -4104,52 +4156,36 @@ export default function App() {
           ctx.fillRect(sx + 5.25, -5, 5.25, 80);
         }
 
-        // 2. Líneas reglamentarias de cancha
+        // 2. Líneas reglamentarias de cancha (siempre panorámica horizontal)
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 0.8;
         ctx.fillStyle = 'none';
-        if (st.isPC) {
-          const fw = st.pitchMode === 'half' ? 51 : 101;
-          const midX = st.pitchMode === 'half' ? 53 : 52.5;
-          ctx.strokeRect(2, 2, fw, 64);
-          ctx.beginPath(); ctx.moveTo(midX, 2); ctx.lineTo(midX, 66); ctx.stroke();
-          ctx.beginPath(); ctx.arc(midX, 34, 9.15, 0, Math.PI * 2); ctx.stroke();
-          ctx.fillStyle = '#ffffff';
-          ctx.beginPath(); ctx.arc(midX, 34, 0.8, 0, Math.PI * 2); ctx.fill();
-          ctx.strokeRect(2, 13.8, 16.5, 40.4);
-          ctx.strokeRect(2, 24.8, 5.5, 18.4);
-          ctx.strokeRect(-0.8, 30.34, 2.8, 7.32);
-          ctx.beginPath(); ctx.arc(13, 34, 9.15, -0.92, 0.92); ctx.stroke();
-          if (!st.pitchMode?.includes('half')) {
-            ctx.strokeRect(86.5, 13.8, 16.5, 40.4);
-            ctx.strokeRect(97.5, 24.8, 5.5, 18.4);
-            ctx.strokeRect(103, 30.34, 2.8, 7.32);
-            ctx.beginPath(); ctx.arc(92, 34, 9.15, Math.PI - 0.92, Math.PI + 0.92); ctx.stroke();
-          }
-        } else {
-          const fh = st.pitchMode === 'half' ? 79 : 101;
-          const midY = st.pitchMode === 'half' ? 81 : 52.5;
-          ctx.strokeRect(2, 2, 64, fh);
-          ctx.beginPath(); ctx.moveTo(2, midY); ctx.lineTo(66, midY); ctx.stroke();
-          ctx.beginPath(); ctx.arc(34, midY, 9.15, 0, Math.PI * 2); ctx.stroke();
-          ctx.fillStyle = '#ffffff';
-          ctx.beginPath(); ctx.arc(34, midY, 0.6, 0, Math.PI * 2); ctx.fill();
-          if (!st.pitchMode?.includes('half')) {
-            ctx.strokeRect(13.8, 2, 40.4, 16.5);
-            ctx.strokeRect(24.8, 2, 18.4, 5.5);
-          }
-          const botY = st.pitchMode === 'half' ? 64.5 : 86.5;
-          const penY = st.pitchMode === 'half' ? 75.5 : 97.5;
-          ctx.strokeRect(13.8, botY, 40.4, 16.5);
-          ctx.strokeRect(24.8, penY, 18.4, 5.5);
+        const fw = st.pitchMode === 'half' ? 51 : 101;
+        const midX = st.pitchMode === 'half' ? 53 : 52.5;
+        ctx.strokeRect(2, 2, fw, 64);
+        ctx.beginPath(); ctx.moveTo(midX, 2); ctx.lineTo(midX, 66); ctx.stroke();
+        ctx.beginPath(); ctx.arc(midX, 34, 9.15, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(midX, 34, 0.8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeRect(2, 13.8, 16.5, 40.4);
+        ctx.strokeRect(2, 24.8, 5.5, 18.4);
+        ctx.strokeRect(-0.8, 30.34, 2.8, 7.32);
+        ctx.beginPath(); ctx.arc(13, 34, 9.15, -0.92, 0.92); ctx.stroke();
+        if (!st.pitchMode?.includes('half')) {
+          ctx.strokeRect(86.5, 13.8, 16.5, 40.4);
+          ctx.strokeRect(97.5, 24.8, 5.5, 18.4);
+          ctx.strokeRect(103, 30.34, 2.8, 7.32);
+          ctx.beginPath(); ctx.arc(92, 34, 9.15, Math.PI - 0.92, Math.PI + 0.92); ctx.stroke();
         }
 
         // 3. Trazos tácticos y flechas
         const allLines = st.currentLine ? [...(st.drawings || []), st.currentLine] : (st.drawings || []);
         allLines.forEach((l) => {
           if (!l?.start || !l?.end) return;
-          const dx = l.end.x - l.start.x;
-          const dy = l.end.y - l.start.y;
+          const pStart = toH(l.start.x, l.start.y);
+          const pEnd = toH(l.end.x, l.end.y);
+          const dx = pEnd.x - pStart.x;
+          const dy = pEnd.y - pStart.y;
           const dist = Math.hypot(dx, dy) || 0.001;
           const ux = dx / dist;
           const uy = dy / dist;
@@ -4168,12 +4204,12 @@ export default function App() {
             const waves = Math.max(1, Math.round(dist / 8));
             const wLen = dist / waves;
             const px = -uy * 2.2, py = ux * 2.2;
-            ctx.moveTo(l.start.x, l.start.y);
+            ctx.moveTo(pStart.x, pStart.y);
             for (let i = 0; i < waves; i++) {
-              const bx = l.start.x + ux * (i * wLen);
-              const by = l.start.y + uy * (i * wLen);
-              const ex = l.start.x + ux * ((i + 1) * wLen);
-              const ey = l.start.y + uy * ((i + 1) * wLen);
+              const bx = pStart.x + ux * (i * wLen);
+              const by = pStart.y + uy * (i * wLen);
+              const ex = pStart.x + ux * ((i + 1) * wLen);
+              const ey = pStart.y + uy * ((i + 1) * wLen);
               ctx.bezierCurveTo(
                 bx + ux * wLen * 0.35 + px, by + uy * wLen * 0.35 + py,
                 bx + ux * wLen * 0.65 - px, by + uy * wLen * 0.65 - py,
@@ -4181,26 +4217,25 @@ export default function App() {
               );
             }
           } else {
-            ctx.moveTo(l.start.x, l.start.y);
-            ctx.lineTo(l.end.x, l.end.y);
+            ctx.moveTo(pStart.x, pStart.y);
+            ctx.lineTo(pEnd.x, pEnd.y);
           }
           ctx.stroke();
           ctx.setLineDash([]);
 
           if (isArrow && dist > 1) {
-            const headLen = sw * 2.6;
+            const headLen = sw * 2.8;
             const angle = Math.atan2(dy, dx);
             ctx.beginPath();
-            ctx.moveTo(l.end.x, l.end.y);
-            ctx.lineTo(l.end.x - headLen * Math.cos(angle - Math.PI / 6), l.end.y - headLen * Math.sin(angle - Math.PI / 6));
-            ctx.lineTo(l.end.x - headLen * Math.cos(angle + Math.PI / 6), l.end.y - headLen * Math.sin(angle + Math.PI / 6));
-            ctx.closePath();
-            ctx.fill();
+            ctx.moveTo(pEnd.x - headLen * Math.cos(angle - Math.PI / 5), pEnd.y - headLen * Math.sin(angle - Math.PI / 5));
+            ctx.lineTo(pEnd.x, pEnd.y);
+            ctx.lineTo(pEnd.x - headLen * Math.cos(angle + Math.PI / 5), pEnd.y - headLen * Math.sin(angle + Math.PI / 5));
+            ctx.stroke();
           } else if (l.type === 'block') {
             const px = -uy * sw * 2, py = ux * sw * 2;
             ctx.beginPath();
-            ctx.moveTo(l.end.x - px, l.end.y - py);
-            ctx.lineTo(l.end.x + px, l.end.y + py);
+            ctx.moveTo(pEnd.x - px, pEnd.y - py);
+            ctx.lineTo(pEnd.x + px, pEnd.y + py);
             ctx.stroke();
           }
           ctx.restore();
@@ -4210,7 +4245,8 @@ export default function App() {
         (st.textBlocks || []).forEach((tb) => {
           if (!tb?.text) return;
           ctx.save();
-          ctx.translate(tb.x, tb.y);
+          const pt = toH(tb.x, tb.y);
+       ctx.translate(pt.x, pt.y);
           ctx.rotate(((tb.rotation || 0) * Math.PI) / 180);
           const sz = tb.size || 2.8;
           ctx.font = `${tb.isBold !== false ? 'bold' : 'normal'} ${sz}px sans-serif`;
@@ -4226,7 +4262,8 @@ export default function App() {
         // 5. Jugadores, Balón y Materiales
         (st.objects || []).forEach((obj) => {
           ctx.save();
-          ctx.translate(obj.x, obj.y);
+          const po = toH(obj.x, obj.y);
+          ctx.translate(po.x, po.y);
 
           if (obj.type === 'player') {
             const fillCol =
@@ -4487,10 +4524,10 @@ export default function App() {
 
       const stream = recordCanvas.captureStream(30);
       const supportedTypes = [
-        'video/webm;codecs=vp8',
-        'video/webm',
         'video/mp4;codecs=avc1',
         'video/mp4',
+        'video/webm;codecs=vp8',
+        'video/webm',
       ];
       const mimeType =
         supportedTypes.find(
