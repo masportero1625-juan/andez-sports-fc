@@ -4562,10 +4562,10 @@ export default function App() {
       let encoderConfig = null;
       if (useMuxer) {
         const candidates = [
-          { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 5_000_000, framerate: 24, hardwareAcceleration: 'prefer-software' },
-          { codec: 'avc1.42002a', width: 1920, height: 1080, bitrate: 5_000_000, framerate: 24, hardwareAcceleration: 'prefer-software' },
-          { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 5_000_000, framerate: 24 },
-          { codec: 'avc1.42002a', width: 1920, height: 1080, bitrate: 5_000_000, framerate: 24 },
+          { codec: 'avc1.4d001f', width: 1280, height: 720, bitrate: 4_500_000, framerate: 30, hardwareAcceleration: 'prefer-hardware' },
+          { codec: 'avc1.42001f', width: 1280, height: 720, bitrate: 4_500_000, framerate: 30, hardwareAcceleration: 'prefer-hardware' },
+          { codec: 'avc1.4d001f', width: 1280, height: 720, bitrate: 4_500_000, framerate: 30 },
+          { codec: 'avc1.42001f', width: 1280, height: 720, bitrate: 4_500_000, framerate: 30 },
         ];
         for (const cfg of candidates) {
           try {
@@ -4582,15 +4582,20 @@ export default function App() {
       if (useMuxer && encoderConfig) {
         let isActive = true;
         let frameIndex = 0;
-        const fps = 24;
+        const fps = 30;
         const minIntervalMs = 1000 / fps;
         let startPerfMs = null;
         let lastCapturedMs = 0;
         let lastKeyFrameMs = -2000;
 
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = 1280;
+        outCanvas.height = 720;
+        const outCtx = outCanvas.getContext('2d');
+
         const muxer = new Mp4Muxer.Muxer({
           target: new Mp4Muxer.ArrayBufferTarget(),
-          video: { codec: 'avc', width: 1920, height: 1080 },
+          video: { codec: 'avc', width: 1280, height: 720 },
           fastStart: 'in-memory',
         });
 
@@ -4605,19 +4610,20 @@ export default function App() {
           const now = performance.now();
           if (startPerfMs === null) startPerfMs = now;
 
-          if (now - lastCapturedMs >= minIntervalMs - 2 && encoder.encodeQueueSize <= 2) {
+          if (now - lastCapturedMs >= minIntervalMs - 2 && encoder.encodeQueueSize <= 3) {
             const elapsedMs = now - startPerfMs;
             const deltaMs = lastCapturedMs === 0 ? minIntervalMs : now - lastCapturedMs;
             lastCapturedMs = now;
 
             renderCompositeFrame();
+            outCtx.drawImage(recordCanvas, 0, 0, 1280, 720);
 
             const timestampUs = Math.round(elapsedMs * 1000);
             const durationUs = Math.max(1000, Math.round(deltaMs * 1000));
             const isKeyFrame = elapsedMs - lastKeyFrameMs >= 1000;
             if (isKeyFrame) lastKeyFrameMs = elapsedMs;
 
-            const frame = new VideoFrame(recordCanvas, {
+            const frame = new VideoFrame(outCanvas, {
               timestamp: timestampUs,
               duration: durationUs,
             });
