@@ -4503,16 +4503,28 @@ export default function App() {
         ctx.restore();
       };
 
+      let cachedWebglCanvas = null;
       const renderCompositeFrame = () => {
         const st = latestRecordStateRef.current;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         if (st.viewMode === '3d') {
-          const webglCanvas = Array.from(document.querySelectorAll('canvas')).find(
-            (c) => c !== recordCanvas && c.width > 0
-          );
-          if (webglCanvas) {
+          if (!cachedWebglCanvas || !document.body.contains(cachedWebglCanvas)) {
+            cachedWebglCanvas = Array.from(document.querySelectorAll('canvas')).find(
+              (c) => c !== recordCanvas && c.width > 0
+            ) || null;
+          }
+          if (cachedWebglCanvas) {
             ctx.fillStyle = '#09090b';
             ctx.fillRect(0, 0, 1920, 1080);
-            ctx.drawImage(webglCanvas, 0, 0, 1920, 1080);
+            const srcW = cachedWebglCanvas.width;
+            const srcH = cachedWebglCanvas.height;
+            const scale = Math.min(1920 / srcW, 1080 / srcH);
+            const drawW = Math.round(srcW * scale);
+            const drawH = Math.round(srcH * scale);
+            const drawX = Math.round((1920 - drawW) / 2);
+            const drawY = Math.round((1080 - drawH) / 2);
+            ctx.drawImage(cachedWebglCanvas, 0, 0, srcW, srcH, drawX, drawY, drawW, drawH);
           }
         } else {
           renderNative2D(st);
@@ -5654,7 +5666,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                   frameloop="always"
                   dpr={[1, isPC ? 1.5 : 1]}
                   shadows
-                  gl={{ antialias: true, powerPreference: "default", failIfMajorPerformanceCaveat: false, preserveDrawingBuffer: isRecording }}
+                  gl={{ antialias: true, powerPreference: "default", failIfMajorPerformanceCaveat: false, preserveDrawingBuffer: true }}
                   className="w-full h-full touch-none select-none"
                   style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
                   onCreated={({ gl }) => {
