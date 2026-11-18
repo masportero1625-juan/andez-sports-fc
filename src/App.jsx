@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment';
 import fixWebmDuration from 'fix-webm-duration';
-
+import * as Mp4Muxer from 'mp4-muxer';
 // CREDENCIALES SUPABASE
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://btpzlnatmnmtmzdygcge.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_r0tfzyI2VCIHLHJb5H6kNw_x4euzZSg';
@@ -4503,9 +4503,7 @@ export default function App() {
         ctx.restore();
       };
 
-      const drawLoop = () => {
-        if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
-
+      const renderCompositeFrame = () => {
         const st = latestRecordStateRef.current;
         if (st.viewMode === '3d') {
           const webglCanvas = Array.from(document.querySelectorAll('canvas')).find(
@@ -4519,47 +4517,10 @@ export default function App() {
         } else {
           renderNative2D(st);
         }
-        requestAnimationFrame(drawLoop);
       };
 
-      const stream = recordCanvas.captureStream(30);
-      const supportedTypes = [
-        'video/mp4;codecs=avc1',
-        'video/mp4',
-        'video/webm;codecs=vp8',
-        'video/webm',
-      ];
-      const mimeType =
-        supportedTypes.find(
-          (t) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)
-        ) || '';
-      const mr = new MediaRecorder(
-        stream,
-        mimeType
-          ? { mimeType, videoBitsPerSecond: 10_000_000 }
-          : { videoBitsPerSecond: 10_000_000 }
-      );
-      mediaRecorderRef.current = mr;
-
-      mr.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data);
-      };
-
-      mr.onstop = async () => {
-        const durationMs = Date.now() - recordStartTime;
-        const finalType = mimeType || 'video/webm';
-        const ext = finalType.includes('mp4') ? 'mp4' : 'webm';
-        const rawBlob = new Blob(recordedChunksRef.current, { type: finalType });
-
-        const blob =
-          ext === 'webm'
-            ? await new Promise((resolve) => {
-                fixWebmDuration(rawBlob, durationMs, (fixedBlob) => resolve(fixedBlob || rawBlob));
-              })
-            : rawBlob;
-
+      const finishAndSaveVideo = async (blob, ext, finalType) => {
         const url = URL.createObjectURL(blob);
-        stream.getTracks().forEach((t) => t.stop());
         setIsRecording(false);
 
         const currentTitle = latestRecordStateRef.current.drillTitle;
@@ -4596,9 +4557,134 @@ export default function App() {
         }
       };
 
-      mr.start(250);
-      setIsRecording(true);
-      requestAnimationFrame(drawLoop);
+      // Modo MP4 estándar con índice de tiempo real (VideoEncoder + Mp4Muxer)
+      let useMuxer = typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined';
+      let encoderConfig = null;
+      if (useMuxer) {
+        const candidates = [
+          { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 8_000_000, framerate: 30 },
+          { codec: 'avc1.42002a', width: 1920, height: 1080, bitrate: 8_000_000, framerate: 30 },
+        ];
+        for (const cfg of candidates) {
+          try {
+            const sup = await VideoEncoder.isConfigSupported(cfg);
+            if (sup?.supported) {
+              encoderConfig = cfg;
+              break;
+            }
+          } catch (_) {}
+        }
+        if (!encoderConfig) useMuxer = false;
+      }
+
+      if (useMuxer && encoderConfig) {
+        let isActive = true;
+        let frameIndex = 0;
+        const fps = 30;
+        const frameDurationUs = Math.round(1_000_000 / fps);
+        let lastCapturedMs = 0;
+
+        const muxer = new Mp4Muxer.Muxer({
+          target: new Mp4Muxer.ArrayBufferTarget(),
+          video: { codec: 'avc', width: 1920, height: 1080 },
+          fastStart: 'in-memory',
+        });
+
+        const encoder = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: (e) => console.error('VideoEncoder error:', e),
+        });
+        encoder.configure(encoderConfig);
+
+        const captureTick = () => {
+          if (!isActive) return;
+          const now = performance.now();
+          if (now - lastCapturedMs >= 1000 / fps - 2) {
+            lastCapturedMs = now;
+            renderCompositeFrame();
+            const timestampUs = frameIndex * frameDurationUs;
+            const frame = new VideoFrame(recordCanvas, {
+              timestamp: timestampUs,
+              duration: frameDurationUs,
+            });
+            encoder.encode(frame, { keyFrame: frameIndex % 30 === 0 });
+            frame.close();
+            frameIndex++;
+          }
+          requestAnimationFrame(captureTick);
+        };
+
+        mediaRecorderRef.current = {
+          state: 'recording',
+          stop: async () => {
+            if (!isActive) return;
+            isActive = false;
+            try {
+              await encoder.flush();
+              encoder.close();
+              muxer.finalize();
+              const buffer = muxer.target.buffer;
+              const blob = new Blob([buffer], { type: 'video/mp4' });
+              await finishAndSaveVideo(blob, 'mp4', 'video/mp4');
+            } catch (err) {
+              console.error('Error al finalizar MP4:', err);
+              setIsRecording(false);
+            }
+          },
+        };
+
+        setIsRecording(true);
+        requestAnimationFrame(captureTick);
+      } else {
+        // Respaldo clásico para navegadores sin WebCodecs
+        const drawLoop = () => {
+          if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
+          renderCompositeFrame();
+          requestAnimationFrame(drawLoop);
+        };
+
+        const stream = recordCanvas.captureStream(30);
+        const supportedTypes = [
+          'video/mp4;codecs=avc1',
+          'video/mp4',
+          'video/webm;codecs=vp8',
+          'video/webm',
+        ];
+        const mimeType =
+          supportedTypes.find(
+            (t) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)
+          ) || '';
+        const mr = new MediaRecorder(
+          stream,
+          mimeType
+            ? { mimeType, videoBitsPerSecond: 10_000_000 }
+            : { videoBitsPerSecond: 10_000_000 }
+        );
+        mediaRecorderRef.current = mr;
+
+        mr.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data);
+        };
+
+        mr.onstop = async () => {
+          const durationMs = Date.now() - recordStartTime;
+          const finalType = mimeType || 'video/webm';
+          const ext = finalType.includes('mp4') ? 'mp4' : 'webm';
+          const rawBlob = new Blob(recordedChunksRef.current, { type: finalType });
+          const blob =
+            ext === 'webm'
+              ? await new Promise((resolve) => {
+                  fixWebmDuration(rawBlob, durationMs, (fixedBlob) => resolve(fixedBlob || rawBlob));
+                })
+              : rawBlob;
+          stream.getTracks().forEach((t) => t.stop());
+          await finishAndSaveVideo(blob, ext, finalType);
+        };
+
+        mr.start(250);
+        setIsRecording(true);
+        requestAnimationFrame(drawLoop);
+      }
     } catch (err) {
       alert('No se pudo iniciar la grabación de la pizarra.');
       setIsRecording(false);
