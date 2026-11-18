@@ -4574,11 +4574,12 @@ export default function App() {
       let encoderConfig = null;
       if (useMuxer) {
         const candidates = [
-          { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 9_000_000, framerate: 30, latencyMode: 'realtime' },
-          { codec: 'avc1.42002a', width: 1920, height: 1080, bitrate: 9_000_000, framerate: 30, latencyMode: 'realtime' },
-          { codec: 'avc1.4d001f', width: 1280, height: 720, bitrate: 5_000_000, framerate: 30, latencyMode: 'realtime' },
-          { codec: 'avc1.42001f', width: 1280, height: 720, bitrate: 5_000_000, framerate: 30, latencyMode: 'realtime' },
-        ];
+            { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 12_000_000, framerate: 30, hardwareAcceleration: 'prefer-hardware', latencyMode: 'realtime' },
+            { codec: 'avc1.42002a', width: 1920, height: 1080, bitrate: 12_000_000, framerate: 30, hardwareAcceleration: 'prefer-hardware', latencyMode: 'realtime' },
+            { codec: 'avc1.4d002a', width: 1920, height: 1080, bitrate: 10_000_000, framerate: 30, latencyMode: 'realtime' },
+            { codec: 'avc1.4d001f', width: 1280, height: 720, bitrate: 6_000_000, framerate: 30, hardwareAcceleration: 'prefer-hardware', latencyMode: 'realtime' },
+            { codec: 'avc1.42001f', width: 1280, height: 720, bitrate: 6_000_000, framerate: 30, latencyMode: 'realtime' },
+          ];
         for (const cfg of candidates) {
           try {
             const sup = await VideoEncoder.isConfigSupported(cfg);
