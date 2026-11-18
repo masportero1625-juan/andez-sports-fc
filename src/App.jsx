@@ -4506,8 +4506,6 @@ export default function App() {
       let cachedWebglCanvas = null;
       const renderCompositeFrame = () => {
         const st = latestRecordStateRef.current;
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
         if (st.viewMode === '3d') {
           if (!cachedWebglCanvas || !document.body.contains(cachedWebglCanvas)) {
             cachedWebglCanvas = Array.from(document.querySelectorAll('canvas')).find(
@@ -4515,18 +4513,27 @@ export default function App() {
             ) || null;
           }
           if (cachedWebglCanvas) {
-            ctx.fillStyle = '#09090b';
-            ctx.fillRect(0, 0, 1920, 1080);
             const srcW = cachedWebglCanvas.width;
             const srcH = cachedWebglCanvas.height;
-            const scale = Math.max(1920 / srcW, 1080 / srcH);
-            const drawW = Math.round(srcW * scale);
-            const drawH = Math.round(srcH * scale);
-            const drawX = Math.round((1920 - drawW) / 2);
-            const drawY = Math.round((1080 - drawH) / 2);
-            ctx.drawImage(cachedWebglCanvas, 0, 0, srcW, srcH, drawX, drawY, drawW, drawH);
+            if (srcW === 1920 && srcH === 1080) {
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(cachedWebglCanvas, 0, 0);
+            } else {
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.fillStyle = '#09090b';
+              ctx.fillRect(0, 0, 1920, 1080);
+              const scale = Math.min(1920 / srcW, 1080 / srcH);
+              const drawW = Math.round(srcW * scale);
+              const drawH = Math.round(srcH * scale);
+              const drawX = Math.round((1920 - drawW) / 2);
+              const drawY = Math.round((1080 - drawH) / 2);
+              ctx.drawImage(cachedWebglCanvas, 0, 0, srcW, srcH, drawX, drawY, drawW, drawH);
+            }
           }
         } else {
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           renderNative2D(st);
         }
       };
@@ -4622,42 +4629,61 @@ export default function App() {
         });
         encoder.configure(encoderConfig);
 
-        const captureTick = (now) => {
+        let frameIndex = 0;
+        const frameIntervalMs = 1000 / 30;
+        const frameDurationUs = 33333;
+        let lastCapturePerf = 0;
+        let unsubscribeAfterEffect = null;
+
+        const processFrame = (now) => {
           if (!isActive) return;
-          if (startPerfMs === null) startPerfMs = now;
+          if (now - lastCapturePerf < frameIntervalMs - 2) return;
+          if (encoder.encodeQueueSize > 2) return;
+          lastCapturePerf = now;
 
-          if (now - lastCapturedMs >= minIntervalMs - 4 && encoder.encodeQueueSize <= 4) {
-            const elapsedMs = now - startPerfMs;
-            const deltaMs = lastCapturedMs === 0 ? minIntervalMs : now - lastCapturedMs;
-            lastCapturedMs = now;
-
-            renderCompositeFrame();
-            let sourceCanvas = recordCanvas;
-            if (needsScale && fallbackCtx) {
-              fallbackCtx.drawImage(recordCanvas, 0, 0, targetW, targetH);
-              sourceCanvas = fallbackCanvas;
-            }
-
-            const timestampUs = Math.round(elapsedMs * 1000);
-            const durationUs = Math.max(1000, Math.round(deltaMs * 1000));
-            const isKeyFrame = elapsedMs - lastKeyFrameMs >= 1000;
-            if (isKeyFrame) lastKeyFrameMs = elapsedMs;
-
-            const frame = new VideoFrame(sourceCanvas, {
-              timestamp: timestampUs,
-              duration: durationUs,
-            });
-            encoder.encode(frame, { keyFrame: isKeyFrame });
-            frame.close();
+          renderCompositeFrame();
+          let sourceCanvas = recordCanvas;
+          if (needsScale && fallbackCtx) {
+            fallbackCtx.drawImage(recordCanvas, 0, 0, targetW, targetH);
+            sourceCanvas = fallbackCanvas;
           }
-          requestAnimationFrame(captureTick);
+
+          const timestampUs = frameIndex * frameDurationUs;
+          const isKeyFrame = frameIndex % 30 === 0;
+          frameIndex += 1;
+
+          const frame = new VideoFrame(sourceCanvas, {
+            timestamp: timestampUs,
+            duration: frameDurationUs,
+          });
+          encoder.encode(frame, { keyFrame: isKeyFrame });
+          frame.close();
         };
+
+        const captureTick2D = (now) => {
+          if (!isActive) return;
+          if (latestRecordStateRef.current.viewMode !== '3d') {
+            processFrame(now);
+          }
+          requestAnimationFrame(captureTick2D);
+        };
+
+        if (typeof window.__andezRegisterAfterRender === 'function') {
+          unsubscribeAfterEffect = window.__andezRegisterAfterRender(() => {
+            if (isActive && latestRecordStateRef.current.viewMode === '3d') {
+              processFrame(performance.now());
+            }
+          });
+        }
 
         mediaRecorderRef.current = {
           state: 'recording',
           stop: async () => {
             if (!isActive) return;
             isActive = false;
+            if (typeof unsubscribeAfterEffect === 'function') {
+              unsubscribeAfterEffect();
+            }
             try {
               await encoder.flush();
               encoder.close();
@@ -4673,7 +4699,7 @@ export default function App() {
         };
 
         setIsRecording(true);
-        requestAnimationFrame(captureTick);
+        requestAnimationFrame(captureTick2D);
       } else {
         // Respaldo clásico para navegadores sin WebCodecs
         const drawLoop = () => {
@@ -5638,54 +5664,78 @@ Sin markdown. Inicia con [ y termina con ]:`;
           </svg>
   </div>
   <div
-            className={`absolute inset-0 ${
-              viewMode === '3d' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none -z-10'
+        className={`absolute inset-0 flex items-center justify-center bg-zinc-950 ${
+          viewMode === '3d' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none -z-10'
+        }`}
+      >
+        <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl p-2 flex items-center gap-2">
+          <button
+            onClick={() => setCameraLocked(!cameraLocked)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              cameraLocked ? 'bg-emerald-600 text-white shadow-lg' : 'bg-amber-500 text-black shadow-lg'
             }`}
           >
-            <div className="absolute top-4 left-4 z-40 bg-zinc-950/90 border border-zinc-800 rounded-2xl">
-              <button
-                onClick={() => setCameraLocked(!cameraLocked)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                  cameraLocked ? 'bg-emerald-600 text-white shadow-lg' : 'bg-amber-500 text-black shadow-lg'
-                }`}
+            {cameraLocked ? <Lock className="w-4 h-4" /> : <Move className="w-4 h-4" />}
+            <span>{cameraLocked ? 'Cámara Bloqueada' : 'Rotar Cancha (Orbitar)'}</span>
+          </button>
+        </div>
+        <div
+          className={isRecording && viewMode === '3d' ? 'relative h-full max-w-full aspect-video' : 'relative w-full h-full'}
+        >
+          <Scene3DBoundary>
+            <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando motor 3D...</div>}>
+              <Canvas
+                frameloop="always"
+                dpr={isRecording && viewMode === '3d' ? [1, 2] : [1, isPC ? 1.5 : 1]}
+                shadows
+                gl={{ antialias: true, powerPreference: "default", failIfMajorPerformanceCaveat: false, preserveDrawingBuffer: true }}
+                className="w-full h-full touch-none select-none"
+                style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+                onCreated={({ gl, setDpr }) => {
+                  gl.domElement.addEventListener('webglcontextlost', (ev) => ev.preventDefault(), false);
+                  let listeners = [];
+                  window.__andezRegisterAfterRender = (fn) => {
+                    listeners.push(fn);
+                    return () => {
+                      listeners = listeners.filter((item) => item !== fn);
+                    };
+                  };
+                  const origRender = gl.render.bind(gl);
+                  gl.render = (...args) => {
+                    const cssW = gl.domElement.clientWidth || 1280;
+                    const recordingActive = Boolean(latestRecordStateRef.current?.isRecording && latestRecordStateRef.current?.viewMode === '3d');
+                    if (recordingActive && isPC) {
+                      const targetDpr = Math.min(2, Math.max(1, 1920 / cssW));
+                      if (Math.abs(gl.getPixelRatio() - targetDpr) > 0.01) {
+                        setDpr(targetDpr);
+                      }
+                    }
+                    origRender(...args);
+                    for (let i = 0; i < listeners.length; i++) {
+                      listeners[i]();
+                    }
+                  };
+                }}
               >
-                {cameraLocked ? <Lock className="w-4 h-4" /> : <Move className="w-4 h-4" />}
-                <span>{cameraLocked ? 'Cámara Bloqueada' : 'Rotar Cancha (Orbitar)'}</span>
-              </button>
-            </div>
-            <Scene3DBoundary>
-              <Suspense fallback={<div className="text-white font-bold text-sm flex items-center justify-center h-full">Cargando motor 3D...</div>}>
-                <Canvas
-                  frameloop="always"
-                  dpr={[1, isPC ? 1.5 : 1]}
-                  shadows
-                  gl={{ antialias: true, powerPreference: "default", failIfMajorPerformanceCaveat: false, preserveDrawingBuffer: true }}
-                  className="w-full h-full touch-none select-none"
-                  style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
-                  onCreated={({ gl }) => {
-                    // Permite que el navegador restaure el contexto WebGL si se pierde
-                    gl.domElement.addEventListener('webglcontextlost', (ev) => ev.preventDefault(), false);
-                  }}
-                >
-                  <Suspense fallback={null}>
-                    <Scene3D
-                      objects={objects}
-                      setObjects={setObjects}
-                      drawings={drawings}
-                      textBlocks={textBlocks}
-                      selectedObj={selectedObj}
-                      setSelectedObj={setSelectedObj}
-                      teamColors={teamColors}
-                      cameraLocked={cameraLocked}
-                    
-                      isPC={isPC}
-                      onDragStart={cancelPlayerFx}
-                    />
-                  </Suspense>
-                </Canvas>
-              </Suspense>
-            </Scene3DBoundary>
-          </div>
+                <Suspense fallback={null}>
+                  <Scene3D
+                    objects={objects}
+                    setObjects={setObjects}
+                    drawings={drawings}
+                    textBlocks={textBlocks}
+                    selectedObj={selectedObj}
+                    setSelectedObj={setSelectedObj}
+                    teamColors={teamColors}
+                    cameraLocked={cameraLocked}
+                    isPC={isPC}
+                    onDragStart={cancelPlayerFx}
+                  />
+                </Suspense>
+              </Canvas>
+            </Suspense>
+          </Scene3DBoundary>
+        </div>
+      </div>
         {/* Selector de nombre y posición del jugador (solo doble clic / doble toque) */}
       {(() => {
         const editingPlayer = editingPlayerId ? objects.find((o) => o.id === editingPlayerId && o.type === 'player') : null;
