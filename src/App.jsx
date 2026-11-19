@@ -3078,7 +3078,7 @@ function StadiumEnvironment() {
   );
 }
 
-function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, recordHistory, isPC, onDragStart }) {
+function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, isPC, onDragStart, cameraPreset, onUserOrbit }) {
   const isDragging = useRef(false);
   const dragId = useRef(null);
   const dragOffset = useRef(new THREE.Vector3());
@@ -3186,24 +3186,101 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
     }
   };
 
-  // En móvil usamos una perspectiva diagonal para conservar el volumen 3D y
-  // encuadrar la cancha con sus dos porterías. Se mantiene el eje vertical natural de Three.js.
-  // Cámara cercana de ángulo bajo estilo TacticalPad
   const camPos = isPC ? [0, 23, 64] : [0, 26, 72];
   const camFov = isPC ? 47 : 52;
+  const orbitRef = useRef(null);
+  const desiredCamPos = useRef(new THREE.Vector3(...camPos));
+  const desiredCamTarget = useRef(new THREE.Vector3(0, 4, 0));
+  const isTransitioningCam = useRef(false);
+
+  const CAMERA_PRESETS_3D = useMemo(() => ({
+    tv_south: { pos: isPC ? [0, 23, 64] : [0, 26, 72], target: [0, 4, 0] },
+    tv_north: { pos: isPC ? [0, 23, -64] : [0, 26, -72], target: [0, 4, 0] },
+    corner_nw: { pos: [-62, 24, -46], target: [0, 3, 0] },
+    corner_ne: { pos: [62, 24, -46], target: [0, 3, 0] },
+    corner_sw: { pos: [-62, 24, 46], target: [0, 3, 0] },
+    corner_se: { pos: [62, 24, 46], target: [0, 3, 0] },
+    goal_west: { pos: [-74, 16, 0], target: [12, 3, 0] },
+    goal_east: { pos: [74, 16, 0], target: [-12, 3, 0] },
+    top_zenith: { pos: [0, 96, 0.1], target: [0, 0, 0] },
+  }), [isPC]);
+
+  useEffect(() => {
+    if (!cameraPreset || cameraPreset === 'free') return;
+    if (cameraPreset === 'auto_tv') {
+      isTransitioningCam.current = true;
+      return;
+    }
+    const preset = CAMERA_PRESETS_3D[cameraPreset];
+    if (preset) {
+      desiredCamPos.current.set(...preset.pos);
+      desiredCamTarget.current.set(...preset.target);
+      isTransitioningCam.current = true;
+    }
+  }, [cameraPreset, CAMERA_PRESETS_3D]);
+
+  useFrame(({ camera }) => {
+    if (cameraPreset === 'auto_tv') {
+      const ball = objects.find((o) => o.type === 'ball');
+      let focusX = 0;
+      let focusZ = 0;
+      if (ball) {
+        const w = toWorld(ball);
+        focusX = w.x;
+        focusZ = w.z;
+      } else {
+        const players = objects.filter((o) => o.type === 'player');
+        if (players.length > 0) {
+          let sx = 0, sz = 0;
+          players.forEach((p) => { const w = toWorld(p); sx += w.x; sz += w.z; });
+          focusX = sx / players.length;
+          focusZ = sz / players.length;
+        }
+      }
+      desiredCamTarget.current.set(focusX * 0.75, 2.5, focusZ * 0.55);
+      desiredCamPos.current.set(focusX * 0.65, isPC ? 21 : 25, (isPC ? 56 : 64) + focusZ * 0.35);
+      camera.position.lerp(desiredCamPos.current, 0.06);
+      if (orbitRef.current) {
+        orbitRef.current.target.lerp(desiredCamTarget.current, 0.08);
+        orbitRef.current.update();
+      }
+      return;
+    }
+
+    if (isTransitioningCam.current) {
+      camera.position.lerp(desiredCamPos.current, 0.12);
+      if (orbitRef.current) {
+        orbitRef.current.target.lerp(desiredCamTarget.current, 0.12);
+        orbitRef.current.update();
+      }
+      if (camera.position.distanceTo(desiredCamPos.current) < 0.25) {
+        camera.position.copy(desiredCamPos.current);
+        if (orbitRef.current) {
+          orbitRef.current.target.copy(desiredCamTarget.current);
+          orbitRef.current.update();
+        }
+        isTransitioningCam.current = false;
+      }
+    }
+  });
 
   return (
     <>
       <PerspectiveCamera makeDefault position={camPos} fov={camFov} up={[0, 1, 0]} />
       <OrbitControls
+        ref={orbitRef}
         enabled={!cameraLocked}
         target={[0, 4, 0]}
         maxPolarAngle={Math.PI / 2.05}
-        minPolarAngle={0.2}
+        minPolarAngle={0.05}
         minDistance={15}
         maxDistance={140}
         enableDamping
         dampingFactor={0.08}
+        onStart={() => {
+          isTransitioningCam.current = false;
+          if (onUserOrbit) onUserOrbit();
+        }}
       />
       {/* Atmósfera e iluminación natural de estadio con niebla de horizonte */}
       <fog attach="fog" args={["#93c5fd", 80, 260]} />
@@ -3424,6 +3501,8 @@ export default function App() {
   const [isPC, setIsPC] = useState(true);
   const [viewMode, setViewMode] = useState('2d');
   const [cameraLocked, setCameraLocked] = useState(true);
+  const [cameraPreset, setCameraPreset] = useState('tv_south');
+  const [showCameraMenu, setShowCameraMenu] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsPC(true);
@@ -5811,6 +5890,8 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     cameraLocked={cameraLocked}
                     isPC={isPC}
                     onDragStart={cancelPlayerFx}
+                    cameraPreset={cameraPreset}
+                    onUserOrbit={() => setCameraPreset('free')}
                   />
                 </Suspense>
               </Canvas>
@@ -6951,7 +7032,93 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
     {/* Separador fino */}
     <div className="w-px h-6 sm:h-10 bg-zinc-700/60 mx-0.5 shrink-0"></div>
+    {/* Botón Cámaras Prefijas 3D + Auto-TV (Matriz 3x3 estilo TacticalPad) */}
+              {viewMode === '3d' && (
+                <>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowCameraMenu((v) => !v)}
+                      className={`flex flex-col items-center justify-center min-w-[3.5rem] w-14 sm:w-24 h-12 sm:h-18 rounded-xl transition-all group ${
+                        showCameraMenu || cameraPreset === 'auto_tv'
+                          ? 'bg-blue-600/30 border border-blue-400/60'
+                          : 'hover:bg-zinc-800/80'
+                      }`}
+                      title="Cámaras 3D y Seguimiento TV"
+                    >
+                      <Video className={`w-5 h-5 sm:w-8 sm:h-8 ${cameraPreset === 'auto_tv' ? 'text-emerald-400' : 'text-blue-400'} group-hover:scale-110 transition-transform`} />
+                      <span className="text-[8px] sm:text-xs text-white font-semibold tracking-tight whitespace-nowrap">
+                        {cameraPreset === 'auto_tv' ? 'Auto-TV' : 'Cámara'}
+                      </span>
+                    </button>
 
+                    {showCameraMenu && (
+                      <div className="fixed bottom-16 sm:bottom-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900/95 border border-zinc-700 rounded-2xl p-3 shadow-2xl backdrop-blur-md w-64">
+                        <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-zinc-800">
+                          <span className="text-[11px] font-bold text-zinc-200 uppercase tracking-wider">Cámaras Estadio 3D</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowCameraMenu(false)}
+                            className="text-zinc-400 hover:text-white text-xs px-1"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[
+                            { id: 'corner_nw', label: 'Córner NO', icon: '↘' },
+                            { id: 'tv_north', label: 'TV Norte', icon: '↓' },
+                            { id: 'corner_ne', label: 'Córner NE', icon: '↙' },
+                            { id: 'goal_west', label: 'Arco Izq', icon: '→' },
+                            { id: 'auto_tv', label: 'Auto-TV', icon: '🎯' },
+                            { id: 'goal_east', label: 'Arco Der', icon: '←' },
+                            { id: 'corner_sw', label: 'Córner SO', icon: '↗' },
+                            { id: 'tv_south', label: 'TV Sur', icon: '↑' },
+                            { id: 'corner_se', label: 'Córner SE', icon: '↖' },
+                          ].map((cam) => {
+                            const active = cameraPreset === cam.id;
+                            return (
+                              <button
+                                key={cam.id}
+                                type="button"
+                                onClick={() => {
+                                  setCameraPreset(cam.id);
+                                  setShowCameraMenu(false);
+                                }}
+                                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border text-center transition-all ${
+                                  active
+                                    ? cam.id === 'auto_tv'
+                                      ? 'bg-emerald-600 border-emerald-400 text-white shadow-md'
+                                      : 'bg-blue-600 border-blue-400 text-white shadow-md'
+                                    : 'bg-zinc-800/90 border-zinc-700/80 text-zinc-200 hover:bg-zinc-700'
+                                }`}
+                              >
+                                <span className="text-sm leading-none mb-0.5">{cam.icon}</span>
+                                <span className="text-[10px] font-semibold leading-tight">{cam.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCameraPreset('top_zenith');
+                            setShowCameraMenu(false);
+                          }}
+                          className={`mt-1.5 w-full py-1.5 rounded-xl border text-[11px] font-semibold transition-all ${
+                            cameraPreset === 'top_zenith'
+                              ? 'bg-blue-600 border-blue-400 text-white'
+                              : 'bg-zinc-800/90 border-zinc-700/80 text-zinc-200 hover:bg-zinc-700'
+                          }`}
+                        >
+                          🛰️ Vista Cenital (Dron Táctico)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-px h-6 sm:h-10 bg-zinc-700/60 mx-0.5 shrink-0" />
+                </>
+              )}
     {/* 11. IA Táctica */}
     <button 
       onClick={() => setShowPromptModal(true)} 
