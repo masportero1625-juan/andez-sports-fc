@@ -7053,14 +7053,14 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     </button>
 
                     {showCameraMenu && (
-                      <div className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-xl p-1.5 shadow-2xl backdrop-blur-md w-[116px]">
+                      <div className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-xl p-1.5 shadow-2xl backdrop-blur-md w-fit">
                         <div className="grid grid-cols-3 gap-1">
                           {[
                             { id: 'corner_nw', title: 'Córner Superior Izquierdo', rot: -45, mode: 'cam' },
                             { id: 'tv_north', title: 'Tribuna Norte', rot: 0, mode: 'cam' },
                             { id: 'corner_ne', title: 'Córner Superior Derecho', rot: 45, mode: 'cam' },
                             { id: 'goal_west', title: 'Detrás Arco Izquierdo', rot: -90, mode: 'cam' },
-                            { id: 'top_zenith', title: 'Vista Cenital (Dron)', rot: 0, mode: 'zenith' },
+                            { id: 'top_zenith', title: 'Vista Cenital', rot: 0, mode: 'zenith' },
                             { id: 'goal_east', title: 'Detrás Arco Derecho', rot: 90, mode: 'cam' },
                             { id: 'corner_sw', title: 'Córner Inferior Izquierdo', rot: -135, mode: 'cam' },
                             { id: 'tv_south', title: 'TV Principal (Sur)', rot: 180, mode: 'cam' },
@@ -7076,18 +7076,18 @@ Sin markdown. Inicia con [ y termina con ]:`;
                                   setCameraPreset(cam.id);
                                   setShowCameraMenu(false);
                                 }}
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
+                                className={`w-7 h-7 p-0 rounded-lg flex items-center justify-center border transition-all ${
                                   active
                                     ? 'bg-blue-600 border-blue-400 text-white shadow-sm'
                                     : 'bg-zinc-800/90 border-zinc-700/70 text-zinc-200 hover:bg-zinc-700'
                                 }`}
                               >
                                 {cam.mode === 'zenith' ? (
-                                  <span className="w-2.5 h-2.5 rounded-full bg-current block" />
+                                  <span className="w-2 h-2 rounded-full bg-white block shrink-0" />
                                 ) : (
                                   <svg
                                     viewBox="0 0 24 24"
-                                    className="w-4 h-4"
+                                    className="w-3.5 h-3.5 shrink-0"
                                     style={{ transform: `rotate(${cam.rot}deg)` }}
                                     fill="currentColor"
                                   >
@@ -7106,14 +7106,13 @@ Sin markdown. Inicia con [ y termina con ]:`;
                             setCameraPreset('auto_tv');
                             setShowCameraMenu(false);
                           }}
-                          className={`mt-1 w-full py-1 rounded-lg border text-[10px] font-bold tracking-tight transition-all flex items-center justify-center gap-1 ${
+                          className={`mt-1 w-full py-1 px-1 rounded-lg border text-[9px] font-bold tracking-wider uppercase transition-all text-center ${
                             cameraPreset === 'auto_tv'
                               ? 'bg-emerald-600 border-emerald-400 text-white shadow-sm'
-                              : 'bg-zinc-800/90 border-zinc-700/70 text-emerald-400 hover:bg-zinc-700'
+                              : 'bg-zinc-800/90 border-zinc-700/70 text-zinc-200 hover:bg-zinc-700'
                           }`}
                         >
-                          <span>🎯</span>
-                          <span>Auto-TV</span>
+                          Auto-TV
                         </button>
                       </div>
                     )}
