@@ -3906,8 +3906,13 @@ export default function App() {
     }
 
     let segmentIdx = 0;
-    let segStartPerf = performance.now();
-    const baseSegmentMs = 1300;
+    let segStartPerf = null;
+    const getSegmentDurationMs = (fA, fB) => {
+      const bA = (fA?.objects || []).find((o) => o.type === 'ball');
+      const bB = (fB?.objects || []).find((o) => o.type === 'ball');
+      const dist = bA && bB ? Math.hypot((bB.x || 0) - (bA.x || 0), (bB.y || 0) - (bA.y || 0)) : 20;
+      return Math.max(950, Math.min(2200, dist * 42)) / playbackSpeed;
+    };
     let kickedThisSegment = false;
 
     const step = (now) => {
@@ -3919,7 +3924,8 @@ export default function App() {
         return;
       }
 
-      const durMs = baseSegmentMs / playbackSpeed;
+      if (segStartPerf === null) segStartPerf = now;
+      const durMs = getSegmentDurationMs(fromF, toF);
       const rawT = Math.min(1, (now - segStartPerf) / durMs);
       const t = rawT < 0.5 ? 4 * rawT * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 3) / 2;
 
@@ -7005,7 +7011,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
       <footer className="bg-[#1a1a1a] flex flex-col shrink-0 z-30 border-t border-zinc-800 no-print w-full select-none h-12 text-xs">
         
         {/* CONSOLA UNIFICADA DE ANIMACIÓN VECTORIAL: ESCENAS (FRAMES) + RONDO AUTO */}
-        {(bottomBarMode === 'timeline' || frames.length > 1 || isPlayingFrames || isLoopPlaying) && (
+        {(bottomBarMode === 'timeline' || isPlayingFrames || isLoopPlaying) && (
           <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-2 sm:px-4 flex flex-wrap items-center justify-between gap-2">
             {/* Botón para volver al Menú Principal */}
             <button
