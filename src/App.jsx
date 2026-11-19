@@ -4617,18 +4617,6 @@ export default function App() {
         }
         const fallbackCtx = fallbackCanvas ? fallbackCanvas.getContext('2d') : null;
 
-        const muxer = new Mp4Muxer.Muxer({
-          target: new Mp4Muxer.ArrayBufferTarget(),
-          video: { codec: 'avc', width: targetW, height: targetH },
-          fastStart: 'in-memory',
-        });
-
-        const encoder = new VideoEncoder({
-          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-          error: (e) => console.error('VideoEncoder error:', e),
-        });
-        encoder.configure(encoderConfig);
-
         let startPerf = null;
         let frameIndex = 0;
         const frameIntervalMs = 1000 / 30;
@@ -4636,11 +4624,62 @@ export default function App() {
         let lastCapturePerf = 0;
         let unsubscribeAfterEffect = null;
 
+        // Intentar usar Dedicated Web Worker para sacar H.264 + Mp4Muxer del hilo principal
+        let videoWorker = null;
+        let useWorkerMode = false;
+        if (typeof Worker !== 'undefined' && typeof createImageBitmap === 'function') {
+          try {
+            videoWorker = new Worker('/video-worker.js');
+            useWorkerMode = await new Promise((resolve) => {
+              const timer = setTimeout(() => resolve(false), 1500);
+              videoWorker.onmessage = (ev) => {
+                if (ev.data?.type === 'ready') {
+                  clearTimeout(timer);
+                  resolve(true);
+                } else if (ev.data?.type === 'error') {
+                  clearTimeout(timer);
+                  resolve(false);
+                }
+              };
+              videoWorker.onerror = () => {
+                clearTimeout(timer);
+                resolve(false);
+              };
+              videoWorker.postMessage({ type: 'init', encoderConfig });
+            });
+            if (!useWorkerMode && videoWorker) {
+              videoWorker.terminate();
+              videoWorker = null;
+            }
+          } catch (_) {
+            useWorkerMode = false;
+            videoWorker = null;
+          }
+        }
+
+        // Respaldo directo en hilo principal si el navegador no admite Worker + WebCodecs
+        let muxer = null;
+        let encoder = null;
+        if (!useWorkerMode) {
+          muxer = new Mp4Muxer.Muxer({
+            target: new Mp4Muxer.ArrayBufferTarget(),
+            video: { codec: 'avc', width: targetW, height: targetH },
+            fastStart: 'in-memory',
+          });
+          encoder = new VideoEncoder({
+            output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+            error: (e) => console.error('VideoEncoder error:', e),
+          });
+          encoder.configure(encoderConfig);
+        }
+
+        let pendingBitmaps = 0;
         const processFrame = (now) => {
           if (!isActive) return;
           if (startPerf === null) startPerf = now;
           if (now - lastCapturePerf < frameIntervalMs - 2) return;
-          if (encoder.encodeQueueSize > 2) return;
+          if (useWorkerMode && pendingBitmaps > 3) return;
+          if (!useWorkerMode && encoder && encoder.encodeQueueSize > 2) return;
           lastCapturePerf = now;
 
           renderCompositeFrame();
@@ -4654,12 +4693,31 @@ export default function App() {
           const isKeyFrame = frameIndex % 30 === 0;
           frameIndex += 1;
 
-          const frame = new VideoFrame(sourceCanvas, {
-            timestamp: timestampUs,
-            duration: frameDurationUs,
-          });
-          encoder.encode(frame, { keyFrame: isKeyFrame });
-          frame.close();
+          if (useWorkerMode && videoWorker) {
+            pendingBitmaps += 1;
+            createImageBitmap(sourceCanvas)
+              .then((bitmap) => {
+                pendingBitmaps = Math.max(0, pendingBitmaps - 1);
+                if (!isActive || !videoWorker) {
+                  bitmap.close();
+                  return;
+                }
+                videoWorker.postMessage(
+                  { type: 'frame', bitmap, timestampUs, durationUs: frameDurationUs, isKeyFrame },
+                  [bitmap]
+                );
+              })
+              .catch(() => {
+                pendingBitmaps = Math.max(0, pendingBitmaps - 1);
+              });
+          } else if (encoder) {
+            const frame = new VideoFrame(sourceCanvas, {
+              timestamp: timestampUs,
+              duration: frameDurationUs,
+            });
+            encoder.encode(frame, { keyFrame: isKeyFrame });
+            frame.close();
+          }
         };
 
         const captureTick2D = (now) => {
@@ -4687,14 +4745,38 @@ export default function App() {
               unsubscribeAfterEffect();
             }
             try {
-              await encoder.flush();
-              encoder.close();
-              muxer.finalize();
-              const buffer = muxer.target.buffer;
-              const blob = new Blob([buffer], { type: 'video/mp4' });
-              await finishAndSaveVideo(blob, 'mp4', 'video/mp4');
+              if (useWorkerMode && videoWorker) {
+                const buffer = await new Promise((resolve, reject) => {
+                  const timeout = setTimeout(() => reject(new Error('Timeout Worker MP4')), 20000);
+                  videoWorker.onmessage = (ev) => {
+                    if (ev.data?.type === 'done') {
+                      clearTimeout(timeout);
+                      resolve(ev.data.buffer);
+                    } else if (ev.data?.type === 'error') {
+                      clearTimeout(timeout);
+                      reject(new Error(ev.data.message || 'Error en Worker MP4'));
+                    }
+                  };
+                  videoWorker.postMessage({ type: 'stop' });
+                });
+                videoWorker.terminate();
+                videoWorker = null;
+                const blob = new Blob([buffer], { type: 'video/mp4' });
+                await finishAndSaveVideo(blob, 'mp4', 'video/mp4');
+              } else if (encoder && muxer) {
+                await encoder.flush();
+                encoder.close();
+                muxer.finalize();
+                const buffer = muxer.target.buffer;
+                const blob = new Blob([buffer], { type: 'video/mp4' });
+                await finishAndSaveVideo(blob, 'mp4', 'video/mp4');
+              }
             } catch (err) {
               console.error('Error al finalizar MP4:', err);
+              if (videoWorker) {
+                videoWorker.terminate();
+                videoWorker = null;
+              }
               setIsRecording(false);
             }
           },
