@@ -7053,8 +7053,8 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     </button>
 
                     {showCameraMenu && (
-                      <div className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-2xl p-2 shadow-2xl backdrop-blur-md">
-                        <div className="grid grid-cols-3 gap-1.5">
+                      <div className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-xl p-1.5 shadow-2xl backdrop-blur-md w-[116px]">
+                        <div className="grid grid-cols-3 gap-1">
                           {[
                             { id: 'corner_nw', title: 'Córner Superior Izquierdo', rot: -45, mode: 'cam' },
                             { id: 'tv_north', title: 'Tribuna Norte', rot: 0, mode: 'cam' },
@@ -7076,18 +7076,18 @@ Sin markdown. Inicia con [ y termina con ]:`;
                                   setCameraPreset(cam.id);
                                   setShowCameraMenu(false);
                                 }}
-                                className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center border transition-all ${
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
                                   active
-                                    ? 'bg-blue-600 border-blue-400 text-white shadow-md scale-105'
+                                    ? 'bg-blue-600 border-blue-400 text-white shadow-sm'
                                     : 'bg-zinc-800/90 border-zinc-700/70 text-zinc-200 hover:bg-zinc-700'
                                 }`}
                               >
                                 {cam.mode === 'zenith' ? (
-                                  <span className="w-3.5 h-3.5 rounded-full bg-current block" />
+                                  <span className="w-2.5 h-2.5 rounded-full bg-current block" />
                                 ) : (
                                   <svg
                                     viewBox="0 0 24 24"
-                                    className="w-5 h-5"
+                                    className="w-4 h-4"
                                     style={{ transform: `rotate(${cam.rot}deg)` }}
                                     fill="currentColor"
                                   >
@@ -7101,13 +7101,14 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         </div>
                         <button
                           type="button"
+                          title="Auto-TV (Seguimiento de Balón)"
                           onClick={() => {
                             setCameraPreset('auto_tv');
                             setShowCameraMenu(false);
                           }}
-                          className={`mt-1.5 w-full py-1.5 rounded-xl border text-[11px] font-bold tracking-wide transition-all flex items-center justify-center gap-1.5 ${
+                          className={`mt-1 w-full py-1 rounded-lg border text-[10px] font-bold tracking-tight transition-all flex items-center justify-center gap-1 ${
                             cameraPreset === 'auto_tv'
-                              ? 'bg-emerald-600 border-emerald-400 text-white shadow-md'
+                              ? 'bg-emerald-600 border-emerald-400 text-white shadow-sm'
                               : 'bg-zinc-800/90 border-zinc-700/70 text-emerald-400 hover:bg-zinc-700'
                           }`}
                         >
