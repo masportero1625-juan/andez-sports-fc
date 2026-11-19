@@ -7053,48 +7053,48 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     </button>
 
                     {showCameraMenu && (
-                      <div className="fixed bottom-16 sm:bottom-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900/95 border border-zinc-700 rounded-2xl p-3 shadow-2xl backdrop-blur-md w-64">
-                        <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-zinc-800">
-                          <span className="text-[11px] font-bold text-zinc-200 uppercase tracking-wider">Cámaras Estadio 3D</span>
-                          <button
-                            type="button"
-                            onClick={() => setShowCameraMenu(false)}
-                            className="text-zinc-400 hover:text-white text-xs px-1"
-                          >
-                            ✕
-                          </button>
-                        </div>
+                      <div className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-2xl p-2 shadow-2xl backdrop-blur-md">
                         <div className="grid grid-cols-3 gap-1.5">
                           {[
-                            { id: 'corner_nw', label: 'Córner NO', icon: '↘' },
-                            { id: 'tv_north', label: 'TV Norte', icon: '↓' },
-                            { id: 'corner_ne', label: 'Córner NE', icon: '↙' },
-                            { id: 'goal_west', label: 'Arco Izq', icon: '→' },
-                            { id: 'auto_tv', label: 'Auto-TV', icon: '🎯' },
-                            { id: 'goal_east', label: 'Arco Der', icon: '←' },
-                            { id: 'corner_sw', label: 'Córner SO', icon: '↗' },
-                            { id: 'tv_south', label: 'TV Sur', icon: '↑' },
-                            { id: 'corner_se', label: 'Córner SE', icon: '↖' },
+                            { id: 'corner_nw', title: 'Córner Superior Izquierdo', rot: -45, mode: 'cam' },
+                            { id: 'tv_north', title: 'Tribuna Norte', rot: 0, mode: 'cam' },
+                            { id: 'corner_ne', title: 'Córner Superior Derecho', rot: 45, mode: 'cam' },
+                            { id: 'goal_west', title: 'Detrás Arco Izquierdo', rot: -90, mode: 'cam' },
+                            { id: 'top_zenith', title: 'Vista Cenital (Dron)', rot: 0, mode: 'zenith' },
+                            { id: 'goal_east', title: 'Detrás Arco Derecho', rot: 90, mode: 'cam' },
+                            { id: 'corner_sw', title: 'Córner Inferior Izquierdo', rot: -135, mode: 'cam' },
+                            { id: 'tv_south', title: 'TV Principal (Sur)', rot: 180, mode: 'cam' },
+                            { id: 'corner_se', title: 'Córner Inferior Derecho', rot: 135, mode: 'cam' },
                           ].map((cam) => {
                             const active = cameraPreset === cam.id;
                             return (
                               <button
                                 key={cam.id}
                                 type="button"
+                                title={cam.title}
                                 onClick={() => {
                                   setCameraPreset(cam.id);
                                   setShowCameraMenu(false);
                                 }}
-                                className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border text-center transition-all ${
+                                className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center border transition-all ${
                                   active
-                                    ? cam.id === 'auto_tv'
-                                      ? 'bg-emerald-600 border-emerald-400 text-white shadow-md'
-                                      : 'bg-blue-600 border-blue-400 text-white shadow-md'
-                                    : 'bg-zinc-800/90 border-zinc-700/80 text-zinc-200 hover:bg-zinc-700'
+                                    ? 'bg-blue-600 border-blue-400 text-white shadow-md scale-105'
+                                    : 'bg-zinc-800/90 border-zinc-700/70 text-zinc-200 hover:bg-zinc-700'
                                 }`}
                               >
-                                <span className="text-sm leading-none mb-0.5">{cam.icon}</span>
-                                <span className="text-[10px] font-semibold leading-tight">{cam.label}</span>
+                                {cam.mode === 'zenith' ? (
+                                  <span className="w-3.5 h-3.5 rounded-full bg-current block" />
+                                ) : (
+                                  <svg
+                                    viewBox="0 0 24 24"
+                                    className="w-5 h-5"
+                                    style={{ transform: `rotate(${cam.rot}deg)` }}
+                                    fill="currentColor"
+                                  >
+                                    <rect x="6" y="4" width="12" height="10" rx="2" />
+                                    <polygon points="9,15 15,15 17,20 7,20" />
+                                  </svg>
+                                )}
                               </button>
                             );
                           })}
@@ -7102,16 +7102,17 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         <button
                           type="button"
                           onClick={() => {
-                            setCameraPreset('top_zenith');
+                            setCameraPreset('auto_tv');
                             setShowCameraMenu(false);
                           }}
-                          className={`mt-1.5 w-full py-1.5 rounded-xl border text-[11px] font-semibold transition-all ${
-                            cameraPreset === 'top_zenith'
-                              ? 'bg-blue-600 border-blue-400 text-white'
-                              : 'bg-zinc-800/90 border-zinc-700/80 text-zinc-200 hover:bg-zinc-700'
+                          className={`mt-1.5 w-full py-1.5 rounded-xl border text-[11px] font-bold tracking-wide transition-all flex items-center justify-center gap-1.5 ${
+                            cameraPreset === 'auto_tv'
+                              ? 'bg-emerald-600 border-emerald-400 text-white shadow-md'
+                              : 'bg-zinc-800/90 border-zinc-700/70 text-emerald-400 hover:bg-zinc-700'
                           }`}
                         >
-                          🛰️ Vista Cenital (Dron Táctico)
+                          <span>🎯</span>
+                          <span>Auto-TV</span>
                         </button>
                       </div>
                     )}
