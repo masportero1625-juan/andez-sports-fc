@@ -4182,6 +4182,36 @@ export default function App() {
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
+  const [isRecordingPaused, setIsRecordingPaused] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const isRecordingPausedRef = useRef(false);
+
+  const togglePauseRecording = () => {
+    const next = !isRecordingPausedRef.current;
+    isRecordingPausedRef.current = next;
+    setIsRecordingPaused(next);
+    if (mediaRecorderRef.current) {
+      try {
+        if (next && mediaRecorderRef.current.state === 'recording') mediaRecorderRef.current.pause();
+        else if (!next && mediaRecorderRef.current.state === 'paused') mediaRecorderRef.current.resume();
+      } catch (_) {}
+    }
+  };
+
+  useEffect(() => {
+    if (!isRecording) {
+      isRecordingPausedRef.current = false;
+      setIsRecordingPaused(false);
+      setRecordSeconds(0);
+      return;
+    }
+    const id = setInterval(() => {
+      if (!isRecordingPausedRef.current) {
+        setRecordSeconds((s) => s + 1);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isRecording]);
 
   const latestRecordStateRef = useRef({});
   latestRecordStateRef.current = {
@@ -4615,6 +4645,32 @@ export default function App() {
           ctx.imageSmoothingQuality = 'high';
           renderNative2D(st);
         }
+        // Sello de marca de agua comercial (esquina inferior derecha)
+      ctx.save();
+      const wmText = 'ANDEZ SPORTS TACTICS PRO';
+      ctx.font = '700 22px system-ui, -apple-system, sans-serif';
+      const wmMetrics = ctx.measureText(wmText);
+      const wmPadX = 18;
+      const wmW = Math.ceil(wmMetrics.width + wmPadX * 2 + 18);
+      const wmH = 40;
+      const wmX = 1920 - wmW - 28;
+      const wmY = 1080 - wmH - 24;
+      ctx.fillStyle = 'rgba(9, 9, 11, 0.62)';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(wmX, wmY, wmW, wmH, 10);
+      else ctx.rect(wmX, wmY, wmW, wmH);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(wmX + 18, wmY + wmH / 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(wmText, wmX + 32, wmY + wmH / 2 + 1);
+      ctx.restore();
       };
 
       const finishAndSaveVideo = async (blob, ext, finalType) => {
@@ -4753,8 +4809,18 @@ export default function App() {
         }
 
         let pendingBitmaps = 0;
+        let pausedAccumMs = 0;
+      let pauseStartedPerf = null;
         const processFrame = (now) => {
           if (!isActive) return;
+          if (isRecordingPausedRef.current) {
+          if (pauseStartedPerf === null) pauseStartedPerf = now;
+          return;
+        }
+        if (pauseStartedPerf !== null) {
+          pausedAccumMs += now - pauseStartedPerf;
+          pauseStartedPerf = null;
+        }
           if (startPerf === null) startPerf = now;
           if (now - lastCapturePerf < frameIntervalMs - 2) return;
           if (useWorkerMode && pendingBitmaps > 3) return;
@@ -4768,7 +4834,7 @@ export default function App() {
             sourceCanvas = fallbackCanvas;
           }
 
-          const timestampUs = Math.round((now - startPerf) * 1000);
+          const timestampUs = Math.max(0, Math.round((now - startPerf - pausedAccumMs) * 1000));
           const isKeyFrame = frameIndex % 30 === 0;
           frameIndex += 1;
 
@@ -5253,6 +5319,31 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
         {/* Lado Derecho: Controles Administrativos */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {isRecording && (
+                <div className="flex items-center gap-1 bg-zinc-900/95 border border-zinc-700/90 rounded-lg px-1.5 py-1">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isRecordingPaused ? 'bg-amber-400' : 'bg-red-500 animate-pulse'
+                    }`}
+                  />
+                  <span className="text-[11px] font-mono font-bold text-white tabular-nums px-0.5">
+                    {String(Math.floor(recordSeconds / 60)).padStart(2, '0')}:
+                    {String(recordSeconds % 60).padStart(2, '0')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={togglePauseRecording}
+                    title={isRecordingPaused ? 'Reanudar Grabación' : 'Pausar Grabación'}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide transition-colors ${
+                      isRecordingPaused
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                        : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                    }`}
+                  >
+                    {isRecordingPaused ? 'Reanudar' : 'Pausar'}
+                  </button>
+                </div>
+              )}
           <button
               onClick={isRecording ? stopRecording : startRecording}
               className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 border rounded-lg text-xs font-medium transition ${
