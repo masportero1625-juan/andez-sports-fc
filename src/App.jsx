@@ -7007,6 +7007,22 @@ Sin markdown. Inicia con [ y termina con ]:`;
         {/* CONSOLA UNIFICADA DE ANIMACIÓN VECTORIAL: ESCENAS (FRAMES) + RONDO AUTO */}
         {(bottomBarMode === 'timeline' || frames.length > 1 || isPlayingFrames || isLoopPlaying) && (
           <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-2 sm:px-4 flex flex-wrap items-center justify-between gap-2">
+            {/* Botón para volver al Menú Principal */}
+            <button
+              type="button"
+              onClick={() => {
+                stopFramesPlayback();
+                if (isLoopPlaying) stopLoopSequence();
+                setBottomBarMode('menu');
+              }}
+              className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 hover:text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition shrink-0"
+              title="Volver al Menú Principal"
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              <span>Menú</span>
+            </button>
             {/* Izquierda: Selector de Motor (Frames vs Rondo Auto) */}
             <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 shrink-0">
               <button
