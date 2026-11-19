@@ -7051,76 +7051,6 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         {cameraPreset === 'auto_tv' ? 'Auto-TV' : 'Cámara'}
                       </span>
                     </button>
-
-                    {showCameraMenu && (
-                      <div
-                        style={{ width: 'max-content' }}
-                        className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-xl p-1.5 shadow-2xl backdrop-blur-md"
-                      >
-                        <div className="grid grid-cols-3 gap-1">
-                          {[
-                            { id: 'corner_nw', title: 'Córner Superior Izquierdo', rot: -45, mode: 'cam' },
-                            { id: 'tv_north', title: 'Tribuna Norte', rot: 0, mode: 'cam' },
-                            { id: 'corner_ne', title: 'Córner Superior Derecho', rot: 45, mode: 'cam' },
-                            { id: 'goal_west', title: 'Detrás Arco Izquierdo', rot: -90, mode: 'cam' },
-                            { id: 'top_zenith', title: 'Vista Cenital', rot: 0, mode: 'zenith' },
-                            { id: 'goal_east', title: 'Detrás Arco Derecho', rot: 90, mode: 'cam' },
-                            { id: 'corner_sw', title: 'Córner Inferior Izquierdo', rot: -135, mode: 'cam' },
-                            { id: 'tv_south', title: 'TV Principal (Sur)', rot: 180, mode: 'cam' },
-                            { id: 'corner_se', title: 'Córner Inferior Derecho', rot: 135, mode: 'cam' },
-                          ].map((cam) => {
-                            const active = cameraPreset === cam.id;
-                            return (
-                              <button
-                                key={cam.id}
-                                type="button"
-                                title={cam.title}
-                                style={{ width: 28, height: 28, minWidth: 28, minHeight: 28, padding: 0 }}
-                                onClick={() => {
-                                  setCameraPreset(cam.id);
-                                  setShowCameraMenu(false);
-                                }}
-                                className={`w-7 h-7 p-0 rounded-lg flex items-center justify-center border transition-all ${
-                                  active
-                                    ? 'bg-blue-600 border-blue-400 text-white shadow-sm'
-                                    : 'bg-zinc-800/90 border-zinc-700/70 text-zinc-200 hover:bg-zinc-700'
-                                }`}
-                              >
-                                {cam.mode === 'zenith' ? (
-                                  <span className="w-2 h-2 rounded-full bg-white block shrink-0" />
-                                ) : (
-                                  <svg
-                                    viewBox="0 0 24 24"
-                                    className="w-3.5 h-3.5 shrink-0"
-                                    style={{ transform: `rotate(${cam.rot}deg)` }}
-                                    fill="currentColor"
-                                  >
-                                    <rect x="6" y="4" width="12" height="10" rx="2" />
-                                    <polygon points="9,15 15,15 17,20 7,20" />
-                                  </svg>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <button
-                          type="button"
-                          title="Auto-TV (Seguimiento de Balón)"
-                          style={{ height: 22, minHeight: 22, minWidth: 0, padding: '0 4px' }}
-                          onClick={() => {
-                            setCameraPreset('auto_tv');
-                            setShowCameraMenu(false);
-                          }}
-                          className={`mt-1 w-full py-1 px-1 rounded-lg border text-[9px] font-bold tracking-wider uppercase transition-all text-center ${
-                            cameraPreset === 'auto_tv'
-                              ? 'bg-emerald-600 border-emerald-400 text-white shadow-sm'
-                              : 'bg-zinc-800/90 border-zinc-700/70 text-zinc-200 hover:bg-zinc-700'
-                          }`}
-                        >
-                          Auto-TV
-                        </button>
-                      </div>
-                    )}
                   </div>
                   <div className="w-px h-6 sm:h-10 bg-zinc-700/60 mx-0.5 shrink-0" />
                 </>
@@ -7138,7 +7068,94 @@ Sin markdown. Inicia con [ y termina con ]:`;
 
   </div>
 )}
-
+          {/* PAD COMPACTO DE CÁMARAS 3D (FUERA DE LA BARRA PARA TAMAÑO EXACTO) */}
+          {viewMode === '3d' && showCameraMenu && (
+            <div
+              id="andez-cam-pad"
+              className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-xl p-1.5 shadow-2xl backdrop-blur-md"
+              style={{ width: 'max-content' }}
+            >
+              <style>{`
+                #andez-cam-pad .cam-cell {
+                  width: 28px !important;
+                  height: 28px !important;
+                  min-width: 28px !important;
+                  min-height: 28px !important;
+                  max-width: 28px !important;
+                  max-height: 28px !important;
+                  padding: 0 !important;
+                }
+                #andez-cam-pad .cam-autotv {
+                  width: 100% !important;
+                  height: 22px !important;
+                  min-height: 22px !important;
+                  max-height: 22px !important;
+                  min-width: 0 !important;
+                  padding: 0 4px !important;
+                }
+              `}</style>
+              <div className="grid grid-cols-3 gap-1">
+                {[
+                  { id: 'corner_nw', title: 'Córner Superior Izquierdo', rot: -45, mode: 'cam' },
+                  { id: 'tv_north', title: 'Tribuna Norte', rot: 0, mode: 'cam' },
+                  { id: 'corner_ne', title: 'Córner Superior Derecho', rot: 45, mode: 'cam' },
+                  { id: 'goal_west', title: 'Detrás Arco Izquierdo', rot: -90, mode: 'cam' },
+                  { id: 'top_zenith', title: 'Vista Cenital', rot: 0, mode: 'zenith' },
+                  { id: 'goal_east', title: 'Detrás Arco Derecho', rot: 90, mode: 'cam' },
+                  { id: 'corner_sw', title: 'Córner Inferior Izquierdo', rot: -135, mode: 'cam' },
+                  { id: 'tv_south', title: 'TV Principal (Sur)', rot: 180, mode: 'cam' },
+                  { id: 'corner_se', title: 'Córner Inferior Derecho', rot: 135, mode: 'cam' },
+                ].map((cam) => {
+                  const active = cameraPreset === cam.id;
+                  return (
+                    <button
+                      key={cam.id}
+                      type="button"
+                      title={cam.title}
+                      onClick={() => {
+                        setCameraPreset(cam.id);
+                        setShowCameraMenu(false);
+                      }}
+                      className={`cam-cell rounded-lg flex items-center justify-center border transition-all ${
+                        active
+                          ? 'bg-blue-600 border-blue-400 text-white shadow-sm'
+                          : 'bg-zinc-800/90 border-zinc-700/70 text-zinc-200 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {cam.mode === 'zenith' ? (
+                        <span className="w-2 h-2 rounded-full bg-white block shrink-0" />
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="w-3.5 h-3.5 shrink-0"
+                          style={{ transform: `rotate(${cam.rot}deg)` }}
+                          fill="currentColor"
+                        >
+                          <rect x="6" y="4" width="12" height="10" rx="2" />
+                          <polygon points="9,15 15,15 17,20 7,20" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                title="Auto-TV (Seguimiento de Balón)"
+                onClick={() => {
+                  setCameraPreset('auto_tv');
+                  setShowCameraMenu(false);
+                }}
+                className={`cam-autotv mt-1 rounded-md border text-[9px] font-bold tracking-wider uppercase transition-all flex items-center justify-center ${
+                  cameraPreset === 'auto_tv'
+                    ? 'bg-emerald-600 border-emerald-400 text-white shadow-sm'
+                    : 'bg-zinc-800/90 border-zinc-700/70 text-zinc-200 hover:bg-zinc-700'
+                }`}
+              >
+                Auto-TV
+              </button>
+            </div>
+          )}
           {/* MODO: HERRAMIENTAS ESTILO TACTICALPAD + CATÁLOGO TRAS ARCO DERECHO */}
           {bottomBarMode === 'tools' && (
             <>
