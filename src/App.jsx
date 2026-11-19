@@ -7053,7 +7053,10 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     </button>
 
                     {showCameraMenu && (
-                      <div className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-xl p-1.5 shadow-2xl backdrop-blur-md w-fit">
+                      <div
+                        style={{ width: 'max-content' }}
+                        className="fixed bottom-16 sm:bottom-24 right-3 sm:right-6 z-50 bg-zinc-900/95 border border-zinc-700/90 rounded-xl p-1.5 shadow-2xl backdrop-blur-md"
+                      >
                         <div className="grid grid-cols-3 gap-1">
                           {[
                             { id: 'corner_nw', title: 'Córner Superior Izquierdo', rot: -45, mode: 'cam' },
@@ -7072,6 +7075,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                                 key={cam.id}
                                 type="button"
                                 title={cam.title}
+                                style={{ width: 28, height: 28, minWidth: 28, minHeight: 28, padding: 0 }}
                                 onClick={() => {
                                   setCameraPreset(cam.id);
                                   setShowCameraMenu(false);
@@ -7102,6 +7106,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                         <button
                           type="button"
                           title="Auto-TV (Seguimiento de Balón)"
+                          style={{ height: 22, minHeight: 22, minWidth: 0, padding: '0 4px' }}
                           onClick={() => {
                             setCameraPreset('auto_tv');
                             setShowCameraMenu(false);
