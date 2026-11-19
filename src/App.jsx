@@ -3872,6 +3872,145 @@ export default function App() {
     setFrames(prev => prev.filter((_, i) => i !== idx));
     setActiveFrameIndex(prev => Math.max(0, prev - 1));
   };
+  const [animTab, setAnimTab] = useState('frames');
+  const [rondoMode, setRondoMode] = useState('piso');
+  const [isPlayingFrames, setIsPlayingFrames] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [loopFrames, setLoopFrames] = useState(true);
+  const frameAnimRafRef = useRef(null);
+
+  const stopFramesPlayback = () => {
+    setIsPlayingFrames(false);
+    if (frameAnimRafRef.current) {
+      cancelAnimationFrame(frameAnimRafRef.current);
+      frameAnimRafRef.current = null;
+    }
+  };
+
+  const playFramesSequence = (autoRecord = false) => {
+    if (frames.length < 2) {
+      alert('Agrega al menos 2 Frames (+ Frame) moviendo jugadores o balón entre cada paso.');
+      return;
+    }
+    if (isLoopPlaying) stopLoopSequence();
+    stopFramesPlayback();
+
+    const firstFrame = frames[0];
+    if (firstFrame?.objects) setObjects(JSON.parse(JSON.stringify(firstFrame.objects)));
+    if (firstFrame?.drawings) setDrawings(JSON.parse(JSON.stringify(firstFrame.drawings)));
+    setActiveFrameIndex(0);
+    setIsPlayingFrames(true);
+
+    if (autoRecord && !isRecording) {
+      startRecording();
+    }
+
+    let segmentIdx = 0;
+    let segStartPerf = performance.now();
+    const baseSegmentMs = 1300;
+    let kickedThisSegment = false;
+
+    const step = (now) => {
+      const fromF = frames[segmentIdx];
+      const toF = frames[segmentIdx + 1];
+      if (!fromF || !toF) {
+        stopFramesPlayback();
+        if (autoRecord) stopRecording();
+        return;
+      }
+
+      const durMs = baseSegmentMs / playbackSpeed;
+      const rawT = Math.min(1, (now - segStartPerf) / durMs);
+      const t = rawT < 0.5 ? 4 * rawT * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 3) / 2;
+
+      const fromObjs = fromF.objects || [];
+      const toObjs = toF.objects || [];
+      const toBall = toObjs.find((o) => o.type === 'ball');
+      const fromBall = fromObjs.find((o) => o.type === 'ball');
+
+      if (!kickedThisSegment && fromBall && toBall && typeof handlePlayerAction === 'function') {
+        const ballDist = Math.hypot((toBall.x || 0) - (fromBall.x || 0), (toBall.y || 0) - (fromBall.y || 0));
+        if (ballDist > 2) {
+          kickedThisSegment = true;
+          let passer = null;
+          let bestD = Infinity;
+          fromObjs.forEach((o) => {
+            if (o.type === 'player') {
+              const d = Math.hypot((o.x || 0) - (fromBall.x || 0), (o.y || 0) - (fromBall.y || 0));
+              if (d < bestD) { bestD = d; passer = o; }
+            }
+          });
+          if (passer && bestD < 8) {
+            try { handlePlayerAction(passer.id, 'pass'); } catch (_) {}
+          }
+        }
+      }
+
+      const isLob = toF.ballLob === true;
+      const interpObjs = toObjs.map((targetObj) => {
+        const startObj = fromObjs.find((o) => o.id === targetObj.id) || targetObj;
+        const nx = (startObj.x ?? targetObj.x) + ((targetObj.x ?? 0) - (startObj.x ?? 0)) * t;
+        const ny = (startObj.y ?? targetObj.y) + ((targetObj.y ?? 0) - (startObj.y ?? 0)) * t;
+        let nz = targetObj.elevation ?? 0;
+
+        if (targetObj.type === 'ball' && isLob) {
+          const baseZ = (startObj.elevation ?? 0) + ((targetObj.elevation ?? 0) - (startObj.elevation ?? 0)) * t;
+          nz = baseZ + Math.sin(Math.PI * rawT) * 3.2;
+        }
+
+        let rot = targetObj.rotation ?? startObj.rotation ?? 0;
+        if (targetObj.type === 'player') {
+          const dx = (targetObj.x ?? 0) - (startObj.x ?? 0);
+          const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
+          if (Math.hypot(dx, dy) > 0.6) {
+            rot = (Math.atan2(dy, dx) * 180) / Math.PI;
+          } else if (toBall) {
+            const bCurX = fromBall ? fromBall.x + (toBall.x - fromBall.x) * t : toBall.x;
+            const bCurY = fromBall ? fromBall.y + (toBall.y - fromBall.y) * t : toBall.y;
+            if (Math.hypot(bCurX - nx, bCurY - ny) > 0.5) {
+              rot = (Math.atan2(bCurY - ny, bCurX - nx) * 180) / Math.PI;
+            }
+          }
+        }
+
+        return { ...targetObj, x: nx, y: ny, elevation: nz, rotation: rot };
+      });
+
+      setObjects(interpObjs);
+
+      if (rawT >= 1) {
+        segmentIdx += 1;
+        setActiveFrameIndex(segmentIdx);
+        if (toF.drawings) setDrawings(JSON.parse(JSON.stringify(toF.drawings)));
+
+        if (segmentIdx >= frames.length - 1) {
+          if (loopFrames && !autoRecord) {
+            segmentIdx = 0;
+            segStartPerf = now;
+            kickedThisSegment = false;
+            setActiveFrameIndex(0);
+          } else {
+            stopFramesPlayback();
+            if (autoRecord) setTimeout(() => stopRecording(), 250);
+            return;
+          }
+        } else {
+          segStartPerf = now;
+          kickedThisSegment = false;
+        }
+      }
+
+      frameAnimRafRef.current = requestAnimationFrame(step);
+    };
+
+    frameAnimRafRef.current = requestAnimationFrame(step);
+  };
+
+  const toggleFrameBallLob = () => {
+    setFrames((prev) =>
+      prev.map((f, i) => (i === activeFrameIndex ? { ...f, ballLob: !f.ballLob } : f))
+    );
+  };
 
   const exportBoardAsImage = () => {
     if (!svgRef.current) return;
@@ -3918,7 +4057,8 @@ export default function App() {
     }
   };
 
-  const toggleLoopSequence = () => {
+  const toggleLoopSequence = (forcedMode = null) => {
+    if (isPlayingFrames) stopFramesPlayback();
     if (isLoopPlaying) {
       stopLoopSequence();
       return;
@@ -3932,14 +4072,19 @@ export default function App() {
       return;
     }
 
-    // Fijar el modo de juego según la selección previa
-    const initialElev = Number(currentBall.elevation || 0);
-    if (Math.abs(initialElev - 1.8) < 0.3 || Math.abs(initialElev - 1.76) < 0.3) {
-      exerciseModeRef.current = 'cabeza';
-    } else if (initialElev >= 2.4) {
-      exerciseModeRef.current = 'aereo';
+    // Fijar el modo de juego según el botón elegido o la altura previa
+    if (typeof forcedMode === 'string' && ['piso', 'cabeza', 'aereo'].includes(forcedMode)) {
+      exerciseModeRef.current = forcedMode;
+      setRondoMode(forcedMode);
     } else {
-      exerciseModeRef.current = 'piso';
+      const initialElev = Number(currentBall.elevation || 0);
+      if (Math.abs(initialElev - 1.8) < 0.3 || Math.abs(initialElev - 1.76) < 0.3) {
+        exerciseModeRef.current = 'cabeza';
+      } else if (initialElev >= 2.4) {
+        exerciseModeRef.current = 'aereo';
+      } else {
+        exerciseModeRef.current = 'piso';
+      }
     }
 
     setIsLoopPlaying(true);
@@ -6859,60 +7004,283 @@ Sin markdown. Inicia con [ y termina con ]:`;
       {/* FOOTER */}
       <footer className="bg-[#1a1a1a] flex flex-col shrink-0 z-30 border-t border-zinc-800 no-print w-full select-none h-12 text-xs">
         
-        {/* LÍNEA DE TIEMPO / FOTOGRAMAS */}
-        {bottomBarMode === 'timeline' && (
-          <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-4 flex items-center justify-between shadow-2xl backdrop-blur-md overflow-x-auto [&::-webkit-scrollbar]:hidden">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-amber-400">🎬 Marcos:</span>
-              <div className="flex items-center gap-1.5 overflow-x-auto max-w-xl py-0.5 [&::-webkit-scrollbar]:hidden">
-                {frames.map((f, idx) => (
-                  <button
-                    key={f.id || idx}
-                    onClick={() => {
-                      setActiveFrameIndex(idx);
-                      if (frames[idx]?.objects) setObjects(frames[idx].objects);
-                      if (frames[idx]?.drawings) setDrawings(frames[idx].drawings);
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                      activeFrameIndex === idx
-                        ? 'bg-amber-500 text-black shadow-lg scale-105'
-                        : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={handleAddFrame}
-                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow flex items-center gap-1 transition"
-                title="Nuevo Marco (Duplicar Jugada)"
-              >
-                <span>+</span> Añadir
-              </button>
-              <button
-                onClick={() => handleDeleteFrame(activeFrameIndex)}
-                className="p-1 bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white rounded-lg text-xs transition"
-                title="Eliminar Marco Actual"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+        {/* CONSOLA UNIFICADA DE ANIMACIÓN VECTORIAL: ESCENAS (FRAMES) + RONDO AUTO */}
+        {(bottomBarMode === 'timeline' || frames.length > 1 || isPlayingFrames || isLoopPlaying) && (
+          <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-2 sm:px-4 flex flex-wrap items-center justify-between gap-2">
+            {/* Izquierda: Selector de Motor (Frames vs Rondo Auto) */}
+            <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isLoopPlaying) stopLoopSequence();
+                  setAnimTab('frames');
+                }}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1.5 transition ${
+                  animTab === 'frames'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <line x1="7" y1="4" x2="7" y2="20" />
+                  <line x1="17" y1="4" x2="17" y2="20" />
+                </svg>
+                <span>Escenas</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  stopFramesPlayback();
+                  setAnimTab('rondo');
+                }}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold flex items-center gap-1.5 transition ${
+                  animTab === 'rondo'
+                    ? 'bg-amber-500 text-black shadow'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <polyline points="21 3 21 8 16 8" />
+                  <polyline points="3 21 3 16 8 16" />
+                </svg>
+                <span>Rondo Auto</span>
+              </button>
+            </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={toggleLoopSequence}
-                className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
-                  isLoopPlaying ? 'bg-amber-500 text-black animate-pulse' : 'bg-blue-600 text-white hover:bg-blue-500'
-                }`}
-              >
-                <Play className={`w-3.5 h-3.5 ${isLoopPlaying ? 'fill-black' : 'fill-white'}`} />
-                <span>{isLoopPlaying ? 'Pausar' : 'Reproducir'}</span>
-              </button>
-            </div>
-          </div>
-        )}
+            {animTab === 'frames' ? (
+              <>
+                {/* Centro: Cápsulas de Frames + Gestión Vectorial */}
+                <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
+                  <span className="text-[11px] font-mono font-bold text-zinc-400 tabular-nums shrink-0 px-1">
+                    {activeFrameIndex + 1}/{frames.length}
+                  </span>
+                  <div className="flex items-center gap-1 overflow-x-auto max-w-[11rem] sm:max-w-sm py-0.5 [&::-webkit-scrollbar]:hidden">
+                    {frames.map((f, idx) => (
+                      <button
+                        key={f.id || idx}
+                        type="button"
+                        onClick={() => {
+                          stopFramesPlayback();
+                          setActiveFrameIndex(idx);
+                          if (frames[idx]?.objects) setObjects(JSON.parse(JSON.stringify(frames[idx].objects)));
+                          if (frames[idx]?.drawings) setDrawings(JSON.parse(JSON.stringify(frames[idx].drawings)));
+                        }}
+                        title={`Frame ${idx + 1}${f.ballLob ? ' (Pase Elevado)' : ' (Pase Raso)'}`}
+                        className={`w-5 h-6 rounded text-[10px] font-bold transition shrink-0 flex items-center justify-center ${
+                          activeFrameIndex === idx
+                            ? 'bg-blue-500 text-white ring-1 ring-blue-300 shadow'
+                            : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                        }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddFrame}
+                    className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] rounded-lg flex items-center gap-1 transition shrink-0"
+                    title="Agregar nuevo Frame"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span>Frame</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleFrameBallLob}
+                    disabled={activeFrameIndex === 0}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1.5 transition shrink-0 ${
+                      activeFrameIndex === 0
+                        ? 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed'
+                        : frames[activeFrameIndex]?.ballLob
+                        ? 'bg-sky-600 border-sky-400 text-white'
+                        : 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700'
+                    }`}
+                    title="Tipo de pase hacia este Frame: Raso o Elevado"
+                  >
+                    {frames[activeFrameIndex]?.ballLob ? (
+                      <>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2">
+                          <path d="M3 17Q12 4 21 17" />
+                        </svg>
+                        <span>Elevado</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2">
+                          <line x1="3" y1="12" x2="21" y2="12" />
+                        </svg>
+                        <span>Raso</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopFramesPlayback();
+                      handleDeleteFrame(activeFrameIndex);
+                    }}
+                    className="p-1.5 bg-zinc-800 hover:bg-red-600 text-zinc-300 hover:text-white rounded-lg transition shrink-0"
+                    title="Eliminar Frame Actual"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Derecha: Transporte Vectorial + Velocidad + Loop + Exportar MP4 */}
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopFramesPlayback();
+                        setActiveFrameIndex(0);
+                        if (frames[0]?.objects) setObjects(JSON.parse(JSON.stringify(frames[0].objects)));
+                      }}
+                      className="p-1.5 text-zinc-300 hover:text-white transition"
+                      title="Ir al Inicio (Frame 1)"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                        <rect x="4" y="5" width="2.5" height="14" rx="1" />
+                        <polygon points="19,5 9,12 19,19" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopFramesPlayback}
+                      className="p-1.5 text-zinc-300 hover:text-red-400 transition"
+                      title="Detener"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="1.5" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => (isPlayingFrames ? stopFramesPlayback() : playFramesSequence(false))}
+                      className={`px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition ${
+                        isPlayingFrames ? 'bg-amber-500 text-black' : 'bg-blue-600 hover:bg-blue-500 text-white'
+                      }`}
+                      title={isPlayingFrames ? 'Pausar' : 'Reproducir'}
+                    >
+                      <Play className={`w-3 h-3 ${isPlayingFrames ? 'fill-black' : 'fill-white'}`} />
+                      <span>{isPlayingFrames ? 'Pausar' : 'Play'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        stopFramesPlayback();
+                        const next = Math.min(frames.length - 1, activeFrameIndex + 1);
+                        setActiveFrameIndex(next);
+                        if (frames[next]?.objects) setObjects(JSON.parse(JSON.stringify(frames[next].objects)));
+                      }}
+                      className="p-1.5 text-zinc-300 hover:text-white transition"
+                      title="Siguiente Frame"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                        <polygon points="5,5 15,12 5,19" />
+                        <rect x="17.5" y="5" width="2.5" height="14" rx="1" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setPlaybackSpeed((s) => (s === 1 ? 1.5 : s === 1.5 ? 2 : s === 2 ? 0.5 : 1))}
+                    className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-[11px] font-mono font-bold text-amber-400 tabular-nums"
+                    title="Velocidad de reproducción"
+                  >
+                    {playbackSpeed}x
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLoopFrames((v) => !v)}
+                    className={`p-1.5 rounded-lg border transition ${
+                      loopFrames
+                        ? 'bg-indigo-600/30 border-indigo-400 text-indigo-200'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300'
+                    }`}
+                    title={loopFrames ? 'Bucle Activado' : 'Bucle Desactivado'}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <polyline points="17 1 21 5 17 9" />
+                      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                      <polyline points="7 23 3 19 7 15" />
+                      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => playFramesSequence(true)}
+                    disabled={isRecording || frames.length < 2}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition ${
+                      frames.length < 2
+                        ? 'bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed'
+                        : 'bg-red-600 hover:bg-red-500 text-white shadow'
+                    }`}
+                    title="Renderizar y descargar secuencia en MP4"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>Exportar MP4</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* Controles Vectoriales del Motor Rondo Auto */
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                {[
+                  { id: 'piso', label: 'Pase Raso' },
+                  { id: 'cabeza', label: 'De Cabeza' },
+                  { id: 'aereo', label: 'Pase Aéreo' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setRondoMode(m.id);
+                      exerciseModeRef.current = m.id;
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                      rondoMode === m.id
+                        ? 'bg-emerald-600 border-emerald-400 text-white shadow-sm'
+                        : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => (isLoopPlaying ? stopLoopSequence() : toggleLoopSequence(rondoMode))}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${
+                    isLoopPlaying
+                      ? 'bg-red-600 hover:bg-red-500 text-white animate-pulse'
+                      : 'bg-amber-500 hover:bg-amber-400 text-black shadow'
+                  }`}
+                >
+                  <Play className={`w-3.5 h-3.5 ${isLoopPlaying ? 'fill-white' : 'fill-black'}`} />
+                  <span>{isLoopPlaying ? 'Detener Rondo' : 'Iniciar Rondo'}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* PALETA DE CAMISETAS EXPANDIBLE */}
         {showKitPalette && (
