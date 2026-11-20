@@ -3857,9 +3857,15 @@ export default function App() {
   ]);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
   
-  // Sincroniza automáticamente los cambios manuales en el Frame activo mientras no se reproduce
+  const skipFrameSyncRef = useRef(false);
+
+  // Sincroniza cambios manuales en el Frame activo solo cuando el usuario arrastra o edita en cancha
   useEffect(() => {
     if (isPlayingFrames || isLoopPlaying) return;
+    if (skipFrameSyncRef.current) {
+      skipFrameSyncRef.current = false;
+      return;
+    }
     setFrames((prev) => {
       if (!prev[activeFrameIndex]) return prev;
       const updated = [...prev];
@@ -3877,7 +3883,7 @@ export default function App() {
     const nextIdx = frames.length;
     setFrames(prev => [
       ...prev,
-      { id: Date.now(), name: `Marco \${nextIdx + 1}`, objects: currentObjs, drawings: [] }
+      { id: Date.now(), name: `Marco ${nextIdx + 1}`, objects: currentObjs, drawings: JSON.parse(JSON.stringify(drawings || [])) }
     ]);
     setActiveFrameIndex(nextIdx);
   };
@@ -3896,6 +3902,7 @@ export default function App() {
 
   const stopFramesPlayback = () => {
     setIsPlayingFrames(false);
+    skipFrameSyncRef.current = true;
     if (frameAnimRafRef.current) {
       cancelAnimationFrame(frameAnimRafRef.current);
       frameAnimRafRef.current = null;
@@ -3921,7 +3928,7 @@ export default function App() {
     }
 
     let segmentIdx = 0;
-    let segStartPerf = null;
+    let segStartPerf = performance.now() + 450;
     let segmentInitDone = false;
 
     const getSegmentDurationMs = (fA, fB) => {
