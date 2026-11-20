@@ -7092,7 +7092,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         
         {/* CONSOLA UNIFICADA DE ANIMACIÓN VECTORIAL: ESCENAS (FRAMES) + RONDO AUTO */}
         {(bottomBarMode === 'timeline' || isPlayingFrames || isLoopPlaying) && (
-          <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-2 sm:px-4 flex flex-wrap items-center justify-between gap-2">
+         <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-2 sm:px-4 flex flex-nowrap items-center justify-between gap-2 overflow-x-auto touch-pan-x">
             {/* Botón para volver al Menú Principal */}
             <button
               type="button"
