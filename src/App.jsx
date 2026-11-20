@@ -3856,7 +3856,22 @@ export default function App() {
     { id: 1, name: 'Marco 1', objects: [], drawings: [] }
   ]);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
-
+  
+  // Sincroniza automáticamente los cambios manuales en el Frame activo mientras no se reproduce
+  useEffect(() => {
+    if (isPlayingFrames || isLoopPlaying) return;
+    setFrames((prev) => {
+      if (!prev[activeFrameIndex]) return prev;
+      const updated = [...prev];
+      updated[activeFrameIndex] = {
+        ...updated[activeFrameIndex],
+        objects: JSON.parse(JSON.stringify(objects)),
+        drawings: JSON.parse(JSON.stringify(drawings || [])),
+      };
+      return updated;
+    });
+  }, [objects, drawings]);
+  
   const handleAddFrame = () => {
     const currentObjs = JSON.parse(JSON.stringify(objects));
     const nextIdx = frames.length;
@@ -3934,6 +3949,7 @@ export default function App() {
       }
 
       if (segStartPerf === null) segStartPerf = now;
+      if (now < segStartPerf) { frameAnimRafRef.current = requestAnimationFrame(step); return; }
       const durMs = getSegmentDurationMs(fromF, toF);
       const rawT = Math.min(1, (now - segStartPerf) / durMs);
       const t = rawT < 0.5 ? 4 * rawT * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 3) / 2;
@@ -4046,9 +4062,10 @@ export default function App() {
         if (segmentIdx >= frames.length - 1) {
           if (loopFrames && !autoRecord) {
             segmentIdx = 0;
-            segStartPerf = now;
+            segStartPerf = now + 350;
             segmentInitDone = false;
             setActiveFrameIndex(0);
+            if (frames[0]?.objects) setObjects(JSON.parse(JSON.stringify(frames[0].objects)));
           } else {
             stopFramesPlayback();
             if (autoRecord) setTimeout(() => stopRecording(), 250);
