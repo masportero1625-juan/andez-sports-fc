@@ -4003,46 +4003,47 @@ export default function App() {
         let nonce = targetObj.animNonce || 0;
 
         if (targetObj.type === 'player') {
-          // 1. Orientación del cuerpo 2D (grados) y 3D (radianes)
-          if (targetObj.id === passerId && rawT < 0.35 && toBall) {
-            // Pasador gira mirando hacia donde envía el balón
+          const dirToRotY = (vx, vy) => (isPC ? Math.atan2(vx, vy) : Math.atan2(vy, -vx));
+          const bCurX = fromBall && toBall ? fromBall.x + (toBall.x - fromBall.x) * t : toBall?.x;
+          const bCurY = fromBall && toBall ? fromBall.y + (toBall.y - fromBall.y) * t : toBall?.y;
+
+          // 1. Orientación del cuerpo 2D (grados) y 3D (radianes exactos de facingDir2D)
+          if (targetObj.id === passerId && rawT < 0.55 && toBall) {
+            // Pasador gira mirando exactamente hacia donde envía el balón
             const pdx = (toBall.x ?? 0) - nx;
             const pdy = (toBall.y ?? 0) - ny;
-            if (Math.hypot(pdx, pdy) > 0.5) {
+            if (Math.hypot(pdx, pdy) > 0.3) {
               rotDeg = (Math.atan2(pdy, pdx) * 180) / Math.PI;
-              rotY = isPC ? Math.atan2(pdx, pdy) : Math.atan2(pdy, -pdx);
+              rotY = dirToRotY(pdx, pdy);
             }
-          } else if (moveDist > 0.6) {
-            // Jugador o arquero desplazándose mira hacia su trayectoria
+          } else if (moveDist > 0.5 && rawT < 0.78) {
+            // Jugador o arquero desplazándose mira hacia su trayectoria de carrera
             rotDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-            rotY = isPC ? Math.atan2(dx, dy) : Math.atan2(dy, -dx);
-          } else if (toBall) {
-            // Jugador o arquero en posición sigue el balón con la mirada
-            const bCurX = fromBall ? fromBall.x + (toBall.x - fromBall.x) * t : toBall.x;
-            const bCurY = fromBall ? fromBall.y + (toBall.y - fromBall.y) * t : toBall.y;
+            rotY = dirToRotY(dx, dy);
+          } else if (bCurX !== undefined && bCurY !== undefined) {
+            // Al llegar o esperar, se perfila mirando hacia el balón para recibir
             const ldx = bCurX - nx;
             const ldy = bCurY - ny;
-            if (Math.hypot(ldx, ldy) > 0.5) {
+            if (Math.hypot(ldx, ldy) > 0.3) {
               rotDeg = (Math.atan2(ldy, ldx) * 180) / Math.PI;
-              rotY = isPC ? Math.atan2(ldx, ldy) : Math.atan2(ldy, -ldx);
+              rotY = dirToRotY(ldx, ldy);
             }
           }
 
-          // 2. Selección biomecánica: respeta poses grabadas del Arquero/Jugador o asigna pase/trote/sprint
-          const hasCustomPose =
-            targetObj.animation &&
-            !['idle', 'jog', 'sprint', 'pass'].includes(targetObj.animation);
+          // 2. Biomecánica real 3D: golpeo, trote/sprint, recepción perfilada o pose específica del arquero
+          const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'header', 'volley'];
+          const hasCustomPose = targetObj.animation && !standardStates.includes(targetObj.animation);
 
           if (hasCustomPose) {
             activeAnim = targetObj.animation;
             if (!segmentInitDone) nonce = (startObj.animNonce || 0) + 1;
-          } else if (targetObj.id === passerId && rawT < 0.45) {
-            activeAnim = 'pass';
+          } else if (targetObj.id === passerId && rawT < 0.65) {
+            activeAnim = isLob ? 'lofted' : 'pass';
             if (!segmentInitDone) nonce = (startObj.animNonce || 0) + 1;
-          } else if (moveDist > 0.6 && rawT < 0.94) {
+          } else if (moveDist > 0.5 && rawT < 0.88) {
             activeAnim = moveDist > 16 ? 'sprint' : 'jog';
           } else {
-            activeAnim = 'idle';
+            activeAnim = 'defensive';
           }
         }
 
