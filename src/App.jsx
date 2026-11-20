@@ -3889,7 +3889,7 @@ export default function App() {
 
   const playFramesSequence = (autoRecord = false) => {
     if (frames.length < 2) {
-      alert('Agrega al menos 2 Frames (+ Frame) moviendo jugadores o balón entre cada paso.');
+      alert('Agrega al menos 2 Frames (+ Frame) moviendo jugadores, arquero o balón entre cada paso.');
       return;
     }
     if (isLoopPlaying) stopLoopSequence();
@@ -3907,13 +3907,22 @@ export default function App() {
 
     let segmentIdx = 0;
     let segStartPerf = null;
+    let segmentInitDone = false;
+
     const getSegmentDurationMs = (fA, fB) => {
-      const bA = (fA?.objects || []).find((o) => o.type === 'ball');
-      const bB = (fB?.objects || []).find((o) => o.type === 'ball');
-      const dist = bA && bB ? Math.hypot((bB.x || 0) - (bA.x || 0), (bB.y || 0) - (bA.y || 0)) : 20;
-      return Math.max(950, Math.min(2200, dist * 42)) / playbackSpeed;
+      const objsA = fA?.objects || [];
+      const objsB = fB?.objects || [];
+      let maxDist = 0;
+      objsB.forEach((b) => {
+        const a = objsA.find((o) => o.id === b.id);
+        if (a) {
+          const d = Math.hypot((b.x || 0) - (a.x || 0), (b.y || 0) - (a.y || 0));
+          if (d > maxDist) maxDist = d;
+        }
+      });
+      const clamped = Math.max(1050, Math.min(2400, maxDist * 45));
+      return clamped / playbackSpeed;
     };
-    let kickedThisSegment = false;
 
     const step = (now) => {
       const fromF = frames[segmentIdx];
@@ -3934,29 +3943,30 @@ export default function App() {
       const toBall = toObjs.find((o) => o.type === 'ball');
       const fromBall = fromObjs.find((o) => o.type === 'ball');
 
-      if (!kickedThisSegment && fromBall && toBall && typeof handlePlayerAction === 'function') {
+      let passerId = null;
+      if (fromBall && toBall) {
         const ballDist = Math.hypot((toBall.x || 0) - (fromBall.x || 0), (toBall.y || 0) - (fromBall.y || 0));
         if (ballDist > 2) {
-          kickedThisSegment = true;
-          let passer = null;
           let bestD = Infinity;
           fromObjs.forEach((o) => {
             if (o.type === 'player') {
               const d = Math.hypot((o.x || 0) - (fromBall.x || 0), (o.y || 0) - (fromBall.y || 0));
-              if (d < bestD) { bestD = d; passer = o; }
+              if (d < bestD) { bestD = d; passerId = o.id; }
             }
           });
-          if (passer && bestD < 8) {
-            try { handlePlayerAction(passer.id, 'pass'); } catch (_) {}
-          }
+          if (bestD >= 9) passerId = null;
         }
       }
 
       const isLob = toF.ballLob === true;
       const interpObjs = toObjs.map((targetObj) => {
         const startObj = fromObjs.find((o) => o.id === targetObj.id) || targetObj;
-        const nx = (startObj.x ?? targetObj.x) + ((targetObj.x ?? 0) - (startObj.x ?? 0)) * t;
-        const ny = (startObj.y ?? targetObj.y) + ((targetObj.y ?? 0) - (startObj.y ?? 0)) * t;
+        const dx = (targetObj.x ?? 0) - (startObj.x ?? 0);
+        const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
+        const moveDist = Math.hypot(dx, dy);
+
+        const nx = (startObj.x ?? targetObj.x) + dx * t;
+        const ny = (startObj.y ?? targetObj.y) + dy * t;
         let nz = targetObj.elevation ?? 0;
 
         if (targetObj.type === 'ball' && isLob) {
@@ -3964,24 +3974,68 @@ export default function App() {
           nz = baseZ + Math.sin(Math.PI * rawT) * 3.2;
         }
 
-        let rot = targetObj.rotation ?? startObj.rotation ?? 0;
+        let rotDeg = targetObj.rotation ?? startObj.rotation ?? 0;
+        let rotY = targetObj.rotationY ?? startObj.rotationY ?? 0;
+        let activeAnim = targetObj.animation || startObj.animation || 'idle';
+        let nonce = targetObj.animNonce || 0;
+
         if (targetObj.type === 'player') {
-          const dx = (targetObj.x ?? 0) - (startObj.x ?? 0);
-          const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
-          if (Math.hypot(dx, dy) > 0.6) {
-            rot = (Math.atan2(dy, dx) * 180) / Math.PI;
+          // 1. Orientación del cuerpo 2D (grados) y 3D (radianes)
+          if (targetObj.id === passerId && rawT < 0.35 && toBall) {
+            // Pasador gira mirando hacia donde envía el balón
+            const pdx = (toBall.x ?? 0) - nx;
+            const pdy = (toBall.y ?? 0) - ny;
+            if (Math.hypot(pdx, pdy) > 0.5) {
+              rotDeg = (Math.atan2(pdy, pdx) * 180) / Math.PI;
+              rotY = isPC ? Math.atan2(pdx, pdy) : Math.atan2(pdy, -pdx);
+            }
+          } else if (moveDist > 0.6) {
+            // Jugador o arquero desplazándose mira hacia su trayectoria
+            rotDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+            rotY = isPC ? Math.atan2(dx, dy) : Math.atan2(dy, -dx);
           } else if (toBall) {
+            // Jugador o arquero en posición sigue el balón con la mirada
             const bCurX = fromBall ? fromBall.x + (toBall.x - fromBall.x) * t : toBall.x;
             const bCurY = fromBall ? fromBall.y + (toBall.y - fromBall.y) * t : toBall.y;
-            if (Math.hypot(bCurX - nx, bCurY - ny) > 0.5) {
-              rot = (Math.atan2(bCurY - ny, bCurX - nx) * 180) / Math.PI;
+            const ldx = bCurX - nx;
+            const ldy = bCurY - ny;
+            if (Math.hypot(ldx, ldy) > 0.5) {
+              rotDeg = (Math.atan2(ldy, ldx) * 180) / Math.PI;
+              rotY = isPC ? Math.atan2(ldx, ldy) : Math.atan2(ldy, -ldx);
             }
+          }
+
+          // 2. Selección biomecánica: respeta poses grabadas del Arquero/Jugador o asigna pase/trote/sprint
+          const hasCustomPose =
+            targetObj.animation &&
+            !['idle', 'jog', 'sprint', 'pass'].includes(targetObj.animation);
+
+          if (hasCustomPose) {
+            activeAnim = targetObj.animation;
+            if (!segmentInitDone) nonce = (startObj.animNonce || 0) + 1;
+          } else if (targetObj.id === passerId && rawT < 0.45) {
+            activeAnim = 'pass';
+            if (!segmentInitDone) nonce = (startObj.animNonce || 0) + 1;
+          } else if (moveDist > 0.6 && rawT < 0.94) {
+            activeAnim = moveDist > 16 ? 'sprint' : 'jog';
+          } else {
+            activeAnim = 'idle';
           }
         }
 
-        return { ...targetObj, x: nx, y: ny, elevation: nz, rotation: rot };
+        return {
+          ...targetObj,
+          x: nx,
+          y: ny,
+          elevation: nz,
+          rotation: rotDeg,
+          rotationY: rotY,
+          animation: activeAnim,
+          animNonce: nonce,
+        };
       });
 
+      segmentInitDone = true;
       setObjects(interpObjs);
 
       if (rawT >= 1) {
@@ -3993,7 +4047,7 @@ export default function App() {
           if (loopFrames && !autoRecord) {
             segmentIdx = 0;
             segStartPerf = now;
-            kickedThisSegment = false;
+            segmentInitDone = false;
             setActiveFrameIndex(0);
           } else {
             stopFramesPlayback();
@@ -4002,7 +4056,7 @@ export default function App() {
           }
         } else {
           segStartPerf = now;
-          kickedThisSegment = false;
+          segmentInitDone = false;
         }
       }
 
