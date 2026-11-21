@@ -3988,13 +3988,24 @@ export default function App() {
         const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
         const moveDist = Math.hypot(dx, dy);
 
-        const nx = (startObj.x ?? targetObj.x) + dx * t;
-        const ny = (startObj.y ?? targetObj.y) + dy * t;
+        // Si es el balón y hay pasador, espera el 24% inicial (giro + armado del golpeo) antes de salir
+        let effectiveT = t;
+        let effectiveRawT = rawT;
+        if (targetObj.type === 'ball' && passerId) {
+          const kickDelay = 0.24;
+          effectiveRawT = rawT <= kickDelay ? 0 : (rawT - kickDelay) / (1 - kickDelay);
+          effectiveT = effectiveRawT < 0.5
+            ? 4 * effectiveRawT * effectiveRawT * effectiveRawT
+            : 1 - Math.pow(-2 * effectiveRawT + 2, 3) / 2;
+        }
+
+        const nx = (startObj.x ?? targetObj.x) + dx * effectiveT;
+        const ny = (startObj.y ?? targetObj.y) + dy * effectiveT;
         let nz = targetObj.elevation ?? 0;
 
         if (targetObj.type === 'ball' && isLob) {
-          const baseZ = (startObj.elevation ?? 0) + ((targetObj.elevation ?? 0) - (startObj.elevation ?? 0)) * t;
-          nz = baseZ + Math.sin(Math.PI * rawT) * 3.2;
+          const baseZ = (startObj.elevation ?? 0) + ((targetObj.elevation ?? 0) - (startObj.elevation ?? 0)) * effectiveT;
+          nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 3.2;
         }
 
         let rotDeg = targetObj.rotation ?? startObj.rotation ?? 0;
@@ -4004,24 +4015,21 @@ export default function App() {
 
         if (targetObj.type === 'player') {
           const dirToRotY = (vx, vy) => (isPC ? Math.atan2(vx, vy) : Math.atan2(vy, -vx));
-          const bCurX = fromBall && toBall ? fromBall.x + (toBall.x - fromBall.x) * t : toBall?.x;
-          const bCurY = fromBall && toBall ? fromBall.y + (toBall.y - fromBall.y) * t : toBall?.y;
+          const bCurX = fromBall && toBall ? fromBall.x + (toBall.x - fromBall.x) * effectiveT : toBall?.x;
+          const bCurY = fromBall && toBall ? fromBall.y + (toBall.y - fromBall.y) * effectiveT : toBall?.y;
 
-          // 1. Orientación del cuerpo 2D (grados) y 3D (radianes)
+          // 1. Orientación unificada 2D y 3D: pasador mira al pase, corredor mira al frente, receptor mira al balón
           if (targetObj.id === passerId && rawT < 0.65 && toBall) {
-            // Pasador gira mirando exactamente hacia donde envía el balón
             const pdx = (toBall.x ?? 0) - nx;
             const pdy = (toBall.y ?? 0) - ny;
             if (Math.hypot(pdx, pdy) > 0.3) {
               rotDeg = (Math.atan2(pdy, pdx) * 180) / Math.PI;
               rotY = dirToRotY(pdx, pdy);
             }
-          } else if (moveDist > 0.5 && rawT < 0.78) {
-            // Jugador o arquero desplazándose mira de frente hacia su carrera (corregidos los 180°)
+          } else if (moveDist > 0.5 && rawT < 0.76) {
             rotDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-            rotY = dirToRotY(-dx, -dy);
+            rotY = dirToRotY(dx, dy);
           } else if (bCurX !== undefined && bCurY !== undefined) {
-            // Al llegar o esperar, se perfila mirando hacia el balón para recibir
             const ldx = bCurX - nx;
             const ldy = bCurY - ny;
             if (Math.hypot(ldx, ldy) > 0.3) {
@@ -4030,7 +4038,7 @@ export default function App() {
             }
           }
 
-          // 2. Biomecánica real 3D: golpeo completo, carrera de frente, recepción perfilada o pose de arquero
+          // 2. Biomecánica 3D: golpeo sincronizado, carrera de frente, recepción perfilada o pose específica
           const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'header', 'volley'];
           const hasCustomPose = targetObj.animation && !standardStates.includes(targetObj.animation);
           const segNonce = (startObj.animNonce || 0) + segmentIdx + 1;
@@ -4041,7 +4049,7 @@ export default function App() {
           } else if (targetObj.id === passerId && rawT < 0.72) {
             activeAnim = isLob ? 'lofted' : 'pass';
             nonce = segNonce;
-          } else if (moveDist > 0.5 && rawT < 0.88) {
+          } else if (moveDist > 0.5 && rawT < 0.86) {
             activeAnim = moveDist > 16 ? 'sprint' : 'jog';
           } else {
             activeAnim = 'defensive';
@@ -7092,7 +7100,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
         
         {/* CONSOLA UNIFICADA DE ANIMACIÓN VECTORIAL: ESCENAS (FRAMES) + RONDO AUTO */}
         {(bottomBarMode === 'timeline' || isPlayingFrames || isLoopPlaying) && (
-         <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-2 sm:px-4 flex flex-nowrap items-center justify-between gap-2 overflow-x-auto touch-pan-x">
+          <div className="w-full bg-zinc-950/95 border-b border-zinc-800 py-1.5 px-2 sm:px-4 flex flex-nowrap items-center justify-between gap-2 overflow-x-auto touch-pan-x">
             {/* Botón para volver al Menú Principal */}
             <button
               type="button"
@@ -7155,11 +7163,11 @@ Sin markdown. Inicia con [ y termina con ]:`;
             {animTab === 'frames' ? (
               <>
                 {/* Centro: Cápsulas de Frames + Gestión Vectorial */}
-                <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <span className="text-[11px] font-mono font-bold text-zinc-400 tabular-nums shrink-0 px-1">
                     {activeFrameIndex + 1}/{frames.length}
                   </span>
-                  <div className="flex items-center gap-1 overflow-x-auto max-w-[11rem] sm:max-w-sm py-0.5 [&::-webkit-scrollbar]:hidden">
+                  <div className="flex items-center gap-1 py-0.5 shrink-0">
                     {frames.map((f, idx) => (
                       <button
                         key={f.id || idx}
@@ -7185,7 +7193,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                   <button
                     type="button"
                     onClick={handleAddFrame}
-                    className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] rounded-lg flex items-center gap-1 transition shrink-0"
+                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] rounded-lg flex items-center gap-1 shrink-0 whitespace-nowrap transition"
                     title="Agregar nuevo Frame"
                   >
                     <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -7199,7 +7207,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     type="button"
                     onClick={toggleFrameBallLob}
                     disabled={activeFrameIndex === 0}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1.5 transition shrink-0 ${
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 shrink-0 whitespace-nowrap transition ${
                       activeFrameIndex === 0
                         ? 'bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed'
                         : frames[activeFrameIndex]?.ballLob
@@ -7231,7 +7239,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                       stopFramesPlayback();
                       handleDeleteFrame(activeFrameIndex);
                     }}
-                    className="p-1.5 bg-zinc-800 hover:bg-red-600 text-zinc-300 hover:text-white rounded-lg transition shrink-0"
+                    className="p-1.5 bg-zinc-800 hover:bg-red-600 text-zinc-300 hover:text-white rounded-lg shrink-0 transition"
                     title="Eliminar Frame Actual"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -7239,7 +7247,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                 </div>
 
                 {/* Derecha: Transporte Vectorial + Velocidad + Loop + Exportar MP4 */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
                     <button
                       type="button"
@@ -7326,7 +7334,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     type="button"
                     onClick={() => playFramesSequence(true)}
                     disabled={isRecording || frames.length < 2}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 shrink-0 whitespace-nowrap transition ${
                       frames.length < 2
                         ? 'bg-zinc-900 text-zinc-600 border border-zinc-800 cursor-not-allowed'
                         : 'bg-red-600 hover:bg-red-500 text-white shadow'
