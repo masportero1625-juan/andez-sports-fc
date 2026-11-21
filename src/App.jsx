@@ -3989,7 +3989,7 @@ export default function App() {
         const moveDist = Math.hypot(dx, dy);
 
         // Fases adaptables: 0..PH1 armado y giro del pasador; PH1..PH3 vuelo/desmarque; PH3..1 recepción
-        const PH1 = passerId ? Math.min(0.25, 280 / Math.max(segDurMs, 400)) : 0;
+        const PH1 = passerId ? 0.24 : 0;
         const PH3 = 0.78;
         const smooth = (k) => k * k * (3 - 2 * k);
         const clamp01 = (v) => Math.min(1, Math.max(0, v));
