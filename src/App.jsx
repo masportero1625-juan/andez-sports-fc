@@ -3988,15 +3988,17 @@ export default function App() {
         const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
         const moveDist = Math.hypot(dx, dy);
 
-        // Si es el balón y hay pasador, espera el 24% inicial (giro + armado del golpeo) antes de salir
+        // Fases adaptables: 0..PH1 armado y giro del pasador; PH1..PH3 vuelo/desmarque; PH3..1 recepción
+        const PH1 = passerId ? Math.min(0.25, 280 / Math.max(segDurMs, 400)) : 0;
+        const PH3 = 0.78;
+        const smooth = (k) => k * k * (3 - 2 * k);
+        const clamp01 = (v) => Math.min(1, Math.max(0, v));
+
         let effectiveT = t;
         let effectiveRawT = rawT;
         if (targetObj.type === 'ball' && passerId) {
-          const kickDelay = 0.24;
-          effectiveRawT = rawT <= kickDelay ? 0 : (rawT - kickDelay) / (1 - kickDelay);
-          effectiveT = effectiveRawT < 0.5
-            ? 4 * effectiveRawT * effectiveRawT * effectiveRawT
-            : 1 - Math.pow(-2 * effectiveRawT + 2, 3) / 2;
+          effectiveRawT = clamp01((rawT - PH1) / (1 - PH1));
+          effectiveT = smooth(effectiveRawT);
         }
 
         const nx = (startObj.x ?? targetObj.x) + dx * effectiveT;
@@ -4014,40 +4016,54 @@ export default function App() {
         let nonce = targetObj.animNonce || 0;
 
         if (targetObj.type === 'player') {
-          const dirToRotY = (vx, vy) => (isPC ? Math.atan2(vx, vy) : Math.atan2(vy, -vx));
+          // Calibración única y universal para PC, Tablet y Móvil (0 = derecha, Math.PI = izquierda)
+          const computeYaw3D = (vx, vy) => Math.atan2(-vy, vx) || 0.0001;
+          const lerpAngle = (a, b, k) => {
+            let d = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI;
+            if (d < -Math.PI) d += 2 * Math.PI;
+            return (a + d * k) || 0.0001;
+          };
+
           const bCurX = fromBall && toBall ? fromBall.x + (toBall.x - fromBall.x) * effectiveT : toBall?.x;
           const bCurY = fromBall && toBall ? fromBall.y + (toBall.y - fromBall.y) * effectiveT : toBall?.y;
+          const prevYaw = startObj.rotationY !== undefined && startObj.rotationY !== 0
+            ? startObj.rotationY
+            : ((startObj.team === 'blue' || startObj.team === 'gk') ? 0.0001 : Math.PI);
 
-          // 1. Orientación unificada 2D y 3D: pasador mira al pase, corredor mira al frente, receptor mira al balón
-          if (targetObj.id === passerId && rawT < 0.65 && toBall) {
+          // 1. Orientación espacial unificada (pasador hacia destino, corredor hacia frente, receptor hacia balón)
+          if (targetObj.id === passerId && rawT < PH3 && toBall) {
             const pdx = (toBall.x ?? 0) - nx;
             const pdy = (toBall.y ?? 0) - ny;
-            if (Math.hypot(pdx, pdy) > 0.3) {
+            if (Math.hypot(pdx, pdy) > 0.25) {
+              const targetYaw = computeYaw3D(pdx, pdy);
               rotDeg = (Math.atan2(pdy, pdx) * 180) / Math.PI;
-              rotY = dirToRotY(pdx, pdy);
+              rotY = rawT < PH1 ? lerpAngle(prevYaw, targetYaw, smooth(clamp01(rawT / Math.max(PH1, 0.05)))) : targetYaw;
             }
-          } else if (moveDist > 0.5 && rawT < 0.76) {
+          } else if (moveDist > 0.5 && rawT < PH3) {
+            const runYaw = computeYaw3D(dx, dy);
             rotDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-            rotY = dirToRotY(dx, dy);
+            rotY = rawT < 0.18 ? lerpAngle(prevYaw, runYaw, smooth(rawT / 0.18)) : runYaw;
           } else if (bCurX !== undefined && bCurY !== undefined) {
             const ldx = bCurX - nx;
             const ldy = bCurY - ny;
-            if (Math.hypot(ldx, ldy) > 0.3) {
+            if (Math.hypot(ldx, ldy) > 0.25) {
+              const ballYaw = computeYaw3D(ldx, ldy);
+              const fromYaw = moveDist > 0.5 ? computeYaw3D(dx, dy) : prevYaw;
               rotDeg = (Math.atan2(ldy, ldx) * 180) / Math.PI;
-              rotY = dirToRotY(ldx, ldy);
+              rotY = lerpAngle(fromYaw, ballYaw, smooth(clamp01((rawT - (PH3 - 0.08)) / 0.2)));
             }
           }
 
-          // 2. Biomecánica 3D: golpeo sincronizado, carrera de frente, recepción perfilada o pose específica
-          const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'header', 'volley'];
+          // 2. Clips reales FBX_ANIMATIONS: golpeo ('kick_pass'/'strike_motion'), carrera ('jog'/'sprint'), recepción ('defensive') o pose específica
+          const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'kick_pass', 'strike_motion', 'shot_power', 'header', 'volley'];
           const hasCustomPose = targetObj.animation && !standardStates.includes(targetObj.animation);
           const segNonce = (startObj.animNonce || 0) + segmentIdx + 1;
 
           if (hasCustomPose) {
             activeAnim = targetObj.animation;
             nonce = segNonce;
-          } else if (targetObj.id === passerId && rawT < 0.72) {
-            activeAnim = isLob ? 'lofted' : 'pass';
+          } else if (targetObj.id === passerId && rawT < PH3) {
+            activeAnim = isLob ? 'strike_motion' : 'kick_pass';
             nonce = segNonce;
           } else if (moveDist > 0.5 && rawT < 0.86) {
             activeAnim = moveDist > 16 ? 'sprint' : 'jog';
