@@ -4003,7 +4003,7 @@ export default function App() {
         }
       }
 
-      // Punto de golpeo adelantado frente al pie de apoyo del pasador
+      // Punto de golpeo alineado exactamente con el pie ejecutor derecho frente al pie de apoyo
       let kickOriginX = fromBall?.x ?? 0;
       let kickOriginY = fromBall?.y ?? 0;
       if (passerObj && toBall) {
@@ -4011,8 +4011,11 @@ export default function App() {
         const kdy = (toBall.y ?? 0) - (passerObj.y ?? 0);
         const klen = Math.hypot(kdx, kdy);
         if (klen > 0.5) {
-          kickOriginX = (passerObj.x ?? 0) + (kdx / klen) * 1.65;
-          kickOriginY = (passerObj.y ?? 0) + (kdy / klen) * 1.65;
+          const ux = kdx / klen;
+          const uy = kdy / klen;
+          // Desplazamiento frontal (1.55) + lateral hacia el pie derecho (-uy * 0.38, +ux * 0.38)
+          kickOriginX = (passerObj.x ?? 0) + ux * 1.55 - uy * 0.38;
+          kickOriginY = (passerObj.y ?? 0) + uy * 1.55 + ux * 0.38;
         }
       }
 
@@ -4023,7 +4026,7 @@ export default function App() {
         const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
         const moveDist = Math.hypot(dx, dy);
 
-        const PH1 = passerId ? 0.42 : 0;
+        const PH1 = passerId ? 0.46 : 0;
         const PH3 = 0.78;
         const smooth = (k) => k * k * (3 - 2 * k);
         const clamp01 = (v) => Math.min(1, Math.max(0, v));
