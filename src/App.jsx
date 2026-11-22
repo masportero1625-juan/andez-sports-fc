@@ -4003,7 +4003,14 @@ export default function App() {
         }
       }
 
-      // Punto de golpeo alineado exactamente con el pie ejecutor derecho frente al pie de apoyo
+      // Clasificación del gesto del ejecutor: mano (arquero/saque), cabeza o pie
+      const passerStart = passerObj ? (fromObjs.find((o) => o.id === passerObj.id) || passerObj) : null;
+      const passerEnd = passerObj ? (toObjs.find((o) => o.id === passerObj.id) || passerObj) : null;
+      const passerPose = passerEnd?.animation || passerStart?.animation || '';
+      const handPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'punt_kick', 'short_pass', 'overhand_throw', 'underhand_throw', 'throw_in'];
+      const isHandAction = !!passerObj && (handPoses.includes(passerPose) || passerObj.role === 'GK' || passerObj.role === 'POR');
+      const isHeadAction = !!passerObj && !isHandAction && (passerPose === 'header' || (fromBall?.elevation ?? 0) >= 1.5);
+
       let kickOriginX = fromBall?.x ?? 0;
       let kickOriginY = fromBall?.y ?? 0;
       if (passerObj && toBall) {
@@ -4013,9 +4020,16 @@ export default function App() {
         if (klen > 0.5) {
           const ux = kdx / klen;
           const uy = kdy / klen;
-          // Desplazamiento frontal (1.55) + lateral hacia el pie derecho (-uy * 0.38, +ux * 0.38)
-          kickOriginX = (passerObj.x ?? 0) + ux * 1.55 - uy * 0.38;
-          kickOriginY = (passerObj.y ?? 0) + uy * 1.55 + ux * 0.38;
+          if (isHandAction) {
+            kickOriginX = (passerObj.x ?? 0) + ux * 0.85;
+            kickOriginY = (passerObj.y ?? 0) + uy * 0.85;
+          } else if (isHeadAction) {
+            kickOriginX = (passerObj.x ?? 0) + ux * 0.55;
+            kickOriginY = (passerObj.y ?? 0) + uy * 0.55;
+          } else {
+            kickOriginX = (passerObj.x ?? 0) + ux * 1.55 - uy * 0.38;
+            kickOriginY = (passerObj.y ?? 0) + uy * 1.55 + ux * 0.38;
+          }
         }
       }
 
@@ -4026,7 +4040,7 @@ export default function App() {
         const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
         const moveDist = Math.hypot(dx, dy);
 
-        const PH1 = passerId ? 0.46 : 0;
+        const PH1 = passerId ? (isHeadAction ? 0.36 : isHandAction ? 0.38 : 0.46) : 0;
         const PH3 = 0.78;
         const smooth = (k) => k * k * (3 - 2 * k);
         const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -4047,9 +4061,21 @@ export default function App() {
         const ny = origY + ((targetObj.y ?? 0) - origY) * effectiveT;
         let nz = targetObj.elevation ?? 0;
 
-        if (targetObj.type === 'ball' && isLob) {
-          const baseZ = (startObj.elevation ?? 0) + ((targetObj.elevation ?? 0) - (startObj.elevation ?? 0)) * effectiveT;
-          nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 3.2;
+        if (targetObj.type === 'ball') {
+          const startZ = isHeadAction
+            ? Math.max(startObj.elevation ?? 0, 2.15)
+            : isHandAction
+              ? Math.max(startObj.elevation ?? 0, passerPose === 'underhand_throw' ? 0.85 : 1.35)
+              : (startObj.elevation ?? 0);
+          const endZ = targetObj.elevation ?? 0;
+          const baseZ = startZ + (endZ - startZ) * effectiveT;
+          if (isLob) {
+            nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 3.2;
+          } else if (isHeadAction && endZ >= 1.4) {
+            nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 0.55;
+          } else {
+            nz = baseZ;
+          }
         }
 
         let rotDeg = targetObj.rotation ?? startObj.rotation ?? 0;
@@ -4105,8 +4131,8 @@ export default function App() {
 
           lastYawMapRef.current[targetObj.id] = rotY;
 
-          // 2. Clips reales FBX_ANIMATIONS
-          const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'kick_pass', 'strike_motion', 'shot_power', 'header', 'volley'];
+          // 2. Clips reales FBX_ANIMATIONS (respeta poses de arquero y cabezazo manuales)
+          const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'kick_pass', 'strike_motion', 'shot_power'];
           const hasCustomPose = targetObj.animation && !standardStates.includes(targetObj.animation);
           const segNonce = (startObj.animNonce || 0) + segmentIdx + 1;
 
@@ -4114,7 +4140,7 @@ export default function App() {
             activeAnim = targetObj.animation;
             nonce = segNonce;
           } else if (targetObj.id === passerId && rawT < 0.85) {
-            activeAnim = isLob ? 'strike_motion' : 'kick_pass';
+            activeAnim = isHeadAction ? 'header' : (isLob ? 'strike_motion' : 'kick_pass');
             nonce = segNonce;
           } else if (moveDist > 0.5 && rawT < 0.86) {
             activeAnim = moveDist > 16 ? 'sprint' : 'jog';
