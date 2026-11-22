@@ -3989,7 +3989,7 @@ export default function App() {
         const moveDist = Math.hypot(dx, dy);
 
         // Fases adaptables: 0..PH1 armado y giro del pasador; PH1..PH3 vuelo/desmarque; PH3..1 recepción
-        const PH1 = passerId ? 0.24 : 0;
+        const PH1 = passerId ? 0.42 : 0;
         const PH3 = 0.78;
         const smooth = (k) => k * k * (3 - 2 * k);
         const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -4031,7 +4031,7 @@ export default function App() {
             : ((startObj.team === 'blue' || startObj.team === 'gk') ? 0.0001 : Math.PI);
 
           // 1. Orientación espacial unificada (pasador hacia destino, corredor hacia frente, receptor hacia balón)
-          if (targetObj.id === passerId && rawT < PH3 && toBall) {
+          if (targetObj.id === passerId && toBall) {
             const pdx = (toBall.x ?? 0) - nx;
             const pdy = (toBall.y ?? 0) - ny;
             if (Math.hypot(pdx, pdy) > 0.25) {
@@ -4062,7 +4062,7 @@ export default function App() {
           if (hasCustomPose) {
             activeAnim = targetObj.animation;
             nonce = segNonce;
-          } else if (targetObj.id === passerId && rawT < PH3) {
+          } else if (targetObj.id === passerId && rawT < 0.85) {
             activeAnim = isLob ? 'strike_motion' : 'kick_pass';
             nonce = segNonce;
           } else if (moveDist > 0.5 && rawT < 0.86) {
