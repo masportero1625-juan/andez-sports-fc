@@ -3899,10 +3899,19 @@ export default function App() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [loopFrames, setLoopFrames] = useState(true);
   const frameAnimRafRef = useRef(null);
+  const pausedFrameStateRef = useRef(null);
+  const livePlaybackProgressRef = useRef({ segmentIdx: 0, rawT: 0 });
+  const lastYawMapRef = useRef({});
 
-  const stopFramesPlayback = () => {
+  const stopFramesPlayback = (keepPause = false) => {
     setIsPlayingFrames(false);
     skipFrameSyncRef.current = true;
+    if (keepPause) {
+      pausedFrameStateRef.current = { ...livePlaybackProgressRef.current };
+    } else {
+      pausedFrameStateRef.current = null;
+      lastYawMapRef.current = {};
+    }
     if (frameAnimRafRef.current) {
       cancelAnimationFrame(frameAnimRafRef.current);
       frameAnimRafRef.current = null;
@@ -3915,21 +3924,27 @@ export default function App() {
       return;
     }
     if (isLoopPlaying) stopLoopSequence();
-    stopFramesPlayback();
 
-    const firstFrame = frames[0];
-    if (firstFrame?.objects) setObjects(JSON.parse(JSON.stringify(firstFrame.objects)));
-    if (firstFrame?.drawings) setDrawings(JSON.parse(JSON.stringify(firstFrame.drawings)));
-    setActiveFrameIndex(0);
+    const resumeState = !autoRecord ? pausedFrameStateRef.current : null;
+    stopFramesPlayback(false);
+
+    let segmentIdx = resumeState ? resumeState.segmentIdx : 0;
+    const initialRawT = resumeState ? resumeState.rawT : 0;
+    let segmentInitDone = false;
+
+    if (!resumeState) {
+      const firstFrame = frames[0];
+      if (firstFrame?.objects) setObjects(JSON.parse(JSON.stringify(firstFrame.objects)));
+      if (firstFrame?.drawings) setDrawings(JSON.parse(JSON.stringify(firstFrame.drawings)));
+      setActiveFrameIndex(0);
+    } else {
+      setActiveFrameIndex(segmentIdx);
+    }
     setIsPlayingFrames(true);
 
     if (autoRecord && !isRecording) {
       startRecording();
     }
-
-    let segmentIdx = 0;
-    let segStartPerf = performance.now() + 450;
-    let segmentInitDone = false;
 
     const getSegmentDurationMs = (fA, fB) => {
       const objsA = fA?.objects || [];
@@ -3946,11 +3961,16 @@ export default function App() {
       return clamped / playbackSpeed;
     };
 
+    const firstDurMs = getSegmentDurationMs(frames[segmentIdx], frames[segmentIdx + 1]);
+    let segStartPerf = resumeState
+      ? performance.now() - initialRawT * firstDurMs
+      : performance.now() + 450;
+
     const step = (now) => {
       const fromF = frames[segmentIdx];
       const toF = frames[segmentIdx + 1];
       if (!fromF || !toF) {
-        stopFramesPlayback();
+        stopFramesPlayback(false);
         if (autoRecord) stopRecording();
         return;
       }
@@ -3959,6 +3979,7 @@ export default function App() {
       if (now < segStartPerf) { frameAnimRafRef.current = requestAnimationFrame(step); return; }
       const durMs = getSegmentDurationMs(fromF, toF);
       const rawT = Math.min(1, (now - segStartPerf) / durMs);
+      livePlaybackProgressRef.current = { segmentIdx, rawT };
       const t = rawT < 0.5 ? 4 * rawT * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 3) / 2;
 
       const fromObjs = fromF.objects || [];
@@ -3967,6 +3988,7 @@ export default function App() {
       const fromBall = fromObjs.find((o) => o.type === 'ball');
 
       let passerId = null;
+      let passerObj = null;
       if (fromBall && toBall) {
         const ballDist = Math.hypot((toBall.x || 0) - (fromBall.x || 0), (toBall.y || 0) - (fromBall.y || 0));
         if (ballDist > 1.5) {
@@ -3974,13 +3996,26 @@ export default function App() {
           fromObjs.forEach((o) => {
             if (o.type === 'player') {
               const d = Math.hypot((o.x || 0) - (fromBall.x || 0), (o.y || 0) - (fromBall.y || 0));
-              if (d < bestD) { bestD = d; passerId = o.id; }
+              if (d < bestD) { bestD = d; passerId = o.id; passerObj = o; }
             }
           });
-          if (bestD >= 14) passerId = null;
+          if (bestD >= 14) { passerId = null; passerObj = null; }
         }
       }
-      
+
+      // Punto de golpeo adelantado frente al pie de apoyo del pasador
+      let kickOriginX = fromBall?.x ?? 0;
+      let kickOriginY = fromBall?.y ?? 0;
+      if (passerObj && toBall) {
+        const kdx = (toBall.x ?? 0) - (passerObj.x ?? 0);
+        const kdy = (toBall.y ?? 0) - (passerObj.y ?? 0);
+        const klen = Math.hypot(kdx, kdy);
+        if (klen > 0.5) {
+          kickOriginX = (passerObj.x ?? 0) + (kdx / klen) * 1.65;
+          kickOriginY = (passerObj.y ?? 0) + (kdy / klen) * 1.65;
+        }
+      }
+
       const isLob = toF.ballLob === true;
       const interpObjs = toObjs.map((targetObj) => {
         const startObj = fromObjs.find((o) => o.id === targetObj.id) || targetObj;
@@ -3988,7 +4023,6 @@ export default function App() {
         const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
         const moveDist = Math.hypot(dx, dy);
 
-        // Fases adaptables: 0..PH1 armado y giro del pasador; PH1..PH3 vuelo/desmarque; PH3..1 recepción
         const PH1 = passerId ? 0.42 : 0;
         const PH3 = 0.78;
         const smooth = (k) => k * k * (3 - 2 * k);
@@ -3996,13 +4030,18 @@ export default function App() {
 
         let effectiveT = t;
         let effectiveRawT = rawT;
+        let origX = startObj.x ?? targetObj.x;
+        let origY = startObj.y ?? targetObj.y;
+
         if (targetObj.type === 'ball' && passerId) {
+          origX = kickOriginX;
+          origY = kickOriginY;
           effectiveRawT = clamp01((rawT - PH1) / (1 - PH1));
           effectiveT = smooth(effectiveRawT);
         }
 
-        const nx = (startObj.x ?? targetObj.x) + dx * effectiveT;
-        const ny = (startObj.y ?? targetObj.y) + dy * effectiveT;
+        const nx = origX + ((targetObj.x ?? 0) - origX) * effectiveT;
+        const ny = origY + ((targetObj.y ?? 0) - origY) * effectiveT;
         let nz = targetObj.elevation ?? 0;
 
         if (targetObj.type === 'ball' && isLob) {
@@ -4016,7 +4055,6 @@ export default function App() {
         let nonce = targetObj.animNonce || 0;
 
         if (targetObj.type === 'player') {
-          // Calibración única y universal para PC, Tablet y Móvil (0 = derecha, Math.PI = izquierda)
           const computeYaw3D = (vx, vy) => Math.atan2(-vy, vx) || 0.0001;
           const lerpAngle = (a, b, k) => {
             let d = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI;
@@ -4024,22 +4062,27 @@ export default function App() {
             return (a + d * k) || 0.0001;
           };
 
-          const bCurX = fromBall && toBall ? fromBall.x + (toBall.x - fromBall.x) * effectiveT : toBall?.x;
-          const bCurY = fromBall && toBall ? fromBall.y + (toBall.y - fromBall.y) * effectiveT : toBall?.y;
-          const prevYaw = startObj.rotationY !== undefined && startObj.rotationY !== 0
-            ? startObj.rotationY
-            : ((startObj.team === 'blue' || startObj.team === 'gk') ? 0.0001 : Math.PI);
+          const bCurX = toBall ? kickOriginX + ((toBall.x ?? 0) - kickOriginX) * effectiveT : undefined;
+          const bCurY = toBall ? kickOriginY + ((toBall.y ?? 0) - kickOriginY) * effectiveT : undefined;
+          const savedYaw = lastYawMapRef.current[targetObj.id];
+          const prevYaw = savedYaw !== undefined
+            ? savedYaw
+            : (startObj.rotationY !== undefined && startObj.rotationY !== 0
+              ? startObj.rotationY
+              : ((startObj.team === 'blue' || startObj.team === 'gk') ? 0.0001 : Math.PI));
 
-          // 1. Orientación espacial unificada (pasador hacia destino, corredor hacia frente, receptor hacia balón)
-          if (targetObj.id === passerId && toBall) {
-            const pdx = (toBall.x ?? 0) - nx;
-            const pdy = (toBall.y ?? 0) - ny;
+          // 1. Seguimiento visual continuo: pasador acompaña el pase, corredor mira su carrera y receptor mira al balón en todo momento
+          if (targetObj.id === passerId && bCurX !== undefined && bCurY !== undefined) {
+            const pdx = (rawT < PH1 ? (toBall.x ?? 0) : bCurX) - nx;
+            const pdy = (rawT < PH1 ? (toBall.y ?? 0) : bCurY) - ny;
             if (Math.hypot(pdx, pdy) > 0.25) {
               const targetYaw = computeYaw3D(pdx, pdy);
               rotDeg = (Math.atan2(pdy, pdx) * 180) / Math.PI;
-              rotY = rawT < PH1 ? lerpAngle(prevYaw, targetYaw, smooth(clamp01(rawT / Math.max(PH1, 0.05)))) : targetYaw;
+              rotY = rawT < PH1 ? lerpAngle(prevYaw, targetYaw, smooth(clamp01(rawT / PH1))) : targetYaw;
+            } else {
+              rotY = prevYaw;
             }
-          } else if (moveDist > 0.5 && rawT < PH3) {
+          } else if (moveDist > 2.5 && rawT < PH3) {
             const runYaw = computeYaw3D(dx, dy);
             rotDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
             rotY = rawT < 0.18 ? lerpAngle(prevYaw, runYaw, smooth(rawT / 0.18)) : runYaw;
@@ -4048,13 +4091,18 @@ export default function App() {
             const ldy = bCurY - ny;
             if (Math.hypot(ldx, ldy) > 0.25) {
               const ballYaw = computeYaw3D(ldx, ldy);
-              const fromYaw = moveDist > 0.5 ? computeYaw3D(dx, dy) : prevYaw;
+              const fromYaw = moveDist > 2.5 ? computeYaw3D(dx, dy) : prevYaw;
+              const turnT = moveDist > 2.5 ? smooth(clamp01((rawT - (PH3 - 0.12)) / 0.22)) : smooth(clamp01(rawT / 0.22));
               rotDeg = (Math.atan2(ldy, ldx) * 180) / Math.PI;
-              rotY = lerpAngle(fromYaw, ballYaw, smooth(clamp01((rawT - (PH3 - 0.08)) / 0.2)));
+              rotY = lerpAngle(fromYaw, ballYaw, turnT);
+            } else {
+              rotY = prevYaw;
             }
           }
 
-          // 2. Clips reales FBX_ANIMATIONS: golpeo ('kick_pass'/'strike_motion'), carrera ('jog'/'sprint'), recepción ('defensive') o pose específica
+          lastYawMapRef.current[targetObj.id] = rotY;
+
+          // 2. Clips reales FBX_ANIMATIONS
           const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'kick_pass', 'strike_motion', 'shot_power', 'header', 'volley'];
           const hasCustomPose = targetObj.animation && !standardStates.includes(targetObj.animation);
           const segNonce = (startObj.animNonce || 0) + segmentIdx + 1;
@@ -7292,7 +7340,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     </button>
                     <button
                       type="button"
-                      onClick={() => (isPlayingFrames ? stopFramesPlayback() : playFramesSequence(false))}
+                      onClick={() => (isPlayingFrames ? stopFramesPlayback(true) : playFramesSequence(false))}
                       className={`px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition ${
                         isPlayingFrames ? 'bg-amber-500 text-black' : 'bg-blue-600 hover:bg-blue-500 text-white'
                       }`}
