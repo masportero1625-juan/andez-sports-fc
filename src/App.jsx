@@ -3333,108 +3333,116 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       {(drawings || []).map((drawing) => <TacticalDrawing3D key={`drawing-${drawing.id}`} drawing={drawing} />)}
       {(textBlocks || []).map((item) => <TacticalText3D key={`text-${item.id}`} item={item} />)}
 
-      {objects.map((obj) => {
-        const pos = toWorld(obj);
-        const onDown = (e) => {
-    e.stopPropagation();
-    if (!cameraLocked) return;
-    setSelectedObj(obj);
-    dragId.current = obj.id;
-    isDragging.current = true;
-    setActiveDragId(obj.id);
-  };
+      {[...objects]
+          .sort((a, b) => (a.type === 'ball' ? -1 : b.type === 'ball' ? 1 : 0))
+          .map((obj) => {
+          const pos = toWorld(obj);
+          const onDown = (e) => {
+            if (!cameraLocked) return;
+            if (e.cancelable) e.preventDefault();
+            e.stopPropagation();
+            if (e.target && e.pointerId !== undefined && e.target.setPointerCapture) {
+              try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+            }
+            handlePointerDown(e, obj);
+          };
+          const onUp = (e) => {
+            if (e.target && e.pointerId !== undefined && e.target.releasePointerCapture) {
+              try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
+            }
+            handlePointerUp(e);
+          };
 
-        if (obj.type === 'player') {
-  const col = obj.customColor || (
-    obj.role === 'GK'
-      ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk)
-      : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
-  );
+          if (obj.type === 'player') {
+            const col = obj.customColor || (
+              obj.role === 'GK'
+                ? (obj.team === 'red' || obj.team === 'gk_away' ? teamColors.gk_away : teamColors.gk)
+                : (obj.team === 'blue' ? teamColors.blue : teamColors.red)
+            );
 
-  // Rotación unificada para PC, Tablet y Móvil (Azul izquierda -> derecha, Rojo derecha -> izquierda)
-        const isBlueSide = (obj.team === 'blue' || obj.team === 'gk');
-        const baseRot = isBlueSide ? 0 : Math.PI;
-        const finalRotY = (obj.rotationY !== undefined && obj.rotationY !== 0) ? obj.rotationY : baseRot;
-        
-  return (
-    <group
-      key={obj.id}
-      position={[pos?.x ?? pos?.[0] ?? 0, 0, pos?.z ?? pos?.[2] ?? 0]}
-      rotation={[0, finalRotY, 0]}
-      onPointerDown={onDown}
-              onPointerCancel={handlePointerUp}
-            >
-              {/* Hitbox táctil ampliada para móvil */}
-              <mesh position={[0, 1.1, 0]}>
-                <cylinderGeometry args={[1.4, 1.4, 2.4, 12]} />
-                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-              </mesh>
-              <TacticalPlayer3D
-                color={col}
-                number={obj.number}
-                role={(obj.role === 'GK' || obj.role === 'POR' || obj.team === 'gk' || obj.team === 'gk_away') ? 'GK' : obj.role}
-                animation={obj.animation}
-                animNonce={obj.animNonce}
-                isSelected={selectedObj?.id === obj.id}
-                onClick={() => setSelectedObj(obj)}
-              />
-            </group>
-          );
-        }
-        if (obj.type === 'ball') {
-        const bx = pos?.x ?? pos?.[0] ?? 0;
-        const bz = pos?.z ?? pos?.[2] ?? 0;
-        const by = Math.max(0.24, Number(obj?.elevation || obj?.altitude || 0.24));
+            // Rotación unificada para PC, Tablet y Móvil (Azul izquierda -> derecha, Rojo derecha -> izquierda)
+            const isBlueSide = (obj.team === 'blue' || obj.team === 'gk');
+            const baseRot = isBlueSide ? 0 : Math.PI;
+            const finalRotY = (obj.rotationY !== undefined && obj.rotationY !== 0) ? obj.rotationY : baseRot;
 
-        return (
-          <group
-            key={obj.id}
-            position={[bx, by, bz]}
-            onPointerDown={onDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-          >
-            {/* Hitbox para arrastrar */}
-            <mesh position={[0, 0.5, 0]}>
-              <cylinderGeometry args={[1.2, 1.2, 1.8, 12]} />
-              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
+            return (
+              <group
+                key={obj.id}
+                position={[pos?.x ?? pos?.[0] ?? 0, 0, pos?.z ?? pos?.[2] ?? 0]}
+                rotation={[0, finalRotY, 0]}
+                onPointerDown={onDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={onUp}
+                onPointerCancel={onUp}
+              >
+                {/* Hitbox precisa ajustada al cuerpo real para no invadir el balón cercano */}
+                <mesh position={[0, 1.05, 0]}>
+                  <cylinderGeometry args={[0.58, 0.58, 2.15, 12]} />
+                  <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+                <TacticalPlayer3D
+                  color={col}
+                  number={obj.number}
+                  role={(obj.role === 'GK' || obj.role === 'POR' || obj.team === 'gk' || obj.team === 'gk_away') ? 'GK' : 'FIELD'}
+                  animation={obj.animation}
+                  animNonce={obj.animNonce}
+                  isSelected={selectedObj?.id === obj.id}
+                />
+              </group>
+            );
+          }
+          if (obj.type === 'ball') {
+            const bx = pos?.x ?? pos?.[0] ?? 0;
+            const bz = pos?.z ?? pos?.[2] ?? 0;
+            const by = Math.max(0.24, Number(obj?.elevation || obj?.altitude || 0.24));
 
-            {/* Balón 3D visible garantizado */}
-            <mesh castShadow receiveShadow>
-              <sphereGeometry args={[0.35, 24, 24]} />
-              <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
-            </mesh>
-            <mesh position={[0, 0, 0.22]}>
-              <sphereGeometry args={[0.15, 12, 12]} />
-              <meshStandardMaterial color="#111111" roughness={0.5} />
-            </mesh>
-          </group>
-        );
-      
-    }
-        if (['cone', 'saucer', 'ring', 'pole', 'hurdle', 'dummy', 'mini_goal', 'ladder', 'rebounder', 'trampoline', 'mat'].includes(obj.type)) {
-          return (
-            <group
-              key={obj.id}
-              position={[pos.x, 0, pos.z]}
-              onPointerDown={onDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-            >
-              {/* Hitbox invisible común para conos y material: facilita tocar sin cambiar su aspecto. */}
-              <mesh position={[0, 0.85, 0]}>
-                <cylinderGeometry args={[1.35, 1.35, 1.7, 12]} />
-                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-              </mesh>
-              <TrainingObject3D obj={obj} position={{ x: 52.5, y: 34 }} onClick={() => {}} />
-            </group>
-          );
-        }
-        return null;
-      })}
+            return (
+              <group
+                key={obj.id}
+                position={[bx, by, bz]}
+                onPointerDown={onDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={onUp}
+                onPointerCancel={onUp}
+              >
+                {/* Hitbox esférica centrada en el balón (prioridad táctil/ratón) */}
+                <mesh>
+                  <sphereGeometry args={[isPC ? 0.68 : 0.92, 16, 16]} />
+                  <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+
+                {/* Balón 3D visible garantizado */}
+                <mesh castShadow receiveShadow>
+                  <sphereGeometry args={[0.35, 24, 24]} />
+                  <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
+                </mesh>
+                <mesh position={[0, 0, 0.22]}>
+                  <sphereGeometry args={[0.15, 12, 12]} />
+                  <meshStandardMaterial color="#111111" roughness={0.5} />
+                </mesh>
+              </group>
+            );
+          }
+          if (['cone', 'saucer', 'ring', 'pole', 'hurdle', 'dummy', 'mini_goal', 'ladder', 'rebounder', 'tactical_pad'].includes(obj.type)) {
+            return (
+              <group
+                key={obj.id}
+                position={[pos.x, 0, pos.z]}
+                onPointerDown={onDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={onUp}
+                onPointerCancel={onUp}
+              >
+                <mesh position={[0, 0.85, 0]}>
+                  <cylinderGeometry args={[0.85, 0.85, 1.7, 12]} />
+                  <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+                </mesh>
+                <TrainingObject3D obj={obj} position={{ x: 52.5, y: 34 }} onClick={() => {}} />
+              </group>
+            );
+          }
+          return null;
+        })}
     </>
   );
 }
@@ -4007,9 +4015,10 @@ export default function App() {
       const passerStart = passerObj ? (fromObjs.find((o) => o.id === passerObj.id) || passerObj) : null;
       const passerEnd = passerObj ? (toObjs.find((o) => o.id === passerObj.id) || passerObj) : null;
       const passerPose = passerEnd?.animation || passerStart?.animation || '';
-      const handPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'punt_kick', 'short_pass', 'overhand_throw', 'underhand_throw', 'throw_in'];
-      const isHandAction = !!passerObj && (handPoses.includes(passerPose) || passerObj.role === 'GK' || passerObj.role === 'POR');
-      const isHeadAction = !!passerObj && !isHandAction && (passerPose === 'header' || (fromBall?.elevation ?? 0) >= 1.5);
+      const handPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'short_pass', 'overhand_throw', 'underhand_throw', 'throw_in'];
+      const isVolleyGK = passerPose === 'punt_kick';
+      const isHandAction = !!passerObj && !isVolleyGK && (handPoses.includes(passerPose) || passerObj.role === 'GK' || passerObj.role === 'POR');
+      const isHeadAction = !!passerObj && !isHandAction && !isVolleyGK && (passerPose === 'header' || (fromBall?.elevation ?? 0) >= 1.5);
 
       let kickOriginX = fromBall?.x ?? 0;
       let kickOriginY = fromBall?.y ?? 0;
@@ -4017,21 +4026,36 @@ export default function App() {
         const kdx = (toBall.x ?? 0) - (passerObj.x ?? 0);
         const kdy = (toBall.y ?? 0) - (passerObj.y ?? 0);
         const klen = Math.hypot(kdx, kdy);
-        if (klen > 0.5) {
+        if (klen > 0.3) {
           const ux = kdx / klen;
           const uy = kdy / klen;
-          if (isHandAction) {
-            kickOriginX = (passerObj.x ?? 0) + ux * 0.85;
-            kickOriginY = (passerObj.y ?? 0) + uy * 0.85;
+          if (passerPose === 'underhand_throw') {
+            // Mano derecha abajo estilo boliche, alineada hacia el receptor
+            kickOriginX = (passerObj.x ?? 0) + ux * 0.72 - uy * 0.32;
+            kickOriginY = (passerObj.y ?? 0) + uy * 0.72 + ux * 0.32;
+          } else if (isHandAction) {
+            kickOriginX = (passerObj.x ?? 0) + ux * 0.65;
+            kickOriginY = (passerObj.y ?? 0) + uy * 0.65;
           } else if (isHeadAction) {
             kickOriginX = (passerObj.x ?? 0) + ux * 0.55;
             kickOriginY = (passerObj.y ?? 0) + uy * 0.55;
+          } else if (isVolleyGK) {
+            kickOriginX = (passerObj.x ?? 0) + ux * 1.15 - uy * 0.32;
+            kickOriginY = (passerObj.y ?? 0) + uy * 1.15 + ux * 0.32;
           } else {
             kickOriginX = (passerObj.x ?? 0) + ux * 1.55 - uy * 0.38;
             kickOriginY = (passerObj.y ?? 0) + uy * 1.55 + ux * 0.38;
           }
         }
       }
+
+      // Detectar si un arquero está sujetando/incorporándose con el balón en mano
+      const nearestGK = toObjs.find((o) => o.type === 'player' && (o.role === 'GK' || o.role === 'POR'));
+      const gkDistToEndBall = (nearestGK && toBall)
+        ? Math.hypot((toBall.x ?? 0) - (nearestGK.x ?? 0), (toBall.y ?? 0) - (nearestGK.y ?? 0))
+        : 999;
+      const gkHoldPoses = ['scoop_catch', 'aerial_catch', 'idle', 'defensive'];
+      const isGKHoldingBall = !!nearestGK && gkDistToEndBall < 2.2 && gkHoldPoses.includes(nearestGK.animation || 'idle') && (toBall?.elevation ?? 0) > 0.2;
 
       const isLob = toF.ballLob === true;
       const interpObjs = toObjs.map((targetObj) => {
@@ -4040,7 +4064,7 @@ export default function App() {
         const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
         const moveDist = Math.hypot(dx, dy);
 
-        const PH1 = passerId ? (isHeadAction ? 0.36 : isHandAction ? 0.38 : 0.46) : 0;
+        const PH1 = passerId ? (isHeadAction ? 0.36 : (isHandAction || isVolleyGK) ? 0.38 : 0.46) : 0;
         const PH3 = 0.78;
         const smooth = (k) => k * k * (3 - 2 * k);
         const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -4050,31 +4074,43 @@ export default function App() {
         let origX = startObj.x ?? targetObj.x;
         let origY = startObj.y ?? targetObj.y;
 
-        if (targetObj.type === 'ball' && passerId) {
+        if (targetObj.type === 'ball' && passerId && !isGKHoldingBall) {
           origX = kickOriginX;
           origY = kickOriginY;
           effectiveRawT = clamp01((rawT - PH1) / (1 - PH1));
           effectiveT = smooth(effectiveRawT);
         }
 
-        const nx = origX + ((targetObj.x ?? 0) - origX) * effectiveT;
-        const ny = origY + ((targetObj.y ?? 0) - origY) * effectiveT;
+        let nx = origX + ((targetObj.x ?? 0) - origX) * effectiveT;
+        let ny = origY + ((targetObj.y ?? 0) - origY) * effectiveT;
         let nz = targetObj.elevation ?? 0;
 
         if (targetObj.type === 'ball') {
-          const startZ = isHeadAction
-            ? Math.max(startObj.elevation ?? 0, 2.15)
-            : isHandAction
-              ? Math.max(startObj.elevation ?? 0, passerPose === 'underhand_throw' ? 0.85 : 1.35)
-              : (startObj.elevation ?? 0);
-          const endZ = targetObj.elevation ?? 0;
-          const baseZ = startZ + (endZ - startZ) * effectiveT;
-          if (isLob) {
-            nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 3.2;
-          } else if (isHeadAction && endZ >= 1.4) {
-            nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 0.55;
+          if (isGKHoldingBall && nearestGK) {
+            const gkStart = fromObjs.find((o) => o.id === nearestGK.id) || nearestGK;
+            const gkX = (gkStart.x ?? 0) + ((nearestGK.x ?? 0) - (gkStart.x ?? 0)) * t;
+            const gkY = (gkStart.y ?? 0) + ((nearestGK.y ?? 0) - (gkStart.y ?? 0)) * t;
+            const gkDir = (nearestGK.team === 'red') ? -1 : 1;
+            nx = gkX + gkDir * 0.55;
+            ny = gkY;
+            nz = (nearestGK.animation === 'scoop_catch') ? 0.42 : 1.05;
           } else {
-            nz = baseZ;
+            const startZ = isHeadAction
+              ? Math.max(startObj.elevation ?? 0, 2.15)
+              : isVolleyGK
+                ? 0.95
+                : isHandAction
+                  ? (passerPose === 'underhand_throw' ? 0.65 : passerPose === 'overhand_throw' ? 1.95 : passerPose === 'aerial_save' ? 1.65 : passerPose === 'diving_low' ? 0.42 : Math.max(startObj.elevation ?? 0, 1.05))
+                  : (startObj.elevation ?? 0);
+            const endZ = targetObj.elevation ?? 0;
+            const baseZ = startZ + (endZ - startZ) * effectiveT;
+            if (isLob || passerPose === 'overhand_throw' || isVolleyGK) {
+              nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 3.0;
+            } else if (isHeadAction && endZ >= 1.4) {
+              nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 0.55;
+            } else {
+              nz = baseZ;
+            }
           }
         }
 
@@ -6391,6 +6427,16 @@ Sin markdown. Inicia con [ y termina con ]:`;
           >
             Piso
           </button>
+          <button
+                      type="button"
+                      onClick={() => {
+                        setObjects((prev) => prev.map((o) => o.id === selectedObj.id ? { ...o, elevation: 1.05 } : o));
+                        setSelectedObj((prev) => ({ ...prev, elevation: 1.05 }));
+                      }}
+                      className={`px-2.5 py-1 text-xs rounded-lg font-medium transition ${selectedObj.elevation === 1.05 ? 'bg-amber-500 text-black font-bold' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
+                    >
+                      Manos
+                    </button>
           <button
             type="button"
             onClick={() => {
