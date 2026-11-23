@@ -3100,7 +3100,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
   };
   const handlePointerDown = (e, obj) => {
     if (!cameraLocked) return;
-    if (e.cancelable) e.preventDefault();
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    else if (e.nativeEvent?.cancelable) e.nativeEvent.preventDefault();
     e.stopPropagation();
     if (onDragStart) onDragStart(obj);
     setSelectedObj(obj);
