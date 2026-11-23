@@ -4531,8 +4531,7 @@ export default function App() {
     const patch = (o) => ({ ...o, animation: key, animNonce: (o.animNonce || 0) + 1 });
     setObjects((prev) => prev.map((o) => (o.id === playerId ? patch(o) : o)));
     setSelectedObj((prev) => (prev && prev.id === playerId ? patch(prev) : prev));
-    if (BALL_ACTIONS[key]) launchBallFromAction(pl, key);
-    else if (key === 'jog' || key === 'sprint') startCarryRun(pl, key);
+    
   };
 
   const [isRecording, setIsRecording] = useState(false);
