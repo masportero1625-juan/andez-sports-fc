@@ -3338,19 +3338,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
           .map((obj) => {
           const pos = toWorld(obj);
           const onDown = (e) => {
-            if (!cameraLocked) return;
-            if (e.cancelable) e.preventDefault();
-            e.stopPropagation();
-            if (e.target && e.pointerId !== undefined && e.target.setPointerCapture) {
-              try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
-            }
             handlePointerDown(e, obj);
-          };
-          const onUp = (e) => {
-            if (e.target && e.pointerId !== undefined && e.target.releasePointerCapture) {
-              try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
-            }
-            handlePointerUp(e);
           };
 
           if (obj.type === 'player') {
@@ -3372,8 +3360,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
                 rotation={[0, finalRotY, 0]}
                 onPointerDown={onDown}
                 onPointerMove={handlePointerMove}
-                onPointerUp={onUp}
-                onPointerCancel={onUp}
+                onPointerUp={handlePointerUp}
+             onPointerCancel={handlePointerUp}
               >
                 {/* Hitbox precisa ajustada al cuerpo real para no invadir el balón cercano */}
                 <mesh position={[0, 1.05, 0]}>
@@ -3402,8 +3390,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
                 position={[bx, by, bz]}
                 onPointerDown={onDown}
                 onPointerMove={handlePointerMove}
-                onPointerUp={onUp}
-                onPointerCancel={onUp}
+                onPointerUp={handlePointerUp}
+             onPointerCancel={handlePointerUp}
               >
                 {/* Hitbox esférica centrada en el balón (prioridad táctil/ratón) */}
                 <mesh>
@@ -3430,8 +3418,8 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
                 position={[pos.x, 0, pos.z]}
                 onPointerDown={onDown}
                 onPointerMove={handlePointerMove}
-                onPointerUp={onUp}
-                onPointerCancel={onUp}
+                onPointerUp={handlePointerUp}
+             onPointerCancel={handlePointerUp}
               >
                 <mesh position={[0, 0.85, 0]}>
                   <cylinderGeometry args={[0.85, 0.85, 1.7, 12]} />
