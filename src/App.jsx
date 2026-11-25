@@ -1851,18 +1851,7 @@ function getPlayableFbxClip(raw, url, clone) {
     if (!bone) return;
 
     if (prop === 'quaternion') {
-      const qVals = t.values.slice();
-      const isHipsQuat = clean.includes('hips') || t.name.toLowerCase().includes('hips');
-      const isScoopClip = String(url || '').toLowerCase().includes('scoop');
-      if (isHipsQuat && isScoopClip) {
-        const qFix = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-        const qTmp = new THREE.Quaternion();
-        for (let i = 0; i < qVals.length; i += 4) {
-          qTmp.set(qVals[i], qVals[i + 1], qVals[i + 2], qVals[i + 3]).premultiply(qFix);
-          qVals[i] = qTmp.x; qVals[i + 1] = qTmp.y; qVals[i + 2] = qTmp.z; qVals[i + 3] = qTmp.w;
-        }
-      }
-      out.push(new THREE.QuaternionKeyframeTrack(`${bone.name}.${prop}`, t.times.slice(), qVals));
+      out.push(new THREE.QuaternionKeyframeTrack(`${bone.name}.${prop}`, t.times.slice(), t.values.slice()));
     } else if (prop === 'position') {
   
       const isHipsTrack = clean.includes('hips') || t.name.toLowerCase().includes('hips');
