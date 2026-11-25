@@ -4275,16 +4275,16 @@ export default function App() {
 
           // 1. Seguimiento visual continuo: pasador acompaña el pase, corredor mira su carrera y receptor mira al balón en todo momento
           if (targetObj.id === passerId && bCurX !== undefined && bCurY !== undefined) {
-            const pdx = (rawT < PH1 ? (toBall.x ?? 0) : bCurX) - nx;
-            const pdy = (rawT < PH1 ? (toBall.y ?? 0) : bCurY) - ny;
+            const pdx = (rawT < releaseAt ? (toBall.x ?? 0) : bCurX) - nx;
+            const pdy = (rawT < releaseAt ? (toBall.y ?? 0) : bCurY) - ny;
             if (Math.hypot(pdx, pdy) > 0.25) {
               const targetYaw = computeYaw3D(pdx, pdy);
               rotDeg = (Math.atan2(pdy, pdx) * 180) / Math.PI;
-              rotY = rawT < PH1 ? lerpAngle(prevYaw, targetYaw, smooth(clamp01(rawT / PH1))) : targetYaw;
+              rotY = rawT < releaseAt ? lerpAngle(prevYaw, targetYaw, smooth(clamp01(rawT / releaseAt))) : targetYaw;
             } else {
               rotY = prevYaw;
             }
-          } else if (moveDist > 2.5 && rawT < PH3) {
+          } else if (moveDist > 2.5 && rawT < 0.78) {
             const runYaw = computeYaw3D(dx, dy);
             rotDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
             rotY = rawT < 0.18 ? lerpAngle(prevYaw, runYaw, smooth(rawT / 0.18)) : runYaw;
