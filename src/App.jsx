@@ -1851,7 +1851,18 @@ function getPlayableFbxClip(raw, url, clone) {
     if (!bone) return;
 
     if (prop === 'quaternion') {
-      out.push(new THREE.QuaternionKeyframeTrack(`${bone.name}.${prop}`, t.times.slice(), t.values.slice()));
+      const qVals = t.values.slice();
+      const isHipsQuat = clean.includes('hips') || t.name.toLowerCase().includes('hips');
+      const isScoopClip = String(url || '').toLowerCase().includes('scoop');
+      if (isHipsQuat && isScoopClip) {
+        const qFix = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+        const qTmp = new THREE.Quaternion();
+        for (let i = 0; i < qVals.length; i += 4) {
+          qTmp.set(qVals[i], qVals[i + 1], qVals[i + 2], qVals[i + 3]).premultiply(qFix);
+          qVals[i] = qTmp.x; qVals[i + 1] = qTmp.y; qVals[i + 2] = qTmp.z; qVals[i + 3] = qTmp.w;
+        }
+      }
+      out.push(new THREE.QuaternionKeyframeTrack(`${bone.name}.${prop}`, t.times.slice(), qVals));
     } else if (prop === 'position') {
       const isHipsTrack = clean.includes('hips') || t.name.toLowerCase().includes('hips');
       if (isHipsTrack) {
@@ -4059,19 +4070,26 @@ export default function App() {
     }
 
     const getSegmentDurationMs = (fA, fB) => {
-      const objsA = fA?.objects || [];
-      const objsB = fB?.objects || [];
-      let maxDist = 0;
-      objsB.forEach((b) => {
-        const a = objsA.find((o) => o.id === b.id);
-        if (a) {
-          const d = Math.hypot((b.x || 0) - (a.x || 0), (b.y || 0) - (a.y || 0));
-          if (d > maxDist) maxDist = d;
-        }
-      });
-      const clamped = Math.max(1050, Math.min(2400, maxDist * 45));
-      return clamped / playbackSpeed;
-    };
+    const objsA = fA?.objects || [];
+    const objsB = fB?.objects || [];
+    let maxDist = 0;
+    let hasTechAction = false;
+    const techPoses = new Set([
+      'scoop_catch', 'aerial_catch', 'aerial_save', 'body_block',
+      'diving_low', 'underhand_throw', 'overhand_throw', 'punt', 'punt_kick', 'goal_kick'
+    ]);
+    objsB.forEach((b) => {
+      const a = objsA.find((o) => o.id === b.id);
+      if (techPoses.has(b.animation) || techPoses.has(a?.animation)) hasTechAction = true;
+      if (a) {
+        const d = Math.hypot((b.x || 0) - (a.x || 0), (b.y || 0) - (a.y || 0));
+        if (d > maxDist) maxDist = d;
+      }
+    });
+    const minMs = hasTechAction ? 2400 : 1150;
+    const clamped = Math.max(minMs, Math.min(2800, maxDist * 45));
+    return clamped / playbackSpeed;
+  };
 
     const firstDurMs = getSegmentDurationMs(frames[segmentIdx], frames[segmentIdx + 1]);
     let segStartPerf = resumeState
