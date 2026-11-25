@@ -1855,7 +1855,7 @@ function getPlayableFbxClip(raw, url, clone) {
       const isHipsQuat = clean.includes('hips') || t.name.toLowerCase().includes('hips');
       const isScoopClip = String(url || '').toLowerCase().includes('scoop');
       if (isHipsQuat && isScoopClip) {
-        const qFix = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+        const qFix = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
         const qTmp = new THREE.Quaternion();
         for (let i = 0; i < qVals.length; i += 4) {
           qTmp.set(qVals[i], qVals[i + 1], qVals[i + 2], qVals[i + 3]).premultiply(qFix);
@@ -1864,6 +1864,7 @@ function getPlayableFbxClip(raw, url, clone) {
       }
       out.push(new THREE.QuaternionKeyframeTrack(`${bone.name}.${prop}`, t.times.slice(), qVals));
     } else if (prop === 'position') {
+  
       const isHipsTrack = clean.includes('hips') || t.name.toLowerCase().includes('hips');
       if (isHipsTrack) {
         const v = t.values.slice();
@@ -3184,14 +3185,12 @@ function TacticalBall3D({ obj, pos, objects, isPC, onDown, handlePointerMove, ha
     }
 
     if (bestBone) {
-      tx = bestBone[0];
-      ty = Math.max(0.24, bestBone[1]);
-      tz = bestBone[2];
+      g.position.set(bestBone[0], Math.max(0.24, bestBone[1]), bestBone[2]);
+    } else {
+      g.position.x += (tx - g.position.x) * 0.65;
+      g.position.y += (ty - g.position.y) * 0.65;
+      g.position.z += (tz - g.position.z) * 0.65;
     }
-
-    g.position.x += (tx - g.position.x) * 0.45;
-    g.position.y += (ty - g.position.y) * 0.45;
-    g.position.z += (tz - g.position.z) * 0.45;
   });
 
   return (
@@ -4171,70 +4170,97 @@ export default function App() {
         }
       }
 
-      // Detectar si un arquero está sujetando/incorporándose con el balón en mano
-      const nearestGK = toObjs.find((o) => o.type === 'player' && (o.role === 'GK' || o.role === 'POR'));
-      const gkDistToEndBall = (nearestGK && toBall)
-        ? Math.hypot((toBall.x ?? 0) - (nearestGK.x ?? 0), (toBall.y ?? 0) - (nearestGK.y ?? 0))
-        : 999;
-      const gkHoldPoses = ['scoop_catch', 'aerial_catch', 'idle', 'defensive'];
-      const isGKHoldingBall = !!nearestGK && gkDistToEndBall < 2.2 && gkHoldPoses.includes(nearestGK.animation || 'idle') && (toBall?.elevation ?? 0) > 0.2;
+      // Detectar posesión y fase biomecánica del balón en el segmento actual
+        const nearestGK = toObjs.find((o) => o.type === 'player' && (o.role === 'GK' || o.role === 'POR'));
+        const gkStartObj = nearestGK ? (fromObjs.find((o) => o.id === nearestGK.id) || nearestGK) : null;
+        const gkDistFromBall = (gkStartObj && fromBall)
+          ? Math.hypot((fromBall.x ?? 0) - (gkStartObj.x ?? 0), (fromBall.y ?? 0) - (gkStartObj.y ?? 0))
+          : 999;
+        const gkDistToBall = (nearestGK && toBall)
+          ? Math.hypot((toBall.x ?? 0) - (nearestGK.x ?? 0), (toBall.y ?? 0) - (nearestGK.y ?? 0))
+          : 999;
+        const gkAnimEnd = nearestGK?.animation || '';
+        const gkAnimStart = gkStartObj?.animation || '';
+        const gkHoldPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'idle', 'defensive'];
+        const isGKThrowing = passerId === nearestGK?.id && (gkAnimEnd === 'underhand_throw' || gkAnimEnd === 'overhand_throw');
+        const isGKHoldingWholeSegment = !isGKThrowing
+          && !!nearestGK
+          && gkDistFromBall < 2.2
+          && gkDistToBall < 2.2
+          && (gkHoldPoses.includes(gkAnimEnd) || gkHoldPoses.includes(gkAnimStart));
 
-      const isLob = toF.ballLob === true;
-      const interpObjs = toObjs.map((targetObj) => {
-        const startObj = fromObjs.find((o) => o.id === targetObj.id) || targetObj;
-        const dx = (targetObj.x ?? 0) - (startObj.x ?? 0);
-        const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
-        const moveDist = Math.hypot(dx, dy);
+        const isLob = toF.ballLob === true;
+        const interpObjs = toObjs.map((targetObj) => {
+          const startObj = fromObjs.find((o) => o.id === targetObj.id) || targetObj;
+          const dx = (targetObj.x ?? 0) - (startObj.x ?? 0);
+          const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
+          const moveDist = Math.hypot(dx, dy);
 
-        const PH1 = passerId ? (isHeadAction ? 0.36 : (isHandAction || isVolleyGK) ? 0.38 : 0.46) : 0;
-        const PH3 = 0.78;
-        const smooth = (k) => k * k * (3 - 2 * k);
-        const clamp01 = (v) => Math.min(1, Math.max(0, v));
+          // Instante biomecánico real de liberación por gesto:
+          // - Saque de boliche / saque alto: suelta al 62% tras armar el brazo desde atrás
+          // - Cabezazo: 32% | Volea: 35% | Pase corto / tiro con pie: 34%
+          const releaseAt = passerId
+            ? (isGKThrowing ? 0.62 : isHeadAction ? 0.32 : (isHandAction || isVolleyGK) ? 0.35 : 0.34)
+            : 0;
+          const smooth = (k) => k * k * (3 - 2 * k);
+          const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
-        let effectiveT = t;
-        let effectiveRawT = rawT;
-        let origX = startObj.x ?? targetObj.x;
-        let origY = startObj.y ?? targetObj.y;
+          let effectiveT = t;
+          let effectiveRawT = rawT;
+          let origX = startObj.x ?? targetObj.x;
+          let origY = startObj.y ?? targetObj.y;
 
-        if (targetObj.type === 'ball' && passerId && !isGKHoldingBall) {
-          origX = kickOriginX;
-          origY = kickOriginY;
-          effectiveRawT = clamp01((rawT - PH1) / (1 - PH1));
-          effectiveT = smooth(effectiveRawT);
-        }
+          if (targetObj.type === 'ball' && passerId && !isGKHoldingWholeSegment) {
+            origX = kickOriginX;
+            origY = kickOriginY;
+            effectiveRawT = clamp01((rawT - releaseAt) / (1 - releaseAt));
+            effectiveT = smooth(effectiveRawT);
+          }
 
-        let nx = origX + ((targetObj.x ?? 0) - origX) * effectiveT;
-        let ny = origY + ((targetObj.y ?? 0) - origY) * effectiveT;
-        let nz = targetObj.elevation ?? 0;
+          let nx = origX + ((targetObj.x ?? 0) - origX) * effectiveT;
+          let ny = origY + ((targetObj.y ?? 0) - origY) * effectiveT;
+          let nz = targetObj.elevation ?? 0;
 
-        if (targetObj.type === 'ball') {
-          if (isGKHoldingBall && nearestGK) {
-            const gkStart = fromObjs.find((o) => o.id === nearestGK.id) || nearestGK;
-            const gkX = (gkStart.x ?? 0) + ((nearestGK.x ?? 0) - (gkStart.x ?? 0)) * t;
-            const gkY = (gkStart.y ?? 0) + ((nearestGK.y ?? 0) - (gkStart.y ?? 0)) * t;
-            const gkDir = (nearestGK.team === 'red') ? -1 : 1;
-            nx = gkX + gkDir * 0.55;
-            ny = gkY;
-            nz = (nearestGK.animation === 'scoop_catch') ? 0.42 : 1.05;
-          } else {
-            const startZ = isHeadAction
-              ? Math.max(startObj.elevation ?? 0, 2.15)
-              : isVolleyGK
-                ? 0.95
-                : isHandAction
-                  ? (passerPose === 'underhand_throw' ? 0.65 : passerPose === 'overhand_throw' ? 1.95 : passerPose === 'aerial_save' ? 1.65 : passerPose === 'diving_low' ? 0.42 : Math.max(startObj.elevation ?? 0, 1.05))
-                  : (startObj.elevation ?? 0);
-            const endZ = targetObj.elevation ?? 0;
-            const baseZ = startZ + (endZ - startZ) * effectiveT;
-            if (isLob || passerPose === 'overhand_throw' || isVolleyGK) {
-              nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 3.0;
-            } else if (isHeadAction && endZ >= 1.4) {
-              nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 0.55;
+          if (targetObj.type === 'ball') {
+            if (isGKHoldingWholeSegment && nearestGK && gkStartObj) {
+              const gkX = (gkStartObj.x ?? 0) + ((nearestGK.x ?? 0) - (gkStartObj.x ?? 0)) * t;
+              const gkY = (gkStartObj.y ?? 0) + ((nearestGK.y ?? 0) - (gkStartObj.y ?? 0)) * t;
+              const gkDir = (nearestGK.team === 'red') ? -1 : 1;
+              nx = gkX + gkDir * 0.55;
+              ny = gkY;
+              nz = (gkAnimEnd === 'scoop_catch') ? 0.42 : 1.05;
+            } else if (isGKThrowing && nearestGK && gkStartObj && rawT < releaseAt) {
+              // Durante todo el armado atrás del saque de boliche (0% -> 62%), el balón va pegado a la mano del arquero
+              const gkX = (gkStartObj.x ?? 0) + ((nearestGK.x ?? 0) - (gkStartObj.x ?? 0)) * t;
+              const gkY = (gkStartObj.y ?? 0) + ((nearestGK.y ?? 0) - (gkStartObj.y ?? 0)) * t;
+              const gkDir = (nearestGK.team === 'red') ? -1 : 1;
+              nx = gkX + gkDir * 0.45;
+              ny = gkY + 0.25;
+              nz = 0.72;
+            } else if (passerId && rawT < releaseAt) {
+              // Antes del golpeo del pie/cabeza, el balón permanece quieto en su punto de origen
+              nx = startObj.x ?? origX;
+              ny = startObj.y ?? origY;
+              nz = startObj.elevation ?? 0;
             } else {
-              nz = baseZ;
+              const startZ = isHeadAction
+                ? Math.max(startObj.elevation ?? 0, 2.15)
+                : isVolleyGK
+                  ? 0.95
+                  : isHandAction
+                    ? (passerPose === 'underhand_throw' ? 0.52 : passerPose === 'overhand_throw' ? 1.95 : passerPose === 'throw_in' ? 2.15 : 1.15)
+                    : (startObj.elevation ?? 0);
+              const endZ = targetObj.elevation ?? 0;
+              const baseZ = startZ + (endZ - startZ) * effectiveT;
+              if (isLob || passerPose === 'overhand_throw' || isVolleyGK) {
+                nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 3.0;
+              } else if (isHeadAction && endZ >= 1.4) {
+                nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 0.55;
+              } else {
+                nz = baseZ;
+              }
             }
           }
-        }
 
         let rotDeg = targetObj.rotation ?? startObj.rotation ?? 0;
         let rotY = targetObj.rotationY ?? startObj.rotationY ?? 0;
