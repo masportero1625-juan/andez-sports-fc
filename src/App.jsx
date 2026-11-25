@@ -1895,8 +1895,9 @@ function getPlayerEnvMap(gl) {
 }
 const GLB_ENV_INTENSITY = { shirt: 0.22, shorts: 0.18, hair: 0.1, eye: 1.0, skin: 0.4, shoes: 0.45 };
 const GLB_SHOE_COLORS = ['#0b0f19', '#f8fafc', '#1e293b', '#16a34a', '#f97316'];
+const PLAYER_BONES_WORLD = Object.create(null);
 
-function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, animation, animNonce = 0 }) {
+function GLBPlayer({ playerId, color, number, isSelected, onClick, facing = 0, role, animation, animNonce = 0 }) {
   const { scene } = useGLTF(GLB_URL, DRACO_URL);
   const gl = useThree((state) => state.gl);
 
@@ -1906,6 +1907,30 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     getCloneRig(c);
     return c;
   }, [scene]);
+
+  // Mapa directo de huesos reales del esqueleto (Mixamo / estándar)
+  const boneRefs = useMemo(() => {
+    const found = { rightHand: null, leftHand: null, rightFoot: null, leftFoot: null, head: null };
+    clone.traverse((obj) => {
+      if (!obj.isBone) return;
+      const nm = (obj.name || '').toLowerCase();
+      if (!found.rightHand && nm.includes('righthand') && !nm.includes('thumb') && !nm.includes('index') && !nm.includes('middle') && !nm.includes('ring') && !nm.includes('pinky')) found.rightHand = obj;
+      else if (!found.leftHand && nm.includes('lefthand') && !nm.includes('thumb') && !nm.includes('index') && !nm.includes('middle') && !nm.includes('ring') && !nm.includes('pinky')) found.leftHand = obj;
+      else if (!found.rightFoot && (nm.includes('rightfoot') || nm.includes('righttoe'))) found.rightFoot = obj;
+      else if (!found.leftFoot && (nm.includes('leftfoot') || nm.includes('lefttoe'))) found.leftFoot = obj;
+      else if (!found.head && nm.endsWith('head')) found.head = obj;
+    });
+    return found;
+  }, [clone]);
+
+  const boneVecs = useMemo(() => ({
+    rh: new THREE.Vector3(),
+    lh: new THREE.Vector3(),
+    midH: new THREE.Vector3(),
+    rf: new THREE.Vector3(),
+    lf: new THREE.Vector3(),
+    hd: new THREE.Vector3(),
+  }), []);
 
   // Un mixer por instancia; se actualiza UNA sola vez por frame (más abajo)
   const mixer = useMemo(() => new THREE.AnimationMixer(clone), [clone]);
@@ -1927,12 +1952,12 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     return [base * p.w, base * p.h, base * p.w];
   }, [norm.scale, role, n, seed]);
 
-  // Postura atlética de respaldo: el jugador nunca se ve en T-pose mientras llegan los FBX (o si alguno no existe)
+  // Postura atlética de respaldo
   useLayoutEffect(() => {
     return () => {};
   }, []);
 
-  // Enlace y transición cruzada: obj.animation -> clip FBX (fadeIn 0.25 / fadeOut 0.2). Las acciones puntuales vuelven solas a la postura base
+  // Enlace y transición cruzada: obj.animation -> clip FBX
   const playState = useRef({ action: null, key: null, token: 0 });
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -1941,19 +1966,18 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     const st = playState.current;
 
     const play = (reqKey, fade) => {
-          const key = cat[reqKey] ? reqKey : 'idle';
-        const url = cat[key] || cat[Object.keys(cat)[0]];
+      const key = cat[reqKey] ? reqKey : 'idle';
+      const url = cat[key] || cat[Object.keys(cat)[0]];
       if (!url) return;
       const token = ++st.token;
       loadFbxClip(url).then((raw) => {
         if (!alive || token !== st.token || !raw) return;
         const clip = getPlayableFbxClip(raw, url, clone);
-          if (!clip) return;
+        if (!clip) return;
 
-          // Si es la postura base de campo, neutralizamos los tracks de posición para que no se desplace lateralmente
-          if (!isGK && key === 'defensive') {
-            clip.tracks = clip.tracks.filter(t => !t.name.endsWith('.position'));
-          }
+        if (!isGK && key === 'defensive') {
+          clip.tracks = clip.tracks.filter(t => !t.name.endsWith('.position'));
+        }
         const looping = false;
         const next = mixer.clipAction(clip, clone);
         const prev = st.action;
@@ -1963,7 +1987,6 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
         next.enabled = true;
         next.setEffectiveTimeScale(1);
         next.setEffectiveWeight(1);
-        // Desfase en las poses en bucle para que los 22 jugadores no respiren al unísono
         if (looping && !prev) next.time = ((seed % 997) / 997) * clip.duration;
         if (prev && prev !== next) prev.fadeOut(0.2);
         if (!prev) next.play(); else next.fadeIn(prev === next ? 0.05 : fade).play();
@@ -1978,7 +2001,6 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     };
 
     const onFinished = (e) => {
-      // Si es trote o sprint, no vuelve a base: se queda congelado en la pose
       if (st.key === 'jog' || st.key === 'sprint' || st.key === 'trote') {
         return;
       }
@@ -1990,8 +2012,8 @@ function GLBPlayer({ color, number, isSelected, onClick, facing = 0, role, anima
     mixer.addEventListener('finished', onFinished);
 
     const defaultStance = cat['base'] ? 'base' : (cat['idle'] ? 'idle' : Object.keys(cat)[0]);
-const wanted = (animation && cat[animation]) ? animation : defaultStance;
-play(wanted, 0.25);
+    const wanted = (animation && cat[animation]) ? animation : defaultStance;
+    play(wanted, 0.25);
 
     return () => {
       alive = false;
@@ -2007,12 +2029,40 @@ play(wanted, 0.25);
       mixer.uncacheRoot(clone);
       st.action = null;
       st.key = null;
+      if (playerId) delete PLAYER_BONES_WORLD[playerId];
     };
-  }, [mixer, clone]);
+  }, [mixer, clone, playerId]);
 
-  // Actualización única por frame (con tope de delta para evitar saltos al volver a la pestaña)
+  // Actualización única por frame + publicación de coordenadas reales de huesos
   useFrame((_, delta) => {
     mixer.update(Math.min(delta, 0.05));
+    if (!playerId) return;
+    clone.updateMatrixWorld(true);
+    const { rightHand, leftHand, rightFoot, leftFoot, head } = boneRefs;
+    const { rh, lh, midH, rf, lf, hd } = boneVecs;
+    if (rightHand) rightHand.getWorldPosition(rh);
+    if (leftHand) leftHand.getWorldPosition(lh);
+    if (rightHand && leftHand) midH.addVectors(rh, lh).multiplyScalar(0.5);
+    else if (rightHand) midH.copy(rh);
+    else if (leftHand) midH.copy(lh);
+    if (rightFoot) rightFoot.getWorldPosition(rf);
+    if (leftFoot) leftFoot.getWorldPosition(lf);
+    if (head) head.getWorldPosition(hd);
+
+    const act = playState.current.action;
+    const dur = act?.getClip()?.duration || 1;
+    const progress = act ? Math.min(1, Math.max(0, act.time / dur)) : 0;
+
+    PLAYER_BONES_WORLD[playerId] = {
+      key: playState.current.key || animation || 'idle',
+      progress,
+      rightHand: rightHand ? [rh.x, rh.y, rh.z] : null,
+      leftHand: leftHand ? [lh.x, lh.y, lh.z] : null,
+      handsMid: (rightHand || leftHand) ? [midH.x, midH.y, midH.z] : null,
+      rightFoot: rightFoot ? [rf.x, rf.y, rf.z] : null,
+      leftFoot: leftFoot ? [lf.x, lf.y, lf.z] : null,
+      head: head ? [hd.x, hd.y, hd.z] : null,
+    };
   });
 
   // Materiales PBR, dorsales y render de equipación
@@ -3077,7 +3127,89 @@ function StadiumEnvironment() {
     </group>
   );
 }
+function Ball3D({ obj, pos, objects, isPC, onDown, handlePointerMove, handlePointerUp }) {
+  const groupRef = useRef(null);
+  const bx = pos?.x ?? pos?.[0] ?? 0;
+  const bz = pos?.z ?? pos?.[2] ?? 0;
+  const by = Math.max(0.24, Number(obj?.elevation || obj?.altitude || 0.24));
 
+  useFrame(() => {
+    const g = groupRef.current;
+    if (!g) return;
+    let tx = bx;
+    let ty = by;
+    let tz = bz;
+
+    // Buscar jugador/arquero en contacto directo (< 1.45 m) con pose activa de mano/pie/cabeza
+    let bestBone = null;
+    let bestDist = 1.45;
+    for (let i = 0; i < objects.length; i++) {
+      const p = objects[i];
+      if (p.type !== 'player') continue;
+      const bData = PLAYER_BONES_WORLD[p.id];
+      if (!bData) continue;
+      const anim = p.animation || bData.key || '';
+      const isHandPose = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'underhand_throw', 'overhand_throw', 'throw_in'].includes(anim)
+        || (p.role === 'GK' && Number(obj?.elevation || 0) >= 0.85 && Number(obj?.elevation || 0) <= 1.65);
+      const isFootPose = ['pass', 'short_pass', 'shoot', 'power_shot', 'volley', 'diving_shot', 'punt'].includes(anim);
+      const isHeadPose = anim === 'header';
+
+      let anchor = null;
+      if (isHandPose) {
+        if ((anim === 'underhand_throw' || anim === 'overhand_throw') && bData.rightHand) anchor = bData.rightHand;
+        else if (bData.handsMid) anchor = bData.handsMid;
+      } else if (isFootPose) {
+        anchor = bData.rightFoot || bData.leftFoot;
+      } else if (isHeadPose) {
+        anchor = bData.head;
+      }
+      if (!anchor) continue;
+
+      const d = Math.hypot(anchor[0] - bx, anchor[2] - bz);
+      if (d < bestDist) {
+        bestDist = d;
+        bestBone = anchor;
+      }
+    }
+
+    if (bestBone) {
+      tx = bestBone[0];
+      ty = Math.max(0.24, bestBone[1]);
+      tz = bestBone[2];
+    }
+
+    g.position.x += (tx - g.position.x) * 0.45;
+    g.position.y += (ty - g.position.y) * 0.45;
+    g.position.z += (tz - g.position.z) * 0.45;
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      position={[bx, by, bz]}
+      onPointerDown={onDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      {/* Hitbox esférica centrada en el balón (prioridad táctil/ratón) */}
+      <mesh>
+        <sphereGeometry args={[isPC ? 0.68 : 0.92, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+
+      {/* Balón 3D visible garantizado */}
+      <mesh castShadow receiveShadow>
+        <sphereGeometry args={[0.35, 24, 24]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
+      </mesh>
+      <mesh position={[0, 0, 0.22]}>
+        <sphereGeometry args={[0.15, 12, 12]} />
+        <meshStandardMaterial color="#111111" roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
 function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSelectedObj, teamColors, cameraLocked, isPC, onDragStart, cameraPreset, onUserOrbit }) {
   const isDragging = useRef(false);
   const dragId = useRef(null);
@@ -3370,6 +3502,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
                   <meshBasicMaterial transparent opacity={0} depthWrite={false} />
                 </mesh>
                 <TacticalPlayer3D
+                  playerId={obj.id}
                   color={col}
                   number={obj.number}
                   role={(obj.role === 'GK' || obj.role === 'POR' || obj.team === 'gk' || obj.team === 'gk_away') ? 'GK' : 'FIELD'}
@@ -3381,37 +3514,19 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
             );
           }
           if (obj.type === 'ball') {
-            const bx = pos?.x ?? pos?.[0] ?? 0;
-            const bz = pos?.z ?? pos?.[2] ?? 0;
-            const by = Math.max(0.24, Number(obj?.elevation || obj?.altitude || 0.24));
-
-            return (
-              <group
-                key={obj.id}
-                position={[bx, by, bz]}
-                onPointerDown={onDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-             onPointerCancel={handlePointerUp}
-              >
-                {/* Hitbox esférica centrada en el balón (prioridad táctil/ratón) */}
-                <mesh>
-                  <sphereGeometry args={[isPC ? 0.68 : 0.92, 16, 16]} />
-                  <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-                </mesh>
-
-                {/* Balón 3D visible garantizado */}
-                <mesh castShadow receiveShadow>
-                  <sphereGeometry args={[0.35, 24, 24]} />
-                  <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
-                </mesh>
-                <mesh position={[0, 0, 0.22]}>
-                  <sphereGeometry args={[0.15, 12, 12]} />
-                  <meshStandardMaterial color="#111111" roughness={0.5} />
-                </mesh>
-              </group>
-            );
-          }
+          return (
+            <Ball3D
+              key={obj.id}
+              obj={obj}
+              pos={pos}
+              objects={objects}
+              isPC={isPC}
+              onDown={onDown}
+              handlePointerMove={handlePointerMove}
+              handlePointerUp={handlePointerUp}
+            />
+          );
+        }
           if (['cone', 'saucer', 'ring', 'pole', 'hurdle', 'dummy', 'mini_goal', 'ladder', 'rebounder', 'tactical_pad'].includes(obj.type)) {
             return (
               <group
