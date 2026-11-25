@@ -3127,7 +3127,7 @@ function StadiumEnvironment() {
     </group>
   );
 }
-function Ball3D({ obj, pos, objects, isPC, onDown, handlePointerMove, handlePointerUp }) {
+function TacticalBall3D({ obj, pos, objects, isPC, onDown, handlePointerMove, handlePointerUp }) {
   const groupRef = useRef(null);
   const bx = pos?.x ?? pos?.[0] ?? 0;
   const bz = pos?.z ?? pos?.[2] ?? 0;
@@ -3515,7 +3515,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
           }
           if (obj.type === 'ball') {
           return (
-            <Ball3D
+            <TacticalBall3D
               key={obj.id}
               obj={obj}
               pos={pos}
