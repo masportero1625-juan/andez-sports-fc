@@ -2002,13 +2002,14 @@ function GLBPlayer({ playerId, color, number, isSelected, onClick, facing = 0, r
     };
 
     const onFinished = (e) => {
-      if (st.key === 'jog' || st.key === 'sprint' || st.key === 'trote') {
-        return;
-      }
-      if (e.action === st.action) {
-        play(cat['base'] ? 'base' : (cat['idle'] ? 'idle' : Object.keys(cat)[0]), 0.3);
-      }
-    };
+          const holdEndKeys = ['jog', 'sprint', 'trote', 'scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low'];
+          if (holdEndKeys.includes(st.key)) {
+            return;
+          }
+          if (e.action === st.action) {
+            play(cat['base'] ? 'base' : (cat['idle'] ? 'idle' : Object.keys(cat)[0]), 0.3);
+          }
+        };
 
     mixer.addEventListener('finished', onFinished);
 
@@ -4185,11 +4186,17 @@ export default function App() {
           const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
           const moveDist = Math.hypot(dx, dy);
 
-          // Instante biomecánico real de impacto/liberación en los clips Mixamo:
-          // - Saque de boliche (underhand_throw): suelta al 72% cuando el brazo pasa adelante
-          // - Pase corto / tiro con pie: impacta al 46% | Cabezazo: 36% | Volea / saque alto: 44%
+          // Progreso biomecánico real del clip del ejecutante (0.0 -> 1.0 desde PLAYER_BONES_WORLD)
+          const passerBones = passerId ? PLAYER_BONES_WORLD[passerId] : null;
+          const passerClipKey = passerBones?.key || '';
+          const isPasserClipActive = !!(passerBones && passerClipKey && passerClipKey !== 'idle' && passerClipKey !== 'defensive');
+          const clipProg = isPasserClipActive ? (passerBones.progress ?? 0) : rawT;
+
+          // Instante exacto de impacto/liberación en el clip real de Mixamo:
+          // - Saque de boliche (underhand_throw): suelta al 54% cuando la mano pasa frente a la cadera
+          // - Pase corto / tiro con pie: impacta al 38% | Cabezazo: 34% | Volea / saque alto: 42%
           const releaseAt = passerId
-            ? (isGKThrowing ? 0.72 : isHeadAction ? 0.36 : (isHandAction || isVolleyGK) ? 0.44 : 0.46)
+            ? (isGKThrowing ? 0.54 : isHeadAction ? 0.34 : (isHandAction || isVolleyGK) ? 0.42 : 0.38)
             : 0;
           const smooth = (k) => k * k * (3 - 2 * k);
           const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -4202,8 +4209,16 @@ export default function App() {
           if (targetObj.type === 'ball' && passerId && !isGKHoldingWholeSegment) {
             origX = kickOriginX;
             origY = kickOriginY;
-            effectiveRawT = clamp01((rawT - releaseAt) / (1 - releaseAt));
-            effectiveT = smooth(effectiveRawT);
+            // Combina el instante real de impacto del clip con el recorrido limpio hasta el final del tramo
+            const hasReleased = clipProg >= releaseAt || rawT >= 0.52;
+            if (!hasReleased) {
+              effectiveRawT = 0;
+              effectiveT = 0;
+            } else {
+              const travelSpan = Math.max(0.25, 1 - Math.min(rawT, releaseAt));
+              effectiveRawT = clamp01((rawT - Math.min(rawT, releaseAt)) / travelSpan);
+              effectiveT = smooth(effectiveRawT);
+            }
           }
 
           let nx = origX + ((targetObj.x ?? 0) - origX) * effectiveT;
@@ -4216,7 +4231,7 @@ export default function App() {
 
             if (isGKHoldingWholeSegment && nearestGK && gkStartObj) {
               // Sube progresivamente desde el piso (0.28m) hasta las manos (handsMid) al incorporarse
-              const holdLift = smooth(clamp01(rawT / 0.55));
+              const holdLift = smooth(clamp01(rawT / 0.50));
               if (gkBones && gkBones.handsMid) {
                 nx = gkBones.handsMid[0];
                 ny = gkBones.handsMid[2];
@@ -4227,10 +4242,10 @@ export default function App() {
                 const gkDir = (nearestGK.team === 'red') ? -1 : 1;
                 nx = gkX + gkDir * 0.52;
                 ny = gkY;
-                nz = (gkAnimEnd === 'scoop_catch') ? 0.32 : (0.32 + (1.05 - 0.32) * holdLift);
+                nz = (gkAnimEnd === 'scoop_catch') ? 0.30 : (0.30 + (1.05 - 0.30) * holdLift);
               }
-            } else if (isGKThrowing && nearestGK && gkStartObj && rawT < releaseAt) {
-              // El balón acompaña pegado a la mano derecha durante todo el armado del saque (0% -> 72%)
+            } else if (isGKThrowing && nearestGK && gkStartObj && effectiveRawT === 0) {
+              // El balón acompaña pegado a la mano derecha durante todo el armado del saque (0% -> 54% del clip real)
               if (gkBones && gkBones.rightHand) {
                 nx = gkBones.rightHand[0];
                 ny = gkBones.rightHand[2];
@@ -4241,10 +4256,10 @@ export default function App() {
                 const gkDir = (nearestGK.team === 'red') ? -1 : 1;
                 nx = gkX + gkDir * 0.45;
                 ny = gkY + 0.25;
-                nz = 0.55;
+                nz = 0.50;
               }
-            } else if (passerId && rawT < releaseAt) {
-              // Antes del golpeo del pie/cabeza, el balón espera quieto en su origen
+            } else if (passerId && effectiveRawT === 0) {
+              // Antes del impacto real del pie/cabeza, el balón espera quieto en su origen
               nx = startObj.x ?? origX;
               ny = startObj.y ?? origY;
               nz = startObj.elevation ?? 0;
@@ -4254,9 +4269,8 @@ export default function App() {
                 : isVolleyGK
                   ? 0.95
                   : isHandAction
-                    ? (passerPose === 'underhand_throw' ? 0.42 : passerPose === 'overhand_throw' ? 1.95 : passerPose === 'throw_in' ? 2.15 : 1.15)
+                    ? (passerPose === 'underhand_throw' ? 0.36 : passerPose === 'overhand_throw' ? 1.95 : passerPose === 'throw_in' ? 2.15 : 1.15)
                     : (startObj.elevation ?? 0);
-              // Si el destino es Atrapada Baja, el balón llega raso al piso (0.24m) hasta los guantes, no flotando a 1.05m
               const endZ = isIncomingToScoop ? 0.24 : (targetObj.elevation ?? 0);
               const baseZ = startZ + (endZ - startZ) * effectiveT;
               if (isLob || passerPose === 'overhand_throw' || isVolleyGK) {
@@ -4334,8 +4348,8 @@ export default function App() {
               activeAnim = hasCustomEndPose ? targetObj.animation : (isHeadAction ? 'header' : (isLob ? 'strike_motion' : 'kick_pass'));
               nonce = segNonce;
             } else if (hasCustomEndPose && catchPoses.includes(targetObj.animation)) {
-              // El receptor espera atento mientras el pasador arma el golpe, y dispara la atrapada al salir el balón (rawT >= 0.46)
-              if (rawT >= 0.46) {
+              // El receptor dispara la atrapada justo en el instante en que sale el pase (rawT >= 0.34)
+              if (rawT >= 0.34) {
                 activeAnim = targetObj.animation;
                 nonce = segNonce;
               } else {
