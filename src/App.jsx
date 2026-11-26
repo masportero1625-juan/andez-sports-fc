@@ -4454,23 +4454,32 @@ export default function App() {
       const toObjs = seg.toF?.objects || [];
       const toBall2d = toObjs.find((o) => o.type === 'ball');
 
+      const otherPlayers = toObjs.filter((o) => o.type === 'player');
+
       const interpObjs = toObjs.map((targetObj) => {
         const startObj = fromObjs.find((o) => o.id === targetObj.id) || targetObj;
         const nx = (startObj.x ?? 0) + ((targetObj.x ?? 0) - (startObj.x ?? 0)) * easeT;
         const ny = (startObj.y ?? 0) + ((targetObj.y ?? 0) - (startObj.y ?? 0)) * easeT;
 
         let rotDeg = targetObj.rotation ?? startObj.rotation ?? 0;
-        let rotY = targetObj.rotationY ?? startObj.rotationY;
 
-        if (targetObj.type === 'player' && toBall2d) {
-          const fdx = (toBall2d.x ?? 0) - nx;
-          const fdy = (toBall2d.y ?? 0) - ny;
-          if (Math.hypot(fdx, fdy) > 0.35) {
-            const targetDeg = (Math.atan2(fdy, fdx) * 180) / Math.PI;
-            const startDeg = startObj.rotation ?? targetDeg;
-            let diff = ((targetDeg - startDeg + 540) % 360) - 180;
-            rotDeg = startDeg + diff * smooth(clamp01(rawT / 0.35));
-            rotY = isPC ? Math.atan2(fdx, fdy) : Math.atan2(fdy, -fdx);
+        if (targetObj.type === 'player') {
+          // Apuntar hacia el otro jugador activo (pasador/receptor) o hacia el balón si está lejos (> 1.5 m)
+          const rival = otherPlayers.find((p) => p.id !== targetObj.id);
+          const aimTarget =
+            toBall2d && Math.hypot((toBall2d.x ?? 0) - nx, (toBall2d.y ?? 0) - ny) > 1.5
+              ? toBall2d
+              : rival;
+
+          if (aimTarget) {
+            const fdx = (aimTarget.x ?? 0) - nx;
+            const fdy = (aimTarget.y ?? 0) - ny;
+            if (Math.hypot(fdx, fdy) > 0.35) {
+              const targetDeg = (Math.atan2(fdy, fdx) * 180) / Math.PI;
+              const startDeg = startObj.rotation ?? targetDeg;
+              const diff = ((targetDeg - startDeg + 540) % 360) - 180;
+              rotDeg = startDeg + diff * smooth(clamp01(rawT / 0.30));
+            }
           }
         }
 
@@ -4487,7 +4496,6 @@ export default function App() {
           x: nx,
           y: ny,
           rotation: rotDeg,
-          rotationY: rotY,
           animation: activePose,
         };
       });
