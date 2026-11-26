@@ -4125,11 +4125,14 @@ export default function App() {
       // Clasificación del gesto del ejecutor: mano (arquero/saque), cabeza o pie
       const passerStart = passerObj ? (fromObjs.find((o) => o.id === passerObj.id) || passerObj) : null;
       const passerEnd = passerObj ? (toObjs.find((o) => o.id === passerObj.id) || passerObj) : null;
-      const passerPose = passerEnd?.animation || passerStart?.animation || '';
-      const handPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'short_pass', 'overhand_throw', 'underhand_throw', 'throw_in'];
-      const isVolleyGK = passerPose === 'punt_kick';
-      const isHandAction = !!passerObj && !isVolleyGK && (handPoses.includes(passerPose) || passerObj.role === 'GK' || passerObj.role === 'POR');
-      const isHeadAction = !!passerObj && !isHandAction && !isVolleyGK && (passerPose === 'header' || (fromBall?.elevation ?? 0) >= 1.5);
+      const startPose = passerStart?.animation || '';
+          const endPose = passerEnd?.animation || '';
+          const neutralPoses = ['', 'idle', 'defensive', 'jog', 'sprint'];
+          const passerPose = !neutralPoses.includes(startPose) ? startPose : (!neutralPoses.includes(endPose) ? endPose : (endPose || startPose));
+          const handPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'short_throw', 'long_throw', 'overhand_throw', 'underhand_throw', 'throw_in'];
+          const isVolleyGK = passerPose === 'punt_kick';
+          const isHandAction = !!passerObj && !isVolleyGK && (handPoses.includes(passerPose) || passerObj.role === 'GK' || passerObj.role === 'POR');
+          const isHeadAction = !!passerObj && !isHandAction && !isVolleyGK && (passerPose === 'header' || (fromBall?.elevation ?? 0) >= 1.5);
 
       let kickOriginX = fromBall?.x ?? 0;
       let kickOriginY = fromBall?.y ?? 0;
@@ -4172,7 +4175,10 @@ export default function App() {
         const gkAnimEnd = nearestGK?.animation || '';
         const gkAnimStart = gkStartObj?.animation || '';
         const gkHoldPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'idle', 'defensive'];
-        const isGKThrowing = passerId === nearestGK?.id && (gkAnimEnd === 'underhand_throw' || gkAnimEnd === 'overhand_throw');
+        const isGKThrowing = passerId === nearestGK?.id && (
+            gkAnimStart === 'underhand_throw' || gkAnimStart === 'overhand_throw' || gkAnimStart === 'punt_kick' ||
+            gkAnimEnd === 'underhand_throw' || gkAnimEnd === 'overhand_throw' || gkAnimEnd === 'punt_kick'
+          );
         const isGKHoldingWholeSegment = !isGKThrowing
           && !!nearestGK
           && gkDistFromBall < 2.2
@@ -4326,7 +4332,7 @@ export default function App() {
             if (Math.hypot(ldx, ldy) > 0.25) {
               const ballYaw = computeYaw3D(ldx, ldy);
               const fromYaw = moveDist > 2.5 ? computeYaw3D(dx, dy) : prevYaw;
-              const turnT = moveDist > 2.5 ? smooth(clamp01((rawT - (PH3 - 0.12)) / 0.22)) : smooth(clamp01(rawT / 0.22));
+              const turnT = moveDist > 2.5 ? smooth(clamp01((rawT - 0.66) / 0.22)) : smooth(clamp01((rawT - 0.18) / 0.30));
               rotDeg = (Math.atan2(ldy, ldx) * 180) / Math.PI;
               rotY = lerpAngle(fromYaw, ballYaw, turnT);
             } else {
@@ -4344,8 +4350,9 @@ export default function App() {
             const segNonce = (startObj.animNonce || 0) + segmentIdx + 1;
 
             if (targetObj.id === passerId && rawT < 0.92) {
-              // El pasador (Pase Corto / Saque Bajo / Saque Alto) ejecuta el gesto completo de forma marcada
-              activeAnim = hasCustomEndPose ? targetObj.animation : (isHeadAction ? 'header' : (isLob ? 'strike_motion' : 'kick_pass'));
+              // El pasador ejecuta el gesto asignado en su frame de origen (ej. Pase Corto en Frame 1, Saque Bajo en Frame 4)
+              const hasPasserSpecificPose = passerPose && !standardStates.includes(passerPose);
+              activeAnim = hasPasserSpecificPose ? passerPose : (isHeadAction ? 'header' : (isLob ? 'strike_motion' : 'kick_pass'));
               nonce = segNonce;
             } else if (hasCustomEndPose && catchPoses.includes(targetObj.animation)) {
               // El receptor dispara la atrapada justo en el instante en que sale el pase (rawT >= 0.34)
