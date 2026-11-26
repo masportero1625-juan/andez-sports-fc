@@ -1897,7 +1897,243 @@ function getPlayerEnvMap(gl) {
 const GLB_ENV_INTENSITY = { shirt: 0.22, shorts: 0.18, hair: 0.1, eye: 1.0, skin: 0.4, shoes: 0.45 };
 const GLB_SHOE_COLORS = ['#0b0f19', '#f8fafc', '#1e293b', '#16a34a', '#f97316'];
 const PLAYER_BONES_WORLD = Object.create(null);
+// ============================================================================
+// MOTOR DE SINCRONÍA DETERMINISTA (RELOJ MAESTRO + COMPILADOR DE EVENTOS)
+// ============================================================================
+const ANIM_META = {
+  short_pass:      { kind: 'release', eventAt: 0.36, rate: 1, holdBone: null,        fade: 0.14 },
+  kick_pass:       { kind: 'release', eventAt: 0.36, rate: 1, holdBone: null,        fade: 0.14 },
+  shoot:           { kind: 'release', eventAt: 0.38, rate: 1, holdBone: null,        fade: 0.14 },
+  power_shot:      { kind: 'release', eventAt: 0.40, rate: 1, holdBone: null,        fade: 0.14 },
+  volley:          { kind: 'release', eventAt: 0.42, rate: 1, holdBone: null,        fade: 0.14 },
+  diving_shot:     { kind: 'release', eventAt: 0.44, rate: 1, holdBone: null,        fade: 0.14 },
+  header:          { kind: 'release', eventAt: 0.34, rate: 1, holdBone: null,        fade: 0.14 },
+  punt_kick:       { kind: 'release', eventAt: 0.48, rate: 1, holdBone: 'handsMid',  fade: 0.18 },
+  punt:            { kind: 'release', eventAt: 0.48, rate: 1, holdBone: 'handsMid',  fade: 0.18 },
+  goal_kick:       { kind: 'release', eventAt: 0.40, rate: 1, holdBone: null,        fade: 0.16 },
+  underhand_throw: { kind: 'release', eventAt: 0.54, rate: 1, holdBone: 'rightHand', fade: 0.18 },
+  overhand_throw:  { kind: 'release', eventAt: 0.50, rate: 1, holdBone: 'rightHand', fade: 0.18 },
+  short_throw:     { kind: 'release', eventAt: 0.50, rate: 1, holdBone: 'rightHand', fade: 0.18 },
+  long_throw:      { kind: 'release', eventAt: 0.52, rate: 1, holdBone: 'rightHand', fade: 0.18 },
+  throw_in:        { kind: 'release', eventAt: 0.50, rate: 1, holdBone: 'handsMid',  fade: 0.18 },
+  scoop_catch:     { kind: 'catch',   eventAt: 0.42, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
+  aerial_catch:    { kind: 'catch',   eventAt: 0.46, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
+  aerial_save:     { kind: 'catch',   eventAt: 0.48, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
+  body_block:      { kind: 'catch',   eventAt: 0.45, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
+  diving_low:      { kind: 'catch',   eventAt: 0.46, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
+  defensive:       { kind: 'idle',    eventAt: 0,    rate: 1, holdBone: 'handsMid',  fade: 0.18 },
+  idle:            { kind: 'idle',    eventAt: 0,    rate: 1, holdBone: 'handsMid',  fade: 0.18 },
+  jog:             { kind: 'move',    eventAt: 0,    rate: 1, holdBone: null,        fade: 0.16 },
+  sprint:          { kind: 'move',    eventAt: 0,    rate: 1, holdBone: null,        fade: 0.16 },
+};
+const DEFAULT_ANIM_META = { kind: 'idle', eventAt: 0.45, rate: 1, holdBone: 'handsMid', fade: 0.18 };
+const metaOfPose = (pose) => ANIM_META[pose] || DEFAULT_ANIM_META;
+const CLIP_DUR_CACHE = Object.create(null);
 
+const PLAYBACK_MASTER = {
+  active: false,
+  T: 0,
+  tl: null,
+  ball: { pos: null, mode: 'REST', owner: null },
+};
+
+const eventTimeSec = (pose) => {
+  const m = metaOfPose(pose);
+  const dur = CLIP_DUR_CACHE[pose] || 1.15;
+  return (m.eventAt * dur) / (m.rate || 1);
+};
+
+async function prewarmFramesClips(frames) {
+  const poses = new Set(['defensive', 'idle', 'jog', 'sprint']);
+  (frames || []).forEach((f) => {
+    (f?.objects || []).forEach((o) => {
+      if (o?.type === 'player' && o.animation) poses.add(o.animation);
+    });
+  });
+  const tasks = [];
+  for (const pose of poses) {
+    for (const catKey of ['arquero', 'campo']) {
+      const cat = FBX_ANIMATIONS?.[catKey];
+      const url = cat?.[pose];
+      if (!url) continue;
+      tasks.push(
+        loadFbxClip(url).then((raw) => {
+          if (raw && raw.duration && !CLIP_DUR_CACHE[pose]) {
+            CLIP_DUR_CACHE[pose] = raw.duration;
+          }
+        }).catch(() => {})
+      );
+    }
+  }
+  await Promise.all(tasks);
+}
+
+function compileTacticalTimeline(frames) {
+  const clampV = (v, a, b) => Math.min(b, Math.max(a, v));
+  const dist2 = (a, b) => Math.hypot((a?.x ?? 0) - (b?.x ?? 0), (a?.y ?? 0) - (b?.y ?? 0));
+  const segs = [];
+  const tracks = Object.create(null);
+  const playing = Object.create(null);
+  let T = 0;
+
+  const pushClip = (id, pose, start) => {
+    if (!id) return;
+    const p = pose || 'defensive';
+    if (playing[id] === p) return;
+    (tracks[id] ??= []).push({ pose: p, start });
+    playing[id] = p;
+  };
+
+  const getPlayers = (f) => (f?.objects || []).filter((o) => o.type === 'player');
+  const getBall = (f) => (f?.objects || []).find((o) => o.type === 'ball');
+
+  const f0Players = getPlayers(frames[0]);
+  const f0Ball = getBall(frames[0]);
+  const nearestTo = (list, pt) =>
+    !pt ? null : list.reduce((best, p) => (!best || dist2(p, pt) < dist2(best, pt) ? p : best), null);
+
+  let carry = f0Ball && (f0Ball.elevation ?? 0) >= 0.75 ? nearestTo(f0Players, f0Ball)?.id : null;
+
+  for (let i = 0; i < frames.length - 1; i++) {
+    const fA = frames[i];
+    const fB = frames[i + 1];
+    const pA = getPlayers(fA);
+    const pB = getPlayers(fB);
+    const bA = getBall(fA);
+    const bB = getBall(fB);
+    const dBall = bA && bB ? dist2(bA, bB) : 0;
+    const seg = { i, t0: T, dur: 1.5, ball: [], fromF: fA, toF: fB };
+
+    if (bA && bB && dBall > 1.5) {
+      // ---- TRAMO CON PASE / SAQUE / REMATE ----
+      const passer =
+        pA.find((p) => metaOfPose(p.animation).kind === 'release') ||
+        pA.find((p) => p.id === carry) ||
+        nearestTo(pA, bA);
+      const candReceivers = pB.filter((p) => p.id !== passer?.id);
+      const receiver =
+        candReceivers.find((p) => metaOfPose(p.animation).kind === 'catch') ||
+        nearestTo(candReceivers, bB);
+
+      const mP = metaOfPose(passer?.animation);
+      const mR = metaOfPose(receiver?.animation);
+      const isAir = fB?.ballLob === true;
+      const flight = clampV(dBall / (isAir ? 9.5 : 8.8), 0.50, 2.1);
+
+      let tRel = Math.max(0.28, eventTimeSec(passer?.animation));
+      let tArr = tRel + flight;
+      let startP = Math.max(0, tRel - eventTimeSec(passer?.animation));
+      let startR = tArr - (mR.kind === 'catch' ? eventTimeSec(receiver?.animation) : 0);
+      if (startR < 0) {
+        const shift = -startR;
+        tRel += shift;
+        tArr += shift;
+        startP += shift;
+        startR = 0;
+      }
+      seg.dur = Math.max(1.25, tArr + 0.24);
+
+      pA.forEach((p) => {
+        const endP = pB.find((q) => q.id === p.id) || p;
+        const moveD = dist2(p, endP);
+        if (passer && p.id === passer.id) {
+          pushClip(p.id, p.animation || 'short_pass', T + startP);
+        } else if (receiver && p.id === receiver.id && mR.kind === 'catch') {
+          pushClip(p.id, p.animation || 'defensive', T);
+          pushClip(p.id, endP.animation, T + startR);
+        } else if (moveD > 0.6) {
+          pushClip(p.id, moveD > 16 ? 'sprint' : 'jog', T);
+        } else {
+          pushClip(p.id, p.animation || endP.animation || 'defensive', T);
+        }
+      });
+
+      const heldBone = mP.holdBone;
+      seg.ball = [
+        heldBone && passer
+          ? { type: 'HOLD', owner: passer.id, bone: heldBone, t0: 0, t1: tRel }
+          : { type: 'REST', pos: bA, t0: 0, t1: tRel },
+        { type: 'FLIGHT', from: bA, to: bB, air: isAir, t0: tRel, t1: tArr, passer: passer?.id },
+        receiver && mR.kind === 'catch' && mR.holdBone
+          ? { type: 'HOLD', owner: receiver.id, bone: mR.holdBone, t0: tArr, t1: seg.dur }
+          : { type: 'REST', pos: bB, t0: tArr, t1: seg.dur },
+      ];
+      carry = receiver && mR.kind === 'catch' ? receiver.id : null;
+    } else {
+      // ---- TRAMO DE RETENCIÓN / INCORPORACIÓN SIN TRASLADO DE BALÓN (ej. Frame 2 -> 3) ----
+      const tail = Math.max(
+        0,
+        ...pA.map((p) => {
+          const m = metaOfPose(p.animation);
+          const dur = CLIP_DUR_CACHE[p.animation] || 1.0;
+          return ((1 - m.eventAt) * dur) / (m.rate || 1);
+        })
+      );
+      seg.dur = clampV(tail, 0.68, 0.85);
+      pA.forEach((p) => {
+        const endP = pB.find((q) => q.id === p.id) || p;
+        const moveD = dist2(p, endP);
+        if (moveD > 0.6) pushClip(p.id, moveD > 16 ? 'sprint' : 'jog', T);
+        else pushClip(p.id, endP.animation || p.animation || 'defensive', T);
+      });
+
+      const owner = carry || (bA && (bA.elevation ?? 0) >= 0.75 ? nearestTo(pA, bA)?.id : null);
+      const ownerObj = owner ? pB.find((p) => p.id === owner) || pA.find((p) => p.id === owner) : null;
+      const bone = ownerObj ? metaOfPose(ownerObj.animation).holdBone || 'handsMid' : null;
+      seg.ball =
+        owner && bB
+          ? [{ type: 'HOLD', owner, bone, t0: 0, t1: seg.dur }]
+          : bB
+            ? [{ type: 'REST', pos: bB, t0: 0, t1: seg.dur }]
+            : [];
+    }
+
+    T += seg.dur;
+    segs.push(seg);
+  }
+
+  // ---- OUTRO: Cierre visual limpio del último frame antes de reiniciar al Frame 1 ----
+  const lastF = frames[frames.length - 1];
+  const lastP = getPlayers(lastF);
+  const lastB = getBall(lastF);
+  const outroDur = clampV(
+    Math.max(
+      0,
+      ...lastP.map((p) => {
+        const m = metaOfPose(p.animation);
+        const dur = CLIP_DUR_CACHE[p.animation] || 1.0;
+        return ((1 - m.eventAt) * dur) / (m.rate || 1);
+      })
+    ),
+    0.55,
+    0.90
+  );
+  lastP.forEach((p) => pushClip(p.id, p.animation || 'defensive', T));
+  const lastOwnerObj = carry ? lastP.find((p) => p.id === carry) : null;
+  segs.push({
+    i: frames.length - 1,
+    t0: T,
+    dur: outroDur,
+    fromF: lastF,
+    toF: lastF,
+    ball:
+      carry && lastB
+        ? [{ type: 'HOLD', owner: carry, bone: metaOfPose(lastOwnerObj?.animation).holdBone || 'handsMid', t0: 0, t1: outroDur }]
+        : lastB
+          ? [{ type: 'REST', pos: lastB, t0: 0, t1: outroDur }]
+          : [],
+  });
+  T += outroDur;
+
+  return { segs, tracks, total: T };
+}
+
+const segAtTime = (tl, t) => {
+  for (let k = tl.segs.length - 1; k >= 0; k--) {
+    if (t >= tl.segs[k].t0) return tl.segs[k];
+  }
+  return tl.segs[0];
+};
 function GLBPlayer({ playerId, color, number, isSelected, onClick, facing = 0, role, animation, animNonce = 0 }) {
   const { scene } = useGLTF(GLB_URL, DRACO_URL);
   const gl = useThree((state) => state.gl);
@@ -2036,8 +2272,59 @@ function GLBPlayer({ playerId, color, number, isSelected, onClick, facing = 0, r
   }, [mixer, clone, playerId]);
 
   // Actualización única por frame + publicación de coordenadas reales de huesos
+  // Actualización única por frame (reloj maestro en Play o delta normal en edición) + huesos mundiales
   useFrame((_, delta) => {
-    mixer.update(Math.min(delta, 0.05));
+    const pm = PLAYBACK_MASTER;
+    const track = pm.active && pm.tl && playerId ? pm.tl.tracks[playerId] : null;
+
+    if (track && track.length > 0 && ready) {
+      const cat = isGK ? FBX_ANIMATIONS.arquero : FBX_ANIMATIONS.campo;
+      let k = 0;
+      for (let n = track.length - 1; n >= 0; n--) {
+        if (pm.T >= track[n].start) { k = n; break; }
+      }
+      const cur = track[k];
+      const prev = k > 0 ? track[k - 1] : null;
+      const mCur = metaOfPose(cur.pose);
+      const rawW = prev ? Math.min(1, Math.max(0, (pm.T - cur.start) / (mCur.fade || 0.16))) : 1;
+      const w = rawW * rawW * (3 - 2 * rawW);
+
+      const applySeek = (poseKey, startT, weight) => {
+        const key = cat[poseKey] ? poseKey : 'defensive';
+        const url = cat[key] || cat[Object.keys(cat)[0]];
+        const raw = url ? FBX_RAW_CACHE?.[url] : null;
+        if (!raw) return null;
+        const clip = getPlayableFbxClip(raw, url, clone);
+        if (!clip) return null;
+        if (!isGK && key === 'defensive') {
+          clip.tracks = clip.tracks.filter((t) => !t.name.endsWith('.position'));
+        }
+        const act = mixer.clipAction(clip, clone);
+        const dur = clip.duration || 1;
+        let tSeek = (pm.T - startT) * (metaOfPose(poseKey).rate || 1);
+        tSeek = mCur.kind === 'idle' || mCur.kind === 'move'
+          ? ((tSeek % dur) + dur) % dur
+          : Math.min(Math.max(tSeek, 0), dur - 1e-3);
+        act.enabled = true;
+        act.paused = false;
+        act.time = tSeek;
+        act.setEffectiveWeight(weight);
+        act.play();
+        return act;
+      };
+
+      mixer._actions?.forEach((a) => { a.enabled = false; a.setEffectiveWeight(0); });
+      const activeAct = applySeek(cur.pose, cur.start, w);
+      if (prev && w < 1) applySeek(prev.pose, prev.start, 1 - w);
+      mixer.update(0);
+      if (activeAct) {
+        playState.current.action = activeAct;
+        playState.current.key = cur.pose;
+      }
+    } else {
+      mixer.update(Math.min(delta, 0.05));
+    }
+
     if (!playerId) return;
     clone.updateMatrixWorld(true);
     const { rightHand, leftHand, rightFoot, leftFoot, head } = boneRefs;
@@ -3138,11 +3425,18 @@ function TacticalBall3D({ obj, pos, objects, isPC, onDown, handlePointerMove, ha
   useFrame(() => {
     const g = groupRef.current;
     if (!g) return;
+
+    // Durante reproducción: posición 100% determinista desde el reloj maestro
+    if (PLAYBACK_MASTER.active && PLAYBACK_MASTER.ball.pos) {
+      const [px, py, pz] = PLAYBACK_MASTER.ball.pos;
+      g.position.set(px, py, pz);
+      return;
+    }
+
+    // En modo edición (detenido): asistencia visual suave hacia manos/pies cercanos
     let tx = bx;
     let ty = by;
     let tz = bz;
-
-    // Buscar jugador/arquero en contacto directo (< 1.45 m) con pose activa de mano/pie/cabeza
     let bestBone = null;
     let bestDist = 1.45;
     for (let i = 0; i < objects.length; i++) {
@@ -3151,7 +3445,7 @@ function TacticalBall3D({ obj, pos, objects, isPC, onDown, handlePointerMove, ha
       const bData = PLAYER_BONES_WORLD[p.id];
       if (!bData) continue;
       const anim = p.animation || bData.key || '';
-      const isHandPose = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'underhand_throw', 'overhand_throw', 'throw_in'].includes(anim)
+      const isHandPose = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'underhand_throw', 'overhand_throw', 'short_throw', 'long_throw', 'throw_in'].includes(anim)
         || (p.role === 'GK' && Number(obj?.elevation || 0) >= 0.85 && Number(obj?.elevation || 0) <= 1.65);
       const isFootPose = ['pass', 'short_pass', 'shoot', 'power_shot', 'volley', 'diving_shot', 'punt'].includes(anim);
       const isHeadPose = anim === 'header';
@@ -3310,7 +3604,7 @@ function Scene3D({ objects, setObjects, drawings, textBlocks, selectedObj, setSe
       isDragging.current = false;
       dragId.current = null;
       setActiveDragId(null);
-      if (recordHistory) recordHistory(objects);
+      if (typeof onRecordHistory === 'function') onRecordHistory(objects);
       if (e?.target?.releasePointerCapture && e?.pointerId !== undefined) {
         try {
           e.target.releasePointerCapture(e.pointerId);
@@ -4014,8 +4308,15 @@ export default function App() {
   const pausedFrameStateRef = useRef(null);
   const livePlaybackProgressRef = useRef({ segmentIdx: 0, rawT: 0 });
   const lastYawMapRef = useRef({});
-
+  const historyStackRef = useRef([]);
+  const recordHistory = useCallback((snapshotObjs) => {
+    if (PLAYBACK_MASTER.active) return;
+    const snap = JSON.parse(JSON.stringify(snapshotObjs || objects));
+    historyStackRef.current.push(snap);
+    if (historyStackRef.current.length > 60) historyStackRef.current.shift();
+  }, [objects]);
   const stopFramesPlayback = (keepPause = false) => {
+    PLAYBACK_MASTER.active = false;
     setIsPlayingFrames(false);
     skipFrameSyncRef.current = true;
     if (keepPause) {
@@ -4030,7 +4331,7 @@ export default function App() {
     }
   };
 
-  const playFramesSequence = (autoRecord = false) => {
+  const playFramesSequence = async (autoRecord = false) => {
     if (frames.length < 2) {
       alert('Agrega al menos 2 Frames (+ Frame) moviendo jugadores, arquero o balón entre cada paso.');
       return;
@@ -4040,17 +4341,21 @@ export default function App() {
     const resumeState = !autoRecord ? pausedFrameStateRef.current : null;
     stopFramesPlayback(false);
 
-    let segmentIdx = resumeState ? resumeState.segmentIdx : 0;
-    const initialRawT = resumeState ? resumeState.rawT : 0;
-    let segmentInitDone = false;
+    // 1. Pre-carga síncrona de todos los clips FBX para obtener CLIP_DUR_CACHE real y evitar latencia
+    await prewarmFramesClips(frames);
+    const tl = compileTacticalTimeline(frames);
 
+    PLAYBACK_MASTER.tl = tl;
+    PLAYBACK_MASTER.T = resumeState
+      ? Math.min(tl.total, (tl.segs[resumeState.segmentIdx]?.t0 || 0) + (resumeState.rawT || 0) * (tl.segs[resumeState.segmentIdx]?.dur || 1))
+      : 0;
+    PLAYBACK_MASTER.active = true;
+
+    const firstFrame = frames[0];
     if (!resumeState) {
-      const firstFrame = frames[0];
       if (firstFrame?.objects) setObjects(JSON.parse(JSON.stringify(firstFrame.objects)));
       if (firstFrame?.drawings) setDrawings(JSON.parse(JSON.stringify(firstFrame.drawings)));
       setActiveFrameIndex(0);
-    } else {
-      setActiveFrameIndex(segmentIdx);
     }
     setIsPlayingFrames(true);
 
@@ -4058,380 +4363,137 @@ export default function App() {
       startRecording();
     }
 
-    const getSegmentDurationMs = (fA, fB) => {
-    const objsA = fA?.objects || [];
-    const objsB = fB?.objects || [];
-    let maxDist = 0;
-    let hasTechAction = false;
-    const techPoses = new Set([
-      'scoop_catch', 'aerial_catch', 'aerial_save', 'body_block',
-      'diving_low', 'underhand_throw', 'overhand_throw', 'punt', 'punt_kick', 'goal_kick'
-    ]);
-    objsB.forEach((b) => {
-      const a = objsA.find((o) => o.id === b.id);
-      if (techPoses.has(b.animation) || techPoses.has(a?.animation)) hasTechAction = true;
-      if (a) {
-        const d = Math.hypot((b.x || 0) - (a.x || 0), (b.y || 0) - (a.y || 0));
-        if (d > maxDist) maxDist = d;
-      }
-    });
-    const minMs = hasTechAction ? 2400 : 1150;
-    const clamped = Math.max(minMs, Math.min(2800, maxDist * 45));
-    return clamped / playbackSpeed;
-  };
+    const ballState = { pieceKey: null, entryWorld: [0, 0.24, 0], enterT: 0, lastWorld: [0, 0.24, 0] };
+    const toWorldField = (obj2d) => {
+      if (isPC) return [(obj2d?.x ?? 52.5) - 52.5, Math.max(0.24, obj2d?.elevation ?? 0.24), (obj2d?.y ?? 34) - 34];
+      return [52.5 - (obj2d?.y ?? 34), Math.max(0.24, obj2d?.elevation ?? 0.24), (obj2d?.x ?? 52.5) - 34];
+    };
+    const smooth = (x) => x * x * (3 - 2 * x);
+    const clamp01 = (v) => Math.min(1, Math.max(0, v));
+    const lerp = (a, b, k) => a + (b - a) * k;
 
-    const firstDurMs = getSegmentDurationMs(frames[segmentIdx], frames[segmentIdx + 1]);
-    let segStartPerf = resumeState
-      ? performance.now() - initialRawT * firstDurMs
-      : performance.now() + 450;
+    let lastPerf = performance.now();
 
     const step = (now) => {
-      const fromF = frames[segmentIdx];
-      const toF = frames[segmentIdx + 1];
-      if (!fromF || !toF) {
-        stopFramesPlayback(false);
-        if (autoRecord) stopRecording();
-        return;
-      }
+      if (!PLAYBACK_MASTER.active) return;
+      const dt = Math.min((now - lastPerf) / 1000, 0.05);
+      lastPerf = now;
 
-      if (segStartPerf === null) segStartPerf = now;
-      if (now < segStartPerf) { frameAnimRafRef.current = requestAnimationFrame(step); return; }
-      const durMs = getSegmentDurationMs(fromF, toF);
-      const rawT = Math.min(1, (now - segStartPerf) / durMs);
-      livePlaybackProgressRef.current = { segmentIdx, rawT };
-      const t = rawT < 0.5 ? 4 * rawT * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 3) / 2;
+      PLAYBACK_MASTER.T += dt * playbackSpeed;
 
-      const fromObjs = fromF.objects || [];
-      const toObjs = toF.objects || [];
-      const toBall = toObjs.find((o) => o.type === 'ball');
-      const fromBall = fromObjs.find((o) => o.type === 'ball');
-
-      let passerId = null;
-      let passerObj = null;
-      if (fromBall && toBall) {
-        const ballDist = Math.hypot((toBall.x || 0) - (fromBall.x || 0), (toBall.y || 0) - (fromBall.y || 0));
-        if (ballDist > 1.5) {
-          let bestD = Infinity;
-          fromObjs.forEach((o) => {
-            if (o.type === 'player') {
-              const d = Math.hypot((o.x || 0) - (fromBall.x || 0), (o.y || 0) - (fromBall.y || 0));
-              if (d < bestD) { bestD = d; passerId = o.id; passerObj = o; }
-            }
-          });
-          if (bestD >= 14) { passerId = null; passerObj = null; }
+      if (PLAYBACK_MASTER.T >= tl.total) {
+        if (loopFrames && !autoRecord) {
+          PLAYBACK_MASTER.T = 0;
+          ballState.pieceKey = null;
+          if (frames[0]?.drawings) setDrawings(JSON.parse(JSON.stringify(frames[0].drawings)));
+        } else {
+          PLAYBACK_MASTER.T = tl.total;
+          PLAYBACK_MASTER.active = false;
+          stopFramesPlayback();
+          if (autoRecord) setTimeout(() => stopRecording(), 250);
+          return;
         }
       }
 
-      // Clasificación del gesto del ejecutor: mano (arquero/saque), cabeza o pie
-      const passerStart = passerObj ? (fromObjs.find((o) => o.id === passerObj.id) || passerObj) : null;
-      const passerEnd = passerObj ? (toObjs.find((o) => o.id === passerObj.id) || passerObj) : null;
-      const startPose = passerStart?.animation || '';
-          const endPose = passerEnd?.animation || '';
-          const neutralPoses = ['', 'idle', 'defensive', 'jog', 'sprint'];
-          const passerPose = !neutralPoses.includes(startPose) ? startPose : (!neutralPoses.includes(endPose) ? endPose : (endPose || startPose));
-          const handPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low', 'short_throw', 'long_throw', 'overhand_throw', 'underhand_throw', 'throw_in'];
-          const isVolleyGK = passerPose === 'punt_kick';
-          const isHandAction = !!passerObj && !isVolleyGK && (handPoses.includes(passerPose) || passerObj.role === 'GK' || passerObj.role === 'POR');
-          const isHeadAction = !!passerObj && !isHandAction && !isVolleyGK && (passerPose === 'header' || (fromBall?.elevation ?? 0) >= 1.5);
+      const T = PLAYBACK_MASTER.T;
+      const seg = segAtTime(tl, T);
+      const localT = T - seg.t0;
+      const rawT = clamp01(localT / Math.max(0.05, seg.dur));
+      const easeT = smooth(rawT);
 
-      let kickOriginX = fromBall?.x ?? 0;
-      let kickOriginY = fromBall?.y ?? 0;
-      if (passerObj && toBall) {
-        const kdx = (toBall.x ?? 0) - (passerObj.x ?? 0);
-        const kdy = (toBall.y ?? 0) - (passerObj.y ?? 0);
-        const klen = Math.hypot(kdx, kdy);
-        if (klen > 0.3) {
-          const ux = kdx / klen;
-          const uy = kdy / klen;
-          if (passerPose === 'underhand_throw') {
-            // Mano derecha abajo estilo boliche, alineada hacia el receptor
-            kickOriginX = (passerObj.x ?? 0) + ux * 0.72 - uy * 0.32;
-            kickOriginY = (passerObj.y ?? 0) + uy * 0.72 + ux * 0.32;
-          } else if (isHandAction) {
-            kickOriginX = (passerObj.x ?? 0) + ux * 0.65;
-            kickOriginY = (passerObj.y ?? 0) + uy * 0.65;
-          } else if (isHeadAction) {
-            kickOriginX = (passerObj.x ?? 0) + ux * 0.55;
-            kickOriginY = (passerObj.y ?? 0) + uy * 0.55;
-          } else if (isVolleyGK) {
-            kickOriginX = (passerObj.x ?? 0) + ux * 1.15 - uy * 0.32;
-            kickOriginY = (passerObj.y ?? 0) + uy * 1.15 + ux * 0.32;
-          } else {
-            kickOriginX = (passerObj.x ?? 0) + ux * 1.55 - uy * 0.38;
-            kickOriginY = (passerObj.y ?? 0) + uy * 1.55 + ux * 0.38;
-          }
+      livePlaybackProgressRef.current = { segmentIdx: seg.i, rawT };
+      setActiveFrameIndex(rawT < 0.55 ? seg.i : Math.min(frames.length - 1, seg.i + 1));
+
+      // 2. Resolver posición exacta del balón (REST | HOLD en hueso real | FLIGHT)
+      const piece = seg.ball.find((p) => localT >= p.t0 && localT < p.t1) || seg.ball[seg.ball.length - 1];
+      if (piece) {
+        const pKey = `${seg.i}:${piece.type}:${piece.t0}`;
+        if (pKey !== ballState.pieceKey) {
+          ballState.pieceKey = pKey;
+          ballState.entryWorld = [...ballState.lastWorld];
+          ballState.enterT = T;
         }
+
+        let targetW = ballState.lastWorld;
+        if (piece.type === 'HOLD') {
+          const bData = PLAYER_BONES_WORLD[piece.owner];
+          const boneVec = bData?.[piece.bone] || bData?.handsMid;
+          if (boneVec) {
+            const blend = smooth(clamp01((T - ballState.enterT) / 0.12));
+            targetW = [
+              lerp(ballState.entryWorld[0], boneVec[0], blend),
+              lerp(ballState.entryWorld[1], Math.max(0.24, boneVec[1]), blend),
+              lerp(ballState.entryWorld[2], boneVec[2], blend),
+            ];
+          }
+        } else if (piece.type === 'FLIGHT') {
+          const u = clamp01((localT - piece.t0) / Math.max(0.05, piece.t1 - piece.t0));
+          const a = ballState.entryWorld;
+          const b = toWorldField(piece.to);
+          const dist = Math.hypot(b[0] - a[0], b[2] - a[2]);
+          const arc = piece.air ? Math.min(3.2, Math.max(0.7, dist * 0.18)) : 0;
+          const horiz = piece.air ? u : u * (2 - u) * 0.15 + u * 0.85;
+          const y = 0.24 + (a[1] - 0.24) * (1 - u) + (piece.air ? Math.sin(Math.PI * u) * arc : 0);
+          targetW = [lerp(a[0], b[0], horiz), y, lerp(a[2], b[2], horiz)];
+        } else {
+          targetW = toWorldField(piece.pos);
+          targetW[1] = 0.24;
+        }
+
+        ballState.lastWorld = targetW;
+        PLAYBACK_MASTER.ball.pos = targetW;
+        PLAYBACK_MASTER.ball.mode = piece.type;
+        PLAYBACK_MASTER.ball.owner = piece.owner || null;
       }
 
-      // Detectar posesión y fase biomecánica del balón en el segmento actual
-        const nearestGK = toObjs.find((o) => o.type === 'player' && (o.role === 'GK' || o.role === 'POR'));
-        const gkStartObj = nearestGK ? (fromObjs.find((o) => o.id === nearestGK.id) || nearestGK) : null;
-        const gkDistFromBall = (gkStartObj && fromBall)
-          ? Math.hypot((fromBall.x ?? 0) - (gkStartObj.x ?? 0), (fromBall.y ?? 0) - (gkStartObj.y ?? 0))
-          : 999;
-        const gkDistToBall = (nearestGK && toBall)
-          ? Math.hypot((toBall.x ?? 0) - (nearestGK.x ?? 0), (toBall.y ?? 0) - (nearestGK.y ?? 0))
-          : 999;
-        const gkAnimEnd = nearestGK?.animation || '';
-        const gkAnimStart = gkStartObj?.animation || '';
-        const gkHoldPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'idle', 'defensive'];
-        const isGKThrowing = passerId === nearestGK?.id && (
-            gkAnimStart === 'underhand_throw' || gkAnimStart === 'overhand_throw' || gkAnimStart === 'punt_kick' ||
-            gkAnimEnd === 'underhand_throw' || gkAnimEnd === 'overhand_throw' || gkAnimEnd === 'punt_kick'
-          );
-        const isGKHoldingWholeSegment = !isGKThrowing
-          && !!nearestGK
-          && gkDistFromBall < 2.2
-          && gkDistToBall < 2.2
-          && (gkHoldPoses.includes(gkAnimEnd) || gkHoldPoses.includes(gkAnimStart));
+      // 3. Interpolar desplazamiento táctico (x, y) y orientación de los jugadores
+      const fromObjs = seg.fromF?.objects || [];
+      const toObjs = seg.toF?.objects || [];
+      const toBall2d = toObjs.find((o) => o.type === 'ball');
 
-        const isLob = toF.ballLob === true;
-        const interpObjs = toObjs.map((targetObj) => {
-          const startObj = fromObjs.find((o) => o.id === targetObj.id) || targetObj;
-          const dx = (targetObj.x ?? 0) - (startObj.x ?? 0);
-          const dy = (targetObj.y ?? 0) - (startObj.y ?? 0);
-          const moveDist = Math.hypot(dx, dy);
+      const interpObjs = toObjs.map((targetObj) => {
+        const startObj = fromObjs.find((o) => o.id === targetObj.id) || targetObj;
+        const nx = (startObj.x ?? 0) + ((targetObj.x ?? 0) - (startObj.x ?? 0)) * easeT;
+        const ny = (startObj.y ?? 0) + ((targetObj.y ?? 0) - (startObj.y ?? 0)) * easeT;
 
-          // Progreso biomecánico real del clip del ejecutante (0.0 -> 1.0 desde PLAYER_BONES_WORLD)
-          const passerBones = passerId ? PLAYER_BONES_WORLD[passerId] : null;
-          const passerClipKey = passerBones?.key || '';
-          const isPasserClipActive = !!(passerBones && passerClipKey && passerClipKey !== 'idle' && passerClipKey !== 'defensive');
-          const clipProg = isPasserClipActive ? (passerBones.progress ?? 0) : rawT;
-
-          // Instante exacto de impacto/liberación en el clip real de Mixamo:
-          // - Saque de boliche (underhand_throw): suelta al 54% cuando la mano pasa frente a la cadera
-          // - Pase corto / tiro con pie: impacta al 38% | Cabezazo: 34% | Volea / saque alto: 42%
-          const releaseAt = passerId
-            ? (isGKThrowing ? 0.54 : isHeadAction ? 0.34 : (isHandAction || isVolleyGK) ? 0.42 : 0.38)
-            : 0;
-          const smooth = (k) => k * k * (3 - 2 * k);
-          const clamp01 = (v) => Math.min(1, Math.max(0, v));
-
-          let effectiveT = t;
-          let effectiveRawT = rawT;
-          let origX = startObj.x ?? targetObj.x;
-          let origY = startObj.y ?? targetObj.y;
-
-          if (targetObj.type === 'ball' && passerId && !isGKHoldingWholeSegment) {
-            origX = kickOriginX;
-            origY = kickOriginY;
-            // Combina el instante real de impacto del clip con el recorrido limpio hasta el final del tramo
-            const hasReleased = clipProg >= releaseAt || rawT >= 0.52;
-            if (!hasReleased) {
-              effectiveRawT = 0;
-              effectiveT = 0;
-            } else {
-              const travelSpan = Math.max(0.25, 1 - Math.min(rawT, releaseAt));
-              effectiveRawT = clamp01((rawT - Math.min(rawT, releaseAt)) / travelSpan);
-              effectiveT = smooth(effectiveRawT);
-            }
-          }
-
-          let nx = origX + ((targetObj.x ?? 0) - origX) * effectiveT;
-          let ny = origY + ((targetObj.y ?? 0) - origY) * effectiveT;
-          let nz = targetObj.elevation ?? 0;
-
-          if (targetObj.type === 'ball') {
-            const gkBones = nearestGK ? PLAYER_BONES_WORLD[nearestGK.id] : null;
-            const isIncomingToScoop = !isGKHoldingWholeSegment && gkAnimEnd === 'scoop_catch' && gkDistToBall < 2.2;
-
-            if (isGKHoldingWholeSegment && nearestGK && gkStartObj) {
-              // Sube progresivamente desde el piso (0.28m) hasta las manos (handsMid) al incorporarse
-              const holdLift = smooth(clamp01(rawT / 0.50));
-              if (gkBones && gkBones.handsMid) {
-                nx = gkBones.handsMid[0];
-                ny = gkBones.handsMid[2];
-                nz = Math.max(0.28, gkBones.handsMid[1]);
-              } else {
-                const gkX = (gkStartObj.x ?? 0) + ((nearestGK.x ?? 0) - (gkStartObj.x ?? 0)) * t;
-                const gkY = (gkStartObj.y ?? 0) + ((nearestGK.y ?? 0) - (gkStartObj.y ?? 0)) * t;
-                const gkDir = (nearestGK.team === 'red') ? -1 : 1;
-                nx = gkX + gkDir * 0.52;
-                ny = gkY;
-                nz = (gkAnimEnd === 'scoop_catch') ? 0.30 : (0.30 + (1.05 - 0.30) * holdLift);
-              }
-            } else if (isGKThrowing && nearestGK && gkStartObj && effectiveRawT === 0) {
-              // El balón acompaña pegado a la mano derecha durante todo el armado del saque (0% -> 54% del clip real)
-              if (gkBones && gkBones.rightHand) {
-                nx = gkBones.rightHand[0];
-                ny = gkBones.rightHand[2];
-                nz = Math.max(0.24, gkBones.rightHand[1]);
-              } else {
-                const gkX = (gkStartObj.x ?? 0) + ((nearestGK.x ?? 0) - (gkStartObj.x ?? 0)) * t;
-                const gkY = (gkStartObj.y ?? 0) + ((nearestGK.y ?? 0) - (gkStartObj.y ?? 0)) * t;
-                const gkDir = (nearestGK.team === 'red') ? -1 : 1;
-                nx = gkX + gkDir * 0.45;
-                ny = gkY + 0.25;
-                nz = 0.50;
-              }
-            } else if (passerId && effectiveRawT === 0) {
-              // Antes del impacto real del pie/cabeza, el balón espera quieto en su origen
-              nx = startObj.x ?? origX;
-              ny = startObj.y ?? origY;
-              nz = startObj.elevation ?? 0;
-            } else {
-              const startZ = isHeadAction
-                ? Math.max(startObj.elevation ?? 0, 2.15)
-                : isVolleyGK
-                  ? 0.95
-                  : isHandAction
-                    ? (passerPose === 'underhand_throw' ? 0.36 : passerPose === 'overhand_throw' ? 1.95 : passerPose === 'throw_in' ? 2.15 : 1.15)
-                    : (startObj.elevation ?? 0);
-              const endZ = isIncomingToScoop ? 0.24 : (targetObj.elevation ?? 0);
-              const baseZ = startZ + (endZ - startZ) * effectiveT;
-              if (isLob || passerPose === 'overhand_throw' || isVolleyGK) {
-                nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 3.0;
-              } else if (isHeadAction && endZ >= 1.4) {
-                nz = baseZ + Math.sin(Math.PI * effectiveRawT) * 0.55;
-              } else {
-                nz = baseZ;
-              }
-            }
-          }
-          
         let rotDeg = targetObj.rotation ?? startObj.rotation ?? 0;
-        let rotY = targetObj.rotationY ?? startObj.rotationY ?? 0;
-        let activeAnim = targetObj.animation || startObj.animation || 'idle';
-        let nonce = targetObj.animNonce || 0;
+        let rotY = targetObj.rotationY ?? startObj.rotationY;
 
-        if (targetObj.type === 'player') {
-          const computeYaw3D = (vx, vy) => Math.atan2(-vy, vx) || 0.0001;
-          const lerpAngle = (a, b, k) => {
-            let d = ((b - a + Math.PI) % (2 * Math.PI)) - Math.PI;
-            if (d < -Math.PI) d += 2 * Math.PI;
-            return (a + d * k) || 0.0001;
-          };
-
-          const bCurX = toBall ? kickOriginX + ((toBall.x ?? 0) - kickOriginX) * effectiveT : undefined;
-          const bCurY = toBall ? kickOriginY + ((toBall.y ?? 0) - kickOriginY) * effectiveT : undefined;
-          const savedYaw = lastYawMapRef.current[targetObj.id];
-          const prevYaw = savedYaw !== undefined
-            ? savedYaw
-            : (startObj.rotationY !== undefined && startObj.rotationY !== 0
-              ? startObj.rotationY
-              : ((startObj.team === 'blue' || startObj.team === 'gk') ? 0.0001 : Math.PI));
-
-          // 1. Seguimiento visual continuo: pasador acompaña el pase, corredor mira su carrera y receptor mira al balón en todo momento
-          if (targetObj.id === passerId && bCurX !== undefined && bCurY !== undefined) {
-            const pdx = (rawT < releaseAt ? (toBall.x ?? 0) : bCurX) - nx;
-            const pdy = (rawT < releaseAt ? (toBall.y ?? 0) : bCurY) - ny;
-            if (Math.hypot(pdx, pdy) > 0.25) {
-              const targetYaw = computeYaw3D(pdx, pdy);
-              rotDeg = (Math.atan2(pdy, pdx) * 180) / Math.PI;
-              rotY = rawT < releaseAt ? lerpAngle(prevYaw, targetYaw, smooth(clamp01(rawT / releaseAt))) : targetYaw;
-            } else {
-              rotY = prevYaw;
-            }
-          } else if (moveDist > 2.5 && rawT < 0.78) {
-            const runYaw = computeYaw3D(dx, dy);
-            rotDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-            rotY = rawT < 0.18 ? lerpAngle(prevYaw, runYaw, smooth(rawT / 0.18)) : runYaw;
-          } else if (bCurX !== undefined && bCurY !== undefined) {
-            const ldx = bCurX - nx;
-            const ldy = bCurY - ny;
-            if (Math.hypot(ldx, ldy) > 0.25) {
-              const ballYaw = computeYaw3D(ldx, ldy);
-              const fromYaw = moveDist > 2.5 ? computeYaw3D(dx, dy) : prevYaw;
-              const turnT = moveDist > 2.5 ? smooth(clamp01((rawT - 0.66) / 0.22)) : smooth(clamp01((rawT - 0.18) / 0.30));
-              rotDeg = (Math.atan2(ldy, ldx) * 180) / Math.PI;
-              rotY = lerpAngle(fromYaw, ballYaw, turnT);
-            } else {
-              rotY = prevYaw;
-            }
-          }
-
-          lastYawMapRef.current[targetObj.id] = rotY;
-
-          // 2. Clips reales FBX_ANIMATIONS con orden causal (Pasador primero -> Receptor al llegar el balón)
-            const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'kick_pass', 'strike_motion', 'header'];
-            const catchPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low'];
-            const hasCustomEndPose = targetObj.animation && !standardStates.includes(targetObj.animation);
-            const hasCustomStartPose = startObj.animation && !standardStates.includes(startObj.animation);
-            const segNonce = (startObj.animNonce || 0) + segmentIdx + 1;
-
-            if (targetObj.id === passerId && rawT < 0.92) {
-              // El pasador ejecuta el gesto asignado en su frame de origen (ej. Pase Corto en Frame 1, Saque Bajo en Frame 4)
-              const hasPasserSpecificPose = passerPose && !standardStates.includes(passerPose);
-              activeAnim = hasPasserSpecificPose ? passerPose : (isHeadAction ? 'header' : (isLob ? 'strike_motion' : 'kick_pass'));
-              nonce = segNonce;
-            } else if (hasCustomEndPose && catchPoses.includes(targetObj.animation)) {
-              // El receptor dispara la atrapada justo en el instante en que sale el pase (rawT >= 0.34)
-              if (rawT >= 0.34) {
-                activeAnim = targetObj.animation;
-                nonce = segNonce;
-              } else {
-                activeAnim = hasCustomStartPose ? startObj.animation : 'defensive';
-              }
-            } else if (hasCustomEndPose) {
-              activeAnim = targetObj.animation;
-              nonce = segNonce;
-            } else if (hasCustomStartPose && rawT < 0.35) {
-              activeAnim = startObj.animation;
-            } else if (moveDist > 0.5 && rawT < 0.86) {
-              activeAnim = moveDist > 16 ? 'sprint' : 'jog';
-            } else {
-              activeAnim = 'defensive';
-            }
-          }
-
-          return {
-            ...targetObj,
-            x: nx,
-            y: ny,
-            elevation: nz,
-            rotation: rotDeg,
-            rotationY: rotY,
-            animation: activeAnim,
-            animNonce: nonce,
-          };
-        });
-
-        segmentInitDone = true;
-        setObjects(interpObjs);
-
-        // Actualiza el indicador visual del frame activo dentro del tramo en curso
-        if (rawT < 0.55) {
-          setActiveFrameIndex(segmentIdx);
-        } else if (segmentIdx + 1 < frames.length) {
-          setActiveFrameIndex(segmentIdx + 1);
-        }
-
-        if (rawT >= 1) {
-          segmentIdx += 1;
-          if (toF.drawings) setDrawings(JSON.parse(JSON.stringify(toF.drawings)));
-
-          if (segmentIdx >= frames.length - 1) {
-            setActiveFrameIndex(frames.length - 1);
-            if (loopFrames && !autoRecord) {
-              // Pausa breve en Frame 5 para apreciar el cierre y reinicio limpio en Frame 1 (índice 0)
-              setTimeout(() => {
-                if (frames[0]?.objects) setObjects(JSON.parse(JSON.stringify(frames[0].objects)));
-                setActiveFrameIndex(0);
-              }, 450);
-              segmentIdx = 0;
-              segStartPerf = now + 950;
-              segmentInitDone = false;
-            } else {
-              stopFramesPlayback();
-              if (autoRecord) setTimeout(() => stopRecording(), 250);
-              return;
-            }
-          } else {
-            segStartPerf = now;
-            segmentInitDone = false;
+        if (targetObj.type === 'player' && toBall2d) {
+          const fdx = (toBall2d.x ?? 0) - nx;
+          const fdy = (toBall2d.y ?? 0) - ny;
+          if (Math.hypot(fdx, fdy) > 0.35) {
+            const targetDeg = (Math.atan2(fdy, fdx) * 180) / Math.PI;
+            const startDeg = startObj.rotation ?? targetDeg;
+            let diff = ((targetDeg - startDeg + 540) % 360) - 180;
+            rotDeg = startDeg + diff * smooth(clamp01(rawT / 0.35));
+            rotY = isPC ? Math.atan2(fdx, fdy) : Math.atan2(fdy, -fdx);
           }
         }
 
+        const track = tl.tracks[targetObj.id];
+        let activePose = targetObj.animation || startObj.animation || 'defensive';
+        if (track && track.length > 0) {
+          for (let n = track.length - 1; n >= 0; n--) {
+            if (T >= track[n].start) { activePose = track[n].pose; break; }
+          }
+        }
+
+        return {
+          ...targetObj,
+          x: nx,
+          y: ny,
+          rotation: rotDeg,
+          rotationY: rotY,
+          animation: activePose,
+        };
+      });
+
+      setObjects(interpObjs);
       frameAnimRafRef.current = requestAnimationFrame(step);
     };
 
     frameAnimRafRef.current = requestAnimationFrame(step);
-  };
-
-  const toggleFrameBallLob = () => {
-    setFrames((prev) =>
-      prev.map((f, i) => (i === activeFrameIndex ? { ...f, ballLob: !f.ballLob } : f))
-    );
   };
 
   const exportBoardAsImage = () => {
@@ -6549,6 +6611,7 @@ Sin markdown. Inicia con [ y termina con ]:`;
                     onDragStart={cancelPlayerFx}
                     cameraPreset={cameraPreset}
                     onUserOrbit={() => setCameraPreset('free')}
+                    onRecordHistory={recordHistory}
                   />
                 </Suspense>
               </Canvas>
