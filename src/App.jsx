@@ -2022,19 +2022,15 @@ function compileTacticalTimeline(frames) {
       const mP = metaOfPose(passer?.animation);
       const mR = metaOfPose(receiver?.animation);
       const isAir = fB?.ballLob === true;
-      const flight = clampV(dBall / (isAir ? 10.5 : 13.5), 0.42, 1.65);
+      const flight = clampV(dBall / (isAir ? 10.5 : 9.2), 0.78, 1.85);
 
-      let tRel = Math.max(0.14, eventTimeSec(passer?.animation));
+      let tRel = Math.max(0.26, eventTimeSec(passer?.animation));
       let tArr = tRel + flight;
       let startP = Math.max(0, tRel - eventTimeSec(passer?.animation));
-      let startR = tArr - (mR.kind === 'catch' ? eventTimeSec(receiver?.animation) : 0);
-      if (startR < 0) {
-        const shift = -startR;
-        tRel += shift;
-        tArr += shift;
-        startP += shift;
-        startR = 0;
-      }
+      // El arquero permanece en Atento mientras sale el pase y solo inicia su tomada
+      // en la segunda mitad del vuelo del balón, llegando sus manos al piso justo en tArr
+      const catchLead = mR.kind === 'catch' ? Math.min(flight * 0.68, eventTimeSec(receiver?.animation)) : 0;
+      let startR = Math.max(tRel + 0.12, tArr - catchLead);
       seg.dur = Math.max(1.25, tArr + 0.24);
 
       pA.forEach((p) => {
