@@ -1929,7 +1929,7 @@ const ANIM_META = {
 const DEFAULT_ANIM_META = { kind: 'idle', eventAt: 0.45, rate: 1, holdBone: 'handsMid', fade: 0.18 };
 const metaOfPose = (pose) => ANIM_META[pose] || DEFAULT_ANIM_META;
 const CLIP_DUR_CACHE = Object.create(null);
-
+const CLIP_RAW_CACHE = Object.create(null);
 const PLAYBACK_MASTER = {
   active: false,
   T: 0,
@@ -1958,10 +1958,13 @@ async function prewarmFramesClips(frames) {
       if (!url) continue;
       tasks.push(
         loadFbxClip(url).then((raw) => {
-          if (raw && raw.duration && !CLIP_DUR_CACHE[pose]) {
-            CLIP_DUR_CACHE[pose] = raw.duration;
-          }
-        }).catch(() => {})
+       if (raw) {
+         CLIP_RAW_CACHE[url] = raw;
+         if (raw.duration && !CLIP_DUR_CACHE[pose]) {
+           CLIP_DUR_CACHE[pose] = raw.duration;
+         }
+       }
+     }).catch(() => {})
       );
     }
   }
@@ -2292,7 +2295,7 @@ function GLBPlayer({ playerId, color, number, isSelected, onClick, facing = 0, r
       const applySeek = (poseKey, startT, weight) => {
         const key = cat[poseKey] ? poseKey : 'defensive';
         const url = cat[key] || cat[Object.keys(cat)[0]];
-        const raw = url ? FBX_RAW_CACHE?.[url] : null;
+        const raw = url ? CLIP_RAW_CACHE[url] : null;
         if (!raw) return null;
         const clip = getPlayableFbxClip(raw, url, clone);
         if (!clip) return null;
