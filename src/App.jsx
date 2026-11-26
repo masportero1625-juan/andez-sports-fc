@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, Suspense } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, Suspense, useCallback } from 'react';
 import {
   Folder, Play, RotateCcw, Save, Undo2, Redo2, Trash2, PenTool, X,
   Eraser, Lock, Plus, AlertTriangle, RotateCw, LogOut, MessageCircle,
