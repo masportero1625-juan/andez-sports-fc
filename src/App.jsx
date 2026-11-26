@@ -1901,8 +1901,8 @@ const PLAYER_BONES_WORLD = Object.create(null);
 // MOTOR DE SINCRONÍA DETERMINISTA (RELOJ MAESTRO + COMPILADOR DE EVENTOS)
 // ============================================================================
 const ANIM_META = {
-  pass:            { kind: 'release', eventAt: 0.36, rate: 1, holdBone: null,        fade: 0.14 },
-  short_pass:      { kind: 'release', eventAt: 0.36, rate: 1, holdBone: null,        fade: 0.14 },
+  pass:            { kind: 'release', eventAt: 0.18, rate: 1, holdBone: null,        fade: 0.12 },
+  short_pass:      { kind: 'release', eventAt: 0.18, rate: 1, holdBone: null,        fade: 0.12 },
   kick_pass:       { kind: 'release', eventAt: 0.36, rate: 1, holdBone: null,        fade: 0.14 },
   shoot:           { kind: 'release', eventAt: 0.38, rate: 1, holdBone: null,        fade: 0.14 },
   power_shot:      { kind: 'release', eventAt: 0.40, rate: 1, holdBone: null,        fade: 0.14 },
@@ -1917,7 +1917,7 @@ const ANIM_META = {
   short_throw:     { kind: 'release', eventAt: 0.50, rate: 1, holdBone: 'rightHand', fade: 0.18 },
   long_throw:      { kind: 'release', eventAt: 0.52, rate: 1, holdBone: 'rightHand', fade: 0.18 },
   throw_in:        { kind: 'release', eventAt: 0.50, rate: 1, holdBone: 'handsMid',  fade: 0.18 },
-  scoop_catch:     { kind: 'catch',   eventAt: 0.42, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
+  scoop_catch:     { kind: 'catch',   eventAt: 0.64, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
   aerial_catch:    { kind: 'catch',   eventAt: 0.46, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
   aerial_save:     { kind: 'catch',   eventAt: 0.48, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
   body_block:      { kind: 'catch',   eventAt: 0.45, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
@@ -2022,9 +2022,9 @@ function compileTacticalTimeline(frames) {
       const mP = metaOfPose(passer?.animation);
       const mR = metaOfPose(receiver?.animation);
       const isAir = fB?.ballLob === true;
-      const flight = clampV(dBall / (isAir ? 9.5 : 8.8), 0.50, 2.1);
+      const flight = clampV(dBall / (isAir ? 10.5 : 13.5), 0.42, 1.65);
 
-      let tRel = Math.max(0.28, eventTimeSec(passer?.animation));
+      let tRel = Math.max(0.14, eventTimeSec(passer?.animation));
       let tArr = tRel + flight;
       let startP = Math.max(0, tRel - eventTimeSec(passer?.animation));
       let startR = tArr - (mR.kind === 'catch' ? eventTimeSec(receiver?.animation) : 0);
