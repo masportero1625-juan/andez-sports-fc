@@ -4211,23 +4211,36 @@ export default function App() {
           let nz = targetObj.elevation ?? 0;
 
           if (targetObj.type === 'ball') {
+            const gkBones = nearestGK ? PLAYER_BONES_WORLD[nearestGK.id] : null;
             if (isGKHoldingWholeSegment && nearestGK && gkStartObj) {
-              const gkX = (gkStartObj.x ?? 0) + ((nearestGK.x ?? 0) - (gkStartObj.x ?? 0)) * t;
-              const gkY = (gkStartObj.y ?? 0) + ((nearestGK.y ?? 0) - (gkStartObj.y ?? 0)) * t;
-              const gkDir = (nearestGK.team === 'red') ? -1 : 1;
-              nx = gkX + gkDir * 0.55;
-              ny = gkY;
-              nz = (gkAnimEnd === 'scoop_catch') ? 0.42 : 1.05;
+              if (gkBones && gkBones.handsMid) {
+                nx = gkBones.handsMid[0];
+                ny = gkBones.handsMid[2];
+                nz = Math.max(0.28, gkBones.handsMid[1]);
+              } else {
+                const gkX = (gkStartObj.x ?? 0) + ((nearestGK.x ?? 0) - (gkStartObj.x ?? 0)) * t;
+                const gkY = (gkStartObj.y ?? 0) + ((nearestGK.y ?? 0) - (gkStartObj.y ?? 0)) * t;
+                const gkDir = (nearestGK.team === 'red') ? -1 : 1;
+                nx = gkX + gkDir * 0.52;
+                ny = gkY;
+                nz = (gkAnimEnd === 'scoop_catch') ? 0.36 : 1.05;
+              }
             } else if (isGKThrowing && nearestGK && gkStartObj && rawT < releaseAt) {
-              // Durante todo el armado atrás del saque de boliche (0% -> 62%), el balón va pegado a la mano del arquero
-              const gkX = (gkStartObj.x ?? 0) + ((nearestGK.x ?? 0) - (gkStartObj.x ?? 0)) * t;
-              const gkY = (gkStartObj.y ?? 0) + ((nearestGK.y ?? 0) - (gkStartObj.y ?? 0)) * t;
-              const gkDir = (nearestGK.team === 'red') ? -1 : 1;
-              nx = gkX + gkDir * 0.45;
-              ny = gkY + 0.25;
-              nz = 0.72;
+              // El balón permanece soldado a la mano derecha del arquero durante todo el armado del saque (0% -> 62%)
+              if (gkBones && gkBones.rightHand) {
+                nx = gkBones.rightHand[0];
+                ny = gkBones.rightHand[2];
+                nz = Math.max(0.24, gkBones.rightHand[1]);
+              } else {
+                const gkX = (gkStartObj.x ?? 0) + ((nearestGK.x ?? 0) - (gkStartObj.x ?? 0)) * t;
+                const gkY = (gkStartObj.y ?? 0) + ((nearestGK.y ?? 0) - (gkStartObj.y ?? 0)) * t;
+                const gkDir = (nearestGK.team === 'red') ? -1 : 1;
+                nx = gkX + gkDir * 0.45;
+                ny = gkY + 0.25;
+                nz = 0.65;
+              }
             } else if (passerId && rawT < releaseAt) {
-              // Antes del golpeo del pie/cabeza, el balón permanece quieto en su punto de origen
+              // Antes del impacto del pie o cabeza, el balón espera quieto en su origen
               nx = startObj.x ?? origX;
               ny = startObj.y ?? origY;
               nz = startObj.elevation ?? 0;
@@ -4237,7 +4250,7 @@ export default function App() {
                 : isVolleyGK
                   ? 0.95
                   : isHandAction
-                    ? (passerPose === 'underhand_throw' ? 0.52 : passerPose === 'overhand_throw' ? 1.95 : passerPose === 'throw_in' ? 2.15 : 1.15)
+                    ? (passerPose === 'underhand_throw' ? 0.45 : passerPose === 'overhand_throw' ? 1.95 : passerPose === 'throw_in' ? 2.15 : 1.15)
                     : (startObj.elevation ?? 0);
               const endZ = targetObj.elevation ?? 0;
               const baseZ = startZ + (endZ - startZ) * effectiveT;
@@ -4250,6 +4263,7 @@ export default function App() {
               }
             }
           }
+          
 
         let rotDeg = targetObj.rotation ?? startObj.rotation ?? 0;
         let rotY = targetObj.rotationY ?? startObj.rotationY ?? 0;
@@ -4304,56 +4318,72 @@ export default function App() {
 
           lastYawMapRef.current[targetObj.id] = rotY;
 
-          // 2. Clips reales FBX_ANIMATIONS (respeta poses de arquero y cabezazo manuales)
-          const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'kick_pass', 'strike_motion', 'shot_power'];
-          const hasCustomPose = targetObj.animation && !standardStates.includes(targetObj.animation);
-          const segNonce = (startObj.animNonce || 0) + segmentIdx + 1;
+          // 2. Clips reales FBX_ANIMATIONS con orden causal (Pasador primero -> Receptor al llegar el balón)
+            const standardStates = ['idle', 'defensive', 'jog', 'sprint', 'pass', 'lofted', 'kick_pass', 'strike_motion', 'header'];
+            const catchPoses = ['scoop_catch', 'aerial_catch', 'aerial_save', 'body_block', 'diving_low'];
+            const hasCustomEndPose = targetObj.animation && !standardStates.includes(targetObj.animation);
+            const hasCustomStartPose = startObj.animation && !standardStates.includes(startObj.animation);
+            const segNonce = (startObj.animNonce || 0) + segmentIdx + 1;
 
-          if (hasCustomPose) {
-            activeAnim = targetObj.animation;
-            nonce = segNonce;
-          } else if (targetObj.id === passerId && rawT < 0.85) {
-            activeAnim = isHeadAction ? 'header' : (isLob ? 'strike_motion' : 'kick_pass');
-            nonce = segNonce;
-          } else if (moveDist > 0.5 && rawT < 0.86) {
-            activeAnim = moveDist > 16 ? 'sprint' : 'jog';
-          } else {
-            activeAnim = 'defensive';
+            if (targetObj.id === passerId && rawT < 0.88) {
+              // El ejecutante (pase corto, saque bajo, saque alto, volea, cabezazo) ejecuta su gesto desde el inicio del tramo
+              activeAnim = hasCustomEndPose ? targetObj.animation : (isHeadAction ? 'header' : (isLob ? 'strike_motion' : 'kick_pass'));
+              nonce = segNonce;
+            } else if (hasCustomEndPose && catchPoses.includes(targetObj.animation)) {
+              // El receptor (Atrapada Baja / Aérea / Desvío) espera atento hasta que el pase va en camino (rawT >= 0.42)
+              if (rawT >= 0.42) {
+                activeAnim = targetObj.animation;
+                nonce = segNonce;
+              } else {
+                activeAnim = hasCustomStartPose ? startObj.animation : 'defensive';
+              }
+            } else if (hasCustomEndPose) {
+              activeAnim = targetObj.animation;
+              nonce = segNonce;
+            } else if (hasCustomStartPose && rawT < 0.45) {
+              activeAnim = startObj.animation;
+            } else if (moveDist > 0.5 && rawT < 0.86) {
+              activeAnim = moveDist > 16 ? 'sprint' : 'jog';
+            } else {
+              activeAnim = 'defensive';
+            }
           }
+
+          return {
+            ...targetObj,
+            x: nx,
+            y: ny,
+            elevation: nz,
+            rotation: rotDeg,
+            rotationY: rotY,
+            animation: activeAnim,
+            animNonce: nonce,
+          };
+        });
+
+        segmentInitDone = true;
+        setObjects(interpObjs);
+
+        // Actualiza el indicador visual del frame activo al cruzar la mitad del tramo
+        if (rawT >= 0.55 && segmentIdx + 1 < frames.length) {
+          setActiveFrameIndex(segmentIdx + 1);
         }
 
-        return {
-          ...targetObj,
-          x: nx,
-          y: ny,
-          elevation: nz,
-          rotation: rotDeg,
-          rotationY: rotY,
-          animation: activeAnim,
-          animNonce: nonce,
-        };
-      });
+        if (rawT >= 1) {
+          segmentIdx += 1;
+          if (toF.drawings) setDrawings(JSON.parse(JSON.stringify(toF.drawings)));
 
-      segmentInitDone = true;
-      setObjects(interpObjs);
-
-      if (rawT >= 1) {
-        segmentIdx += 1;
-        setActiveFrameIndex(segmentIdx);
-        if (toF.drawings) setDrawings(JSON.parse(JSON.stringify(toF.drawings)));
-
-        if (segmentIdx >= frames.length - 1) {
-          if (loopFrames && !autoRecord) {
-            segmentIdx = 0;
-            segStartPerf = now + 350;
-            segmentInitDone = false;
-            setActiveFrameIndex(0);
-            if (frames[0]?.objects) setObjects(JSON.parse(JSON.stringify(frames[0].objects)));
-          } else {
-            stopFramesPlayback();
-            if (autoRecord) setTimeout(() => stopRecording(), 250);
-            return;
-          }
+          if (segmentIdx >= frames.length - 1) {
+            setActiveFrameIndex(frames.length - 1);
+            if (loopFrames && !autoRecord) {
+              segmentIdx = 0;
+              segStartPerf = now + 900;
+              segmentInitDone = false;
+            } else {
+              stopFramesPlayback();
+              if (autoRecord) setTimeout(() => stopRecording(), 250);
+              return;
+            }
         } else {
           segStartPerf = now;
           segmentInitDone = false;
