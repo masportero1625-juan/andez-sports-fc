@@ -4495,7 +4495,11 @@ export default function App() {
 
     frameAnimRafRef.current = requestAnimationFrame(step);
   };
-
+  const toggleFrameBallLob = () => {
+    setFrames((prev) =>
+      prev.map((f, i) => (i === activeFrameIndex ? { ...f, ballLob: !f.ballLob } : f))
+    );
+  };
   const exportBoardAsImage = () => {
     if (!svgRef.current) return;
     const svgElement = svgRef.current;
