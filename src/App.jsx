@@ -1917,7 +1917,7 @@ const ANIM_META = {
   short_throw:     { kind: 'release', eventAt: 0.50, rate: 1, holdBone: 'rightHand', fade: 0.18 },
   long_throw:      { kind: 'release', eventAt: 0.52, rate: 1, holdBone: 'rightHand', fade: 0.18 },
   throw_in:        { kind: 'release', eventAt: 0.50, rate: 1, holdBone: 'handsMid',  fade: 0.18 },
-  scoop_catch:     { kind: 'catch',   eventAt: 0.64, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
+  scoop_catch:     { kind: 'catch',   eventAt: 0.56, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
   aerial_catch:    { kind: 'catch',   eventAt: 0.46, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
   aerial_save:     { kind: 'catch',   eventAt: 0.48, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
   body_block:      { kind: 'catch',   eventAt: 0.45, rate: 1, holdBone: 'handsMid',  fade: 0.14 },
@@ -2029,7 +2029,7 @@ function compileTacticalTimeline(frames) {
       let startP = Math.max(0, tRel - eventTimeSec(passer?.animation));
       // El arquero permanece en Atento mientras sale el pase y solo inicia su tomada
       // en la segunda mitad del vuelo del balón, llegando sus manos al piso justo en tArr
-      const catchLead = mR.kind === 'catch' ? Math.min(flight * 0.68, eventTimeSec(receiver?.animation)) : 0;
+      const catchLead = mR.kind === 'catch' ? Math.min(flight * 0.56, eventTimeSec(receiver?.animation)) : 0;
       let startR = Math.max(tRel + 0.12, tArr - catchLead);
       seg.dur = Math.max(1.25, tArr + 0.24);
 
@@ -3427,7 +3427,16 @@ function TacticalBall3D({ obj, pos, objects, isPC, onDown, handlePointerMove, ha
 
     // Durante reproducción: posición 100% determinista desde el reloj maestro
     if (PLAYBACK_MASTER.active && PLAYBACK_MASTER.ball.pos) {
-      const [px, py, pz] = PLAYBACK_MASTER.ball.pos;
+      let [px, py, pz] = PLAYBACK_MASTER.ball.pos;
+      if (PLAYBACK_MASTER.ball.bone === 'handsMid') {
+        const ownerObj = objects.find((o) => o.id === PLAYBACK_MASTER.ball.owner);
+        const rad = ((ownerObj?.rotation ?? 0) * Math.PI) / 180;
+        const fwdX = isPC ? Math.cos(rad) : -Math.sin(rad);
+        const fwdZ = isPC ? Math.sin(rad) : Math.cos(rad);
+        px += fwdX * 0.12;
+        py = Math.max(0.11, py + 0.09);
+        pz += fwdZ * 0.12;
+      }
       g.position.set(px, py, pz);
       return;
     }
