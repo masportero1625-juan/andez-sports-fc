@@ -1901,6 +1901,7 @@ const PLAYER_BONES_WORLD = Object.create(null);
 // MOTOR DE SINCRONÍA DETERMINISTA (RELOJ MAESTRO + COMPILADOR DE EVENTOS)
 // ============================================================================
 const ANIM_META = {
+  pass:            { kind: 'release', eventAt: 0.36, rate: 1, holdBone: null,        fade: 0.14 },
   short_pass:      { kind: 'release', eventAt: 0.36, rate: 1, holdBone: null,        fade: 0.14 },
   kick_pass:       { kind: 'release', eventAt: 0.36, rate: 1, holdBone: null,        fade: 0.14 },
   shoot:           { kind: 'release', eventAt: 0.38, rate: 1, holdBone: null,        fade: 0.14 },
@@ -2063,16 +2064,9 @@ function compileTacticalTimeline(frames) {
       ];
       carry = receiver && mR.kind === 'catch' ? receiver.id : null;
     } else {
+    
       // ---- TRAMO DE RETENCIÓN / INCORPORACIÓN SIN TRASLADO DE BALÓN (ej. Frame 2 -> 3) ----
-      const tail = Math.max(
-        0,
-        ...pA.map((p) => {
-          const m = metaOfPose(p.animation);
-          const dur = CLIP_DUR_CACHE[p.animation] || 1.0;
-          return ((1 - m.eventAt) * dur) / (m.rate || 1);
-        })
-      );
-      seg.dur = clampV(tail, 0.68, 0.85);
+      seg.dur = 0.95;
       pA.forEach((p) => {
         const endP = pB.find((q) => q.id === p.id) || p;
         const moveD = dist2(p, endP);
@@ -2080,9 +2074,15 @@ function compileTacticalTimeline(frames) {
         else pushClip(p.id, endP.animation || p.animation || 'defensive', T);
       });
 
-      const owner = carry || (bA && (bA.elevation ?? 0) >= 0.75 ? nearestTo(pA, bA)?.id : null);
+      const owner =
+        carry ||
+        pA.find((p) => metaOfPose(p.animation).kind === 'catch')?.id ||
+        (bB && (bB.elevation ?? 0) >= 0.75 ? nearestTo(pB, bB)?.id : null);
+
       const ownerObj = owner ? pB.find((p) => p.id === owner) || pA.find((p) => p.id === owner) : null;
-      const bone = ownerObj ? metaOfPose(ownerObj.animation).holdBone || 'handsMid' : null;
+      const bone = ownerObj ? metaOfPose(ownerObj.animation).holdBone || 'handsMid' : 'handsMid';
+      carry = owner || carry;
+
       seg.ball =
         owner && bB
           ? [{ type: 'HOLD', owner, bone, t0: 0, t1: seg.dur }]
