@@ -2066,8 +2066,15 @@ function compileTacticalTimeline(frames) {
       pA.forEach((p) => {
         const endP = pB.find((q) => q.id === p.id) || p;
         const moveD = dist2(p, endP);
-        if (moveD > 0.6) pushClip(p.id, moveD > 16 ? 'sprint' : 'jog', T);
-        else pushClip(p.id, endP.animation || p.animation || 'defensive', T);
+        if (moveD > 0.6) {
+          pushClip(p.id, moveD > 16 ? 'sprint' : 'jog', T);
+        } else if (metaOfPose(p.animation).kind === 'catch') {
+          // Dejar que la atrapada baja termine su propia incorporación natural con el balón en manos
+          // antes de pasar suavemente a Atento, evitando el salto final
+          pushClip(p.id, endP.animation || 'defensive', T + 0.52);
+        } else {
+          pushClip(p.id, endP.animation || p.animation || 'defensive', T);
+        }
       });
 
       const owner =
