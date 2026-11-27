@@ -3440,9 +3440,11 @@ function TacticalBall3D({ obj, pos, objects, isPC, onDown, handlePointerMove, ha
         const rad = ((ownerObj?.rotation ?? 0) * Math.PI) / 180;
         const fwdX = isPC ? Math.cos(rad) : -Math.sin(rad);
         const fwdZ = isPC ? Math.sin(rad) : Math.cos(rad);
-        px += fwdX * 0.12;
-        py = Math.max(0.11, py + 0.09);
-        pz += fwdZ * 0.12;
+        // Apoyar el balón SOBRE las palmas (radio visual ~0.23 m encima del eje de muñecas)
+        // y ligeramente recogido hacia el cuerpo/palmas (0.04 m) para que no cuelgue del dorso
+        px += fwdX * 0.04;
+        py = Math.max(0.22, py + 0.23);
+        pz += fwdZ * 0.04;
       }
       g.position.set(px, py, pz);
       return;
